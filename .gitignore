@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+.streamlit/
+# 환경 변수 파일
+.env

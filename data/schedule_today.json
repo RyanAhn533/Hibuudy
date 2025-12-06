@@ -1,0 +1,77 @@
+{
+  "date": "2025-12-06",
+  "schedule": [
+    {
+      "time": "08:00",
+      "type": "MORNING_BRIEFING",
+      "task": "오늘 날씨와 일정 간단 안내",
+      "guide_script": [
+        "좋은 아침이에요.",
+        "오늘 날씨를 알려드릴게요.",
+        "오늘 할 일을 함께 살펴봐요."
+      ]
+    },
+    {
+      "time": "10:00",
+      "type": "GENERAL",
+      "task": "옷 입기 연습하기",
+      "guide_script": [
+        "옷을 입어볼 거예요.",
+        "천천히 한 단계씩 해봐요.",
+        "필요하면 도와드릴게요."
+      ]
+    },
+    {
+      "time": "15:00",
+      "type": "GENERAL",
+      "task": "쉬는 시간 갖기",
+      "guide_script": [
+        "이제 쉬는 시간이에요.",
+        "편안하게 쉬어요.",
+        "몸과 마음을 편안하게 해요."
+      ]
+    },
+    {
+      "time": "18:00",
+      "type": "HEALTH",
+      "task": "앉아서 하는 운동하기",
+      "guide_script": [
+        "앉아서 운동을 해볼 거예요.",
+        "천천히 따라 해봐요.",
+        "몸이 편안한지 확인해요."
+      ]
+    },
+    {
+      "time": "21:17",
+      "type": "COOKING",
+      "task": "삼겹살구이 또는 떡볶이 중 하나 먹기",
+      "guide_script": [
+        "저녁 식사 시간이 왔어요.",
+        "삼겹살구이 또는 떡볶이 중 하나를 골라요.",
+        "맛있게 먹어요."
+      ],
+      "menus": [
+        {
+          "name": "떡볶이",
+          "image": "assets/images/default_food.png",
+          "video_url": ""
+        },
+        {
+          "name": "삼겹살구이",
+          "image": "assets/images/default_food.png",
+          "video_url": ""
+        }
+      ]
+    },
+    {
+      "time": "22:00",
+      "type": "NIGHT_WRAPUP",
+      "task": "하루 마무리 인사하기",
+      "guide_script": [
+        "오늘 하루 잘 보냈어요.",
+        "이제 하루를 마무리해요.",
+        "편안한 밤 되세요."
+      ]
+    }
+  ]
+}
