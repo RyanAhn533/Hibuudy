@@ -41,7 +41,7 @@ def _get_config(key: str, default: str = "") -> str:
 
 OPENAI_API_KEY = _get_config("OPENAI_API_KEY")
 OPENAI_MODEL_SCHEDULE = _get_config("OPENAI_MODEL_SCHEDULE", "gpt-4.1-mini")
-OPENAI_MODEL_VISION = _get_config("OPENAI_MODEL_VISION", "gpt-4.1")
+OPENAI_MODEL_VISION = _get_config("OPENAI_MODEL_VISION", "gpt-4.1-vision")
 
 _openai_client: Optional[OpenAI] = None
 
