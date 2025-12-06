@@ -9,6 +9,7 @@ from typing import Dict, List
 
 import streamlit as st
 
+from utils.weather_ai import analyze_weather_and_suggest_clothes
 from utils.topbar import render_topbar
 from utils.schedule_ai import generate_schedule_from_text
 from utils.runtime import parse_hhmm_to_time
@@ -371,6 +372,42 @@ def coordinator_page():
             elif type_ == "CLOTHING":
                 st.markdown("#### 옷 입기 활동 설정")
 
+                # ---- 오늘 날씨 기반 옷차림 안내문 생성 ----
+                st.markdown("##### 오늘 날씨 기반 옷차림 안내문 만들기")
+
+                default_location = st.session_state.get("weather_location_default", "서울")
+                location = st.text_input(
+                    "날씨를 확인할 지역 (예: 서울, 서울시 강남구)",
+                    value=default_location,
+                    key=f"clothing_location_{idx}",
+                )
+                st.session_state["weather_location_default"] = location
+
+                if st.button("오늘 날씨로 옷차림 안내문 생성", key=f"btn_weather_clothes_{idx}"):
+                    if not location.strip():
+                        st.warning("지역을 먼저 입력해 주세요.")
+                    else:
+                        with st.spinner("오늘 날씨를 확인하고, 옷차림 안내문을 만드는 중입니다..."):
+                            try:
+                                result = analyze_weather_and_suggest_clothes(location)
+                                guide_script = result.get("guide_script") or []
+                                st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = guide_script
+                                changed = True
+
+                                st.success("오늘 날씨를 반영한 옷차림 안내문을 guide_script에 저장했습니다.")
+                                st.info("날씨 요약: " + result.get("weather_summary", ""))
+
+                                clothes = result.get("clothes", [])
+                                if clothes:
+                                    st.write("추천 옷차림:")
+                                    for c in clothes:
+                                        st.markdown(f"- {c}")
+                            except Exception as e:
+                                st.error(f"날씨/옷차림 추천 중 오류가 발생했습니다: {e}")
+
+                st.markdown("---")
+                st.markdown("##### 옷 입기 연습 영상 선택")
+
                 yt_key = f"yt_clothing_{idx}"
 
                 if st.button("옷 입기 영상 추천 받기", key=f"search_yt_clothing_{idx}"):
@@ -418,4 +455,3 @@ def coordinator_page():
 
 if __name__ == "__main__":
     coordinator_page()
-#
