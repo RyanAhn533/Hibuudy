@@ -445,3 +445,54 @@ def search_clothing_videos_for_dd(task_or_query: str, max_results: int = 6) -> L
     raw_results = _search_youtube_via_api_multi(queries, per_query_max=4, domain="clothing")
     ranked = _rerank_for_dd(raw_results, domain="clothing")
     return ranked[:max_results]
+
+# ─────────────────────────────────────────────
+# 5. 코디네이터 "직접 검색어"용 RAW 검색 래퍼
+#    (GPT 확장 없이, 입력한 검색어 그대로 사용)
+# ─────────────────────────────────────────────
+
+def _search_videos_for_dd_raw(query: str, max_results: int, domain: str) -> List[Dict]:
+    """
+    코디네이터가 직접 입력한 유튜브 검색어를
+    그대로 YouTube API에 넘기고, DD 친화도 점수로만 재정렬하는 버전.
+
+    - GPT로 검색어를 바꾸지 않음
+    - 검색어만 바꿔도 결과가 확실히 달라지게 하고 싶을 때 사용
+    """
+    q = (query or "").strip()
+    if not q:
+        # 안전한 기본값
+        if domain == "cooking":
+            q = "발달장애인 쉬운 요리 따라하기"
+        elif domain == "exercise":
+            q = "발달장애인 쉬운 운동 따라하기"
+        elif domain == "clothing":
+            q = "발달장애인 옷 입기 연습"
+        else:
+            q = "발달장애 쉬운 설명"
+
+    print(f"[YOUTUBE_RAW] domain={domain}, query='{q}'")
+    raw = _search_youtube_via_api(q, max_results=max_results)
+    ranked = _rerank_for_dd(raw, domain=domain)
+    return ranked[:max_results]
+
+
+def search_cooking_videos_for_dd_raw(query: str, max_results: int = 6) -> List[Dict]:
+    """
+    GPT 확장 없이, 코디네이터가 입력한 검색어 그대로 쓰는 요리 영상 검색.
+    """
+    return _search_videos_for_dd_raw(query, max_results=max_results, domain="cooking")
+
+
+def search_exercise_videos_for_dd_raw(query: str, max_results: int = 6) -> List[Dict]:
+    """
+    GPT 확장 없이, 코디네이터가 입력한 검색어 그대로 쓰는 운동 영상 검색.
+    """
+    return _search_videos_for_dd_raw(query, max_results=max_results, domain="exercise")
+
+
+def search_clothing_videos_for_dd_raw(query: str, max_results: int = 6) -> List[Dict]:
+    """
+    GPT 확장 없이, 코디네이터가 입력한 검색어 그대로 쓰는 옷 입기 영상 검색.
+    """
+    return _search_videos_for_dd_raw(query, max_results=max_results, domain="clothing")

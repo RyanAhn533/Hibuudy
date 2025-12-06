@@ -20,9 +20,9 @@ from utils.recipes import (
 )
 from utils.image_ai import search_and_filter_food_images, download_image_to_assets
 from utils.youtube_ai import (
-    search_cooking_videos_for_dd,
-    search_exercise_videos_for_dd,
-    search_clothing_videos_for_dd,
+    search_cooking_videos_for_dd_raw,
+    search_exercise_videos_for_dd_raw,
+    search_clothing_videos_for_dd_raw,
 )
 
 SCHEDULE_STATE_KEY = "hibuddy_schedule"
@@ -192,7 +192,11 @@ def coordinator_page():
                 if not current_menus:
                     names = _extract_menu_names_from_task(task) or [task]
                     current_menus = [
-                        {"name": name, "image": "assets/images/default_food.png", "video_url": ""}
+                        {
+                            "name": name,
+                            "image": "assets/images/default_food.png",
+                            "video_url": "",
+                        }
                         for name in names
                     ]
                     st.session_state[SCHEDULE_STATE_KEY][idx]["menus"] = current_menus
@@ -218,7 +222,11 @@ def coordinator_page():
                         st.warning("메뉴 이름을 한 개 이상 입력해 주세요.")
                     else:
                         new_menus = [
-                            {"name": name, "image": "assets/images/default_food.png", "video_url": ""}
+                            {
+                                "name": name,
+                                "image": "assets/images/default_food.png",
+                                "video_url": "",
+                            }
                             for name in names
                         ]
                         st.session_state[SCHEDULE_STATE_KEY][idx]["menus"] = new_menus
@@ -239,10 +247,15 @@ def coordinator_page():
                         # 왼쪽: 현재 선택된 사진 + 영상
                         with cols[0]:
                             img_path = menu.get("image")
-                            if isinstance(img_path, str) and (img_path.startswith("http") or os.path.exists(img_path)):
+                            if isinstance(img_path, str) and (
+                                img_path.startswith("http") or os.path.exists(img_path)
+                            ):
                                 st.image(img_path, use_container_width=True)
                             elif os.path.exists("assets/images/default_food.png"):
-                                st.image("assets/images/default_food.png", use_container_width=True)
+                                st.image(
+                                    "assets/images/default_food.png",
+                                    use_container_width=True,
+                                )
                             else:
                                 st.write("아직 사진이 없습니다.")
 
@@ -260,7 +273,9 @@ def coordinator_page():
                             if st.button("음식 사진 자동 추천", key=f"search_img_{idx}_{m_idx}"):
                                 with st.spinner("사진을 찾고 있습니다..."):
                                     try:
-                                        results = search_and_filter_food_images(menu_name, max_results=6)
+                                        results = search_and_filter_food_images(
+                                            menu_name, max_results=6
+                                        )
                                     except Exception as e:
                                         st.error(f"사진 검색 오류: {e}")
                                         results = []
@@ -273,15 +288,24 @@ def coordinator_page():
                                 for r_idx, img_info in enumerate(img_results[:6]):
                                     col = cols_img[r_idx % 3]
                                     with col:
-                                        thumb = img_info.get("thumbnail") or img_info.get("link")
+                                        thumb = img_info.get("thumbnail") or img_info.get(
+                                            "link"
+                                        )
                                         url = img_info.get("link")
                                         if thumb:
                                             st.image(thumb, use_container_width=True)
 
-                                        if st.button("이 사진 사용", key=f"use_img_{idx}_{m_idx}_{r_idx}"):
+                                        if st.button(
+                                            "이 사진 사용",
+                                            key=f"use_img_{idx}_{m_idx}_{r_idx}",
+                                        ):
                                             try:
-                                                local_path = download_image_to_assets(url, menu_name)
-                                                menu_obj = st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]
+                                                local_path = download_image_to_assets(
+                                                    url, menu_name
+                                                )
+                                                menu_obj = st.session_state[
+                                                    SCHEDULE_STATE_KEY
+                                                ][idx]["menus"][m_idx]
                                                 menu_obj["image"] = local_path
                                                 menu_obj["image_url"] = url
                                                 changed = True
@@ -294,7 +318,7 @@ def coordinator_page():
                             # 유튜브 검색어 입력
                             default_yt_query = menu.get(
                                 "video_query",
-                                f"발달장애인 쉬운 {menu_name} 만들기"
+                                f"발달장애인 쉬운 {menu_name} 만들기",
                             )
                             yt_query = st.text_input(
                                 "요리 영상 유튜브 검색어",
@@ -302,13 +326,19 @@ def coordinator_page():
                                 key=f"yt_cook_query_{idx}_{m_idx}",
                             )
                             # 입력값을 메뉴 객체에도 저장 (다시 열었을 때 유지)
-                            st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["video_query"] = yt_query
+                            st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx][
+                                "video_query"
+                            ] = yt_query
 
-                            # 유튜브 요리 영상 추천
-                            if st.button("요리 영상 추천 받기", key=f"search_yt_cook_{idx}_{m_idx}"):
+                            # 유튜브 요리 영상 추천 (RAW 모드)
+                            if st.button(
+                                "요리 영상 추천 받기", key=f"search_yt_cook_{idx}_{m_idx}"
+                            ):
                                 with st.spinner("요리 영상을 찾는 중입니다..."):
                                     try:
-                                        yt_results = search_cooking_videos_for_dd(yt_query, max_results=6)
+                                        yt_results = search_cooking_videos_for_dd_raw(
+                                            yt_query, max_results=6
+                                        )
                                     except Exception as e:
                                         st.error(f"영상 검색 오류: {e}")
                                         yt_results = []
@@ -320,9 +350,16 @@ def coordinator_page():
                                 for v_idx, v in enumerate(yt_results):
                                     st.markdown(f"- {v['title']}")
                                     if v.get("thumbnail"):
-                                        st.image(v["thumbnail"], use_container_width=True)
-                                    if st.button("이 영상 사용", key=f"use_yt_cook_{idx}_{m_idx}_{v_idx}"):
-                                        st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["video_url"] = v["url"]
+                                        st.image(
+                                            v["thumbnail"], use_container_width=True
+                                        )
+                                    if st.button(
+                                        "이 영상 사용",
+                                        key=f"use_yt_cook_{idx}_{m_idx}_{v_idx}",
+                                    ):
+                                        st.session_state[SCHEDULE_STATE_KEY][idx][
+                                            "menus"
+                                        ][m_idx]["video_url"] = v["url"]
                                         changed = True
                                         st.success("영상이 적용되었습니다.")
 
@@ -362,7 +399,7 @@ def coordinator_page():
                     "video_query_health",
                     f"발달장애인 쉬운 {task} 운동 따라하기"
                     if task
-                    else "발달장애인 쉬운 운동 따라하기"
+                    else "발달장애인 쉬운 운동 따라하기",
                 )
                 health_yt_query = st.text_input(
                     "운동 영상 유튜브 검색어",
@@ -370,12 +407,16 @@ def coordinator_page():
                     key=f"yt_health_query_{idx}",
                 )
                 # 상태에 저장해서 유지
-                st.session_state[SCHEDULE_STATE_KEY][idx]["video_query_health"] = health_yt_query
+                st.session_state[SCHEDULE_STATE_KEY][idx][
+                    "video_query_health"
+                ] = health_yt_query
 
                 if st.button("운동 영상 추천 받기", key=f"search_yt_health_{idx}"):
                     with st.spinner("운동 영상을 찾는 중입니다..."):
                         try:
-                            yt_results = search_exercise_videos_for_dd(health_yt_query, max_results=6)
+                            yt_results = search_exercise_videos_for_dd_raw(
+                                health_yt_query, max_results=6
+                            )
                         except Exception as e:
                             st.error(f"영상 검색 오류: {e}")
                             yt_results = []
@@ -394,7 +435,9 @@ def coordinator_page():
                         if v.get("thumbnail"):
                             st.image(v["thumbnail"], use_container_width=True)
                         if st.button("이 영상 사용", key=f"use_yt_health_{idx}_{v_idx}"):
-                            st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = v["url"]
+                            st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = v[
+                                "url"
+                            ]
                             changed = True
                             st.success("영상이 적용되었습니다.")
 
@@ -413,19 +456,30 @@ def coordinator_page():
                 )
                 st.session_state["weather_location_default"] = location
 
-                if st.button("오늘 날씨로 옷차림 안내문 생성", key=f"btn_weather_clothes_{idx}"):
+                if st.button(
+                    "오늘 날씨로 옷차림 안내문 생성", key=f"btn_weather_clothes_{idx}"
+                ):
                     if not location.strip():
                         st.warning("지역을 먼저 입력해 주세요.")
                     else:
-                        with st.spinner("오늘 날씨를 확인하고, 옷차림 안내문을 만드는 중입니다..."):
+                        with st.spinner(
+                            "오늘 날씨를 확인하고, 옷차림 안내문을 만드는 중입니다..."
+                        ):
                             try:
                                 result = analyze_weather_and_suggest_clothes(location)
                                 guide_script = result.get("guide_script") or []
-                                st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = guide_script
+                                st.session_state[SCHEDULE_STATE_KEY][idx][
+                                    "guide_script"
+                                ] = guide_script
                                 changed = True
 
-                                st.success("오늘 날씨를 반영한 옷차림 안내문을 guide_script에 저장했습니다.")
-                                st.info("날씨 요약: " + result.get("weather_summary", ""))
+                                st.success(
+                                    "오늘 날씨를 반영한 옷차림 안내문을 guide_script에 저장했습니다."
+                                )
+                                st.info(
+                                    "날씨 요약: "
+                                    + result.get("weather_summary", "")
+                                )
 
                                 clothes = result.get("clothes", [])
                                 if clothes:
@@ -433,20 +487,21 @@ def coordinator_page():
                                     for c in clothes:
                                         st.markdown(f"- {c}")
                             except Exception as e:
-                                st.error(f"날씨/옷차림 추천 중 오류가 발생했습니다: {e}")
+                                st.error(
+                                    f"날씨/옷차림 추천 중 오류가 발생했습니다: {e}"
+                                )
 
                 st.markdown("---")
                 st.markdown("##### 옷 입기 연습 영상 선택")
 
                 yt_key = f"yt_clothing_{idx}"
 
-                # 기본 검색어 (task/날씨 기반) + 저장된 값 우선
-                # 날씨 요약을 바로 쓰기에는 이 함수 안에서 result를 들고 있지 않으니, 일단 task 기반으로 둔다
+                # 기본 검색어 (task 기반) + 저장된 값 우선
                 default_clothing_query = item.get(
                     "video_query_clothing",
                     f"발달장애인 {task} 옷 입기 연습"
                     if task
-                    else "발달장애인 옷 입기 연습"
+                    else "발달장애인 옷 입기 연습",
                 )
                 clothing_yt_query = st.text_input(
                     "옷 입기 영상 유튜브 검색어",
@@ -454,12 +509,16 @@ def coordinator_page():
                     key=f"yt_clothing_query_{idx}",
                 )
                 # 상태에 저장
-                st.session_state[SCHEDULE_STATE_KEY][idx]["video_query_clothing"] = clothing_yt_query
+                st.session_state[SCHEDULE_STATE_KEY][idx][
+                    "video_query_clothing"
+                ] = clothing_yt_query
 
                 if st.button("옷 입기 영상 추천 받기", key=f"search_yt_clothing_{idx}"):
                     with st.spinner("관련 영상을 찾는 중입니다..."):
                         try:
-                            yt_results = search_clothing_videos_for_dd(clothing_yt_query, max_results=6)
+                            yt_results = search_clothing_videos_for_dd_raw(
+                                clothing_yt_query, max_results=6
+                            )
                         except Exception as e:
                             st.error(f"영상 검색 오류: {e}")
                             yt_results = []
@@ -477,8 +536,12 @@ def coordinator_page():
                         st.markdown(f"- {v['title']}")
                         if v.get("thumbnail"):
                             st.image(v["thumbnail"], use_container_width=True)
-                        if st.button("이 영상 사용", key=f"use_yt_clothing_{idx}_{v_idx}"):
-                            st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = v["url"]
+                        if st.button(
+                            "이 영상 사용", key=f"use_yt_clothing_{idx}_{v_idx}"
+                        ):
+                            st.session_state[SCHEDULE_STATE_KEY][idx][
+                                "video_url"
+                            ] = v["url"]
                             changed = True
                             st.success("영상이 적용되었습니다.")
 
