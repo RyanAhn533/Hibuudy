@@ -291,11 +291,24 @@ def coordinator_page():
 
                             st.markdown("---")
 
+                            # 유튜브 검색어 입력
+                            default_yt_query = menu.get(
+                                "video_query",
+                                f"발달장애인 쉬운 {menu_name} 만들기"
+                            )
+                            yt_query = st.text_input(
+                                "요리 영상 유튜브 검색어",
+                                value=default_yt_query,
+                                key=f"yt_cook_query_{idx}_{m_idx}",
+                            )
+                            # 입력값을 메뉴 객체에도 저장 (다시 열었을 때 유지)
+                            st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["video_query"] = yt_query
+
                             # 유튜브 요리 영상 추천
                             if st.button("요리 영상 추천 받기", key=f"search_yt_cook_{idx}_{m_idx}"):
                                 with st.spinner("요리 영상을 찾는 중입니다..."):
                                     try:
-                                        yt_results = search_cooking_videos_for_dd(menu_name, max_results=6)
+                                        yt_results = search_cooking_videos_for_dd(yt_query, max_results=6)
                                     except Exception as e:
                                         st.error(f"영상 검색 오류: {e}")
                                         yt_results = []
@@ -319,7 +332,9 @@ def coordinator_page():
 
                 current_modes = item.get("health_modes") or []
                 default_modes = (
-                    [m["name"] for m in current_modes] if current_modes else [m["name"] for m in all_health_modes]
+                    [m["name"] for m in current_modes]
+                    if current_modes
+                    else [m["name"] for m in all_health_modes]
                 )
 
                 selected_modes = st.multiselect(
@@ -342,10 +357,25 @@ def coordinator_page():
                 st.markdown("##### 운동 설명 영상 선택")
                 yt_key = f"yt_health_{idx}"
 
+                # 기본 검색어 (task 기반) + 저장된 값 우선
+                default_health_query = item.get(
+                    "video_query_health",
+                    f"발달장애인 쉬운 {task} 운동 따라하기"
+                    if task
+                    else "발달장애인 쉬운 운동 따라하기"
+                )
+                health_yt_query = st.text_input(
+                    "운동 영상 유튜브 검색어",
+                    value=default_health_query,
+                    key=f"yt_health_query_{idx}",
+                )
+                # 상태에 저장해서 유지
+                st.session_state[SCHEDULE_STATE_KEY][idx]["video_query_health"] = health_yt_query
+
                 if st.button("운동 영상 추천 받기", key=f"search_yt_health_{idx}"):
                     with st.spinner("운동 영상을 찾는 중입니다..."):
                         try:
-                            yt_results = search_exercise_videos_for_dd(task, max_results=6)
+                            yt_results = search_exercise_videos_for_dd(health_yt_query, max_results=6)
                         except Exception as e:
                             st.error(f"영상 검색 오류: {e}")
                             yt_results = []
@@ -410,10 +440,26 @@ def coordinator_page():
 
                 yt_key = f"yt_clothing_{idx}"
 
+                # 기본 검색어 (task/날씨 기반) + 저장된 값 우선
+                # 날씨 요약을 바로 쓰기에는 이 함수 안에서 result를 들고 있지 않으니, 일단 task 기반으로 둔다
+                default_clothing_query = item.get(
+                    "video_query_clothing",
+                    f"발달장애인 {task} 옷 입기 연습"
+                    if task
+                    else "발달장애인 옷 입기 연습"
+                )
+                clothing_yt_query = st.text_input(
+                    "옷 입기 영상 유튜브 검색어",
+                    value=default_clothing_query,
+                    key=f"yt_clothing_query_{idx}",
+                )
+                # 상태에 저장
+                st.session_state[SCHEDULE_STATE_KEY][idx]["video_query_clothing"] = clothing_yt_query
+
                 if st.button("옷 입기 영상 추천 받기", key=f"search_yt_clothing_{idx}"):
                     with st.spinner("관련 영상을 찾는 중입니다..."):
                         try:
-                            yt_results = search_clothing_videos_for_dd(task, max_results=6)
+                            yt_results = search_clothing_videos_for_dd(clothing_yt_query, max_results=6)
                         except Exception as e:
                             st.error(f"영상 검색 오류: {e}")
                             yt_results = []
