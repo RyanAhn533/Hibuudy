@@ -346,54 +346,102 @@ def _rerank_for_dd(videos: List[Dict], domain: str) -> List[Dict]:
 # 4. 발달장애인용 특화 검색 래퍼들
 # ─────────────────────────────────────────────
 
-def search_cooking_videos_for_dd(menu_name: str, max_results: int = 6) -> List[Dict]:
+def _has_dd_keywords(q: str) -> bool:
+    """
+    코디네이터가 이미 발달장애 친화 쿼리로 손 본 경우인지 체크
+    그럴 때는 GPT 확장을 하지 않고, 그대로 검색에 쓴다.
+    """
+    q = (q or "").strip()
+    if not q:
+        return False
+
+    dd_keywords = ["발달장애", "지적장애", "쉬운", "천천히", "자막", "픽토그램", "따라하기"]
+    return any(kw in q for kw in dd_keywords)
+
+
+def search_cooking_videos_for_dd(menu_name_or_query: str, max_results: int = 6) -> List[Dict]:
     """
     발달장애인용 요리 영상 검색.
-    - 코디네이터에서 넘어온 요리 제목을 정제해서(normalize) 핵심 음식 이름만 추출
-    - 그걸 기반으로 GPT가 여러 검색어를 생성
-    - 각 검색어로 유튜브 검색 → 합치고 → 발달장애 친화도 점수로 정렬
+
+    - 코디네이터가 직접 입력한 유튜브 검색어가 들어오는 경우:
+      예) "발달장애인 쉬운 라면 끓이는 법 자막"
+      → 그 검색어 그대로로만 검색하고, GPT 확장 없이 단일 쿼리만 사용
+    - 단순 메뉴 이름만 들어오는 경우:
+      예) "라면", "카레"
+      → 메뉴 이름을 정제(normalize)하고, GPT로 여러 검색어를 생성해서 검색
     """
-    raw = (menu_name or "").strip()
+    raw = (menu_name_or_query or "").strip()
     if not raw:
         return []
 
-    menu_core = _normalize_menu_name(raw)
-    # 디버깅용 출력
-    print(f"[YOUTUBE_COOKING] raw_menu='{raw}', normalized_menu='{menu_core}'")
+    print(f"[YOUTUBE_COOKING] input='{raw}'")
 
-    base_query = f"{menu_core} 요리 발달장애 쉬운 설명 따라하기 단계별"
-    gpt_queries = _generate_youtube_queries_with_gpt(base_query, domain="cooking")
-    print(f"[YOUTUBE_COOKING] base_query='{base_query}', gpt_queries={gpt_queries}")
+    if _has_dd_keywords(raw):
+        # 코디네이터가 이미 충분히 구체적인 검색어를 만든 경우
+        queries = [raw]
+        print(f"[YOUTUBE_COOKING] use_raw_query_only={queries}")
+    else:
+        # 예전 방식: 메뉴 이름을 정제해서 기본 쿼리 생성 후 GPT로 확장
+        menu_core = _normalize_menu_name(raw)
+        base_query = f"{menu_core} 요리 발달장애 쉬운 설명 따라하기 단계별"
+        gpt_queries = _generate_youtube_queries_with_gpt(base_query, domain="cooking")
+        print(f"[YOUTUBE_COOKING] normalized_menu='{menu_core}', base_query='{base_query}', gpt_queries={gpt_queries}")
+        queries = gpt_queries
 
-    # 각 쿼리당 4개씩만 가져오고, 전체 결과에서 다시 max_results만 남긴다.
-    raw_results = _search_youtube_via_api_multi(gpt_queries, per_query_max=4, domain="cooking")
+    raw_results = _search_youtube_via_api_multi(queries, per_query_max=4, domain="cooking")
     ranked = _rerank_for_dd(raw_results, domain="cooking")
     return ranked[:max_results]
 
 
-def search_exercise_videos_for_dd(task_or_mode: str, max_results: int = 6) -> List[Dict]:
-    base = (task_or_mode or "").strip()
+def search_exercise_videos_for_dd(task_or_query: str, max_results: int = 6) -> List[Dict]:
+    """
+    발달장애인용 운동 영상 검색.
+
+    - 코디네이터가 직접 만든 검색어가 들어오면 그대로 사용
+    - 그렇지 않으면 task 문장을 바탕으로 템플릿 + GPT 확장 사용
+    """
+    base = (task_or_query or "").strip()
+    print(f"[YOUTUBE_EXERCISE] input='{base}'")
+
     if not base:
-        base = "앉아서 하는"
+        base = "앉아서 하는 쉬운 운동"
 
-    base_query = f"발달장애 {base} 운동 쉬운 동작 따라하기 천천히"
-    gpt_queries = _generate_youtube_queries_with_gpt(base_query, domain="exercise")
-    print(f"[YOUTUBE_EXERCISE] base_query='{base_query}', gpt_queries={gpt_queries}")
+    if _has_dd_keywords(base):
+        queries = [base]
+        print(f"[YOUTUBE_EXERCISE] use_raw_query_only={queries}")
+    else:
+        base_query = f"발달장애 {base} 운동 쉬운 동작 따라하기 천천히"
+        gpt_queries = _generate_youtube_queries_with_gpt(base_query, domain="exercise")
+        print(f"[YOUTUBE_EXERCISE] base_query='{base_query}', gpt_queries={gpt_queries}")
+        queries = gpt_queries
 
-    raw_results = _search_youtube_via_api_multi(gpt_queries, per_query_max=4, domain="exercise")
+    raw_results = _search_youtube_via_api_multi(queries, per_query_max=4, domain="exercise")
     ranked = _rerank_for_dd(raw_results, domain="exercise")
     return ranked[:max_results]
 
 
-def search_clothing_videos_for_dd(task: str, max_results: int = 6) -> List[Dict]:
-    base = (task or "").strip()
+def search_clothing_videos_for_dd(task_or_query: str, max_results: int = 6) -> List[Dict]:
+    """
+    발달장애인용 옷 입기 영상 검색.
+
+    - 코디네이터가 직접 만든 검색어가 들어오면 그대로 사용
+    - 그렇지 않으면 task 문장을 바탕으로 템플릿 + GPT 확장 사용
+    """
+    base = (task_or_query or "").strip()
+    print(f"[YOUTUBE_CLOTHING] input='{base}'")
+
     if not base:
-        base = "티셔츠"
+        base = "티셔츠 입기 연습"
 
-    base_query = f"발달장애 옷 입기 {base} 실습 영상 따라하기"
-    gpt_queries = _generate_youtube_queries_with_gpt(base_query, domain="clothing")
-    print(f"[YOUTUBE_CLOTHING] base_query='{base_query}', gpt_queries={gpt_queries}")
+    if _has_dd_keywords(base):
+        queries = [base]
+        print(f"[YOUTUBE_CLOTHING] use_raw_query_only={queries}")
+    else:
+        base_query = f"발달장애 옷 입기 {base} 실습 영상 따라하기"
+        gpt_queries = _generate_youtube_queries_with_gpt(base_query, domain="clothing")
+        print(f"[YOUTUBE_CLOTHING] base_query='{base_query}', gpt_queries={gpt_queries}")
+        queries = gpt_queries
 
-    raw_results = _search_youtube_via_api_multi(gpt_queries, per_query_max=4, domain="clothing")
+    raw_results = _search_youtube_via_api_multi(queries, per_query_max=4, domain="clothing")
     ranked = _rerank_for_dd(raw_results, domain="clothing")
     return ranked[:max_results]
