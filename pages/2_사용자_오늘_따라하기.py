@@ -101,6 +101,8 @@ def _build_slot_tts_text(slot: dict) -> str:
         head = "지금은 요리하고 밥을 먹는 시간이에요."
     elif t == "HEALTH":
         head = "지금은 운동하고 건강을 챙기는 시간이에요."
+    elif t == "CLOTHING":
+        head = "지금은 옷 입기 연습 시간이에요."
     elif t == "NIGHT_WRAPUP":
         head = "지금은 오늘 하루를 마무리하는 시간이에요."
     else:
@@ -276,6 +278,20 @@ def _render_cooking_view(slot, slot_index: int):
     if not chosen:
         return
 
+    # 선택된 메뉴의 영상 보여주기
+    chosen_menu = next((m for m in menus if m.get("name") == chosen), None)
+    if chosen_menu:
+        vurl = chosen_menu.get("video_url")
+        if vurl:
+            st.markdown("---")
+            st.markdown("### 요리 방법 영상 보기")
+            st.video(vurl)
+            _tts_button(
+                "선택한 메뉴의 요리 방법 영상이에요. 아래 영상을 보면서 같이 따라 해봐요.",
+                key=f"cook_video_tts_{slot_index}",
+                label="🔊 영상 설명 듣기",
+            )
+
     # 레시피가 없어도 동작하도록 fallback
     recipe = get_recipe(chosen)
     if not recipe:
@@ -356,7 +372,7 @@ def _render_cooking_view(slot, slot_index: int):
 
 
 # ─────────────────────────────────────────────
-# HEALTH / NIGHT / MORNING / GENERAL (기존과 동일 구조)
+# HEALTH / NIGHT / MORNING / GENERAL / CLOTHING
 # ─────────────────────────────────────────────
 def _render_health_view(slot, slot_index: int):
     st.subheader("지금은 **운동 / 건강 시간**이에요 💪")
@@ -369,6 +385,17 @@ def _render_health_view(slot, slot_index: int):
     guide = slot.get("guide_script", [])
     if guide:
         _render_stepper(guide, f"guide_health_{slot_index}", "지금 안내")
+
+    # 운동 설명 영상 (코디네이터가 선택한 영상)
+    current_video = slot.get("video_url")
+    if current_video:
+        st.markdown("### 운동 설명 영상 보기")
+        st.video(current_video)
+        _tts_button(
+            "선택된 운동 설명 영상이에요. 영상을 따라 같이 운동해 볼까요?",
+            key=f"health_video_tts_{slot_index}",
+            label="🔊 영상 설명 듣기",
+        )
 
     modes = slot.get("health_modes") or [
         {"id": "sit", "name": "앉아서 하는 운동"},
@@ -433,7 +460,32 @@ def _render_morning_view(slot, slot_index: int):
         label="🔊 지금이 어떤 시간인지 듣기",
     )
     guide = slot.get("guide_script", [])
-    _render_stepper(guide, f"guide_morning_{slot_index}", "아침 안내")
+    _render_stepper(guide, f"guide_morning_{slot_index}", "अ침 안내")
+
+
+def _render_clothing_view(slot, slot_index: int):
+    st.subheader("지금은 **옷 입기 연습 시간**이에요 👕")
+    _tts_button(
+        "지금은 옷 입기 연습을 하는 시간이에요.",
+        key=f"clothing_intro_{slot_index}",
+        label="🔊 지금이 어떤 시간인지 듣기",
+    )
+
+    guide = slot.get("guide_script", [])
+    if guide:
+        _render_stepper(guide, f"guide_clothing_{slot_index}", "옷 입기 안내")
+
+    current_video = slot.get("video_url")
+    if current_video:
+        st.markdown("### 옷 입기 설명 영상 보기")
+        st.video(current_video)
+        _tts_button(
+            "선택된 옷 입기 설명 영상이에요. 영상을 보면서 천천히 따라 해봐요.",
+            key=f"clothing_video_tts_{slot_index}",
+            label="🔊 영상 설명 듣기",
+        )
+    else:
+        st.info("코디네이터에게 옷 입기 설명 영상을 설정해 달라고 부탁해 주세요.")
 
 
 def _render_general_view(slot, slot_index: int):
@@ -635,6 +687,8 @@ def user_page():
                 header_text = "지금은 맛있는 식사 시간이에요 🍽"
             elif t == "HEALTH":
                 header_text = "지금은 내 몸을 돌보는 시간이에요 💪"
+            elif t == "CLOTHING":
+                header_text = "지금은 옷 입기 연습 시간이에요 👕"
             elif t == "NIGHT_WRAPUP":
                 header_text = "지금은 오늘을 마무리하는 시간이에요 🌙"
             else:
@@ -654,6 +708,8 @@ def user_page():
                 _render_cooking_view(active, idx)
             elif t == "HEALTH":
                 _render_health_view(active, idx)
+            elif t == "CLOTHING":
+                _render_clothing_view(active, idx)
             elif t == "MORNING_BRIEFING":
                 _render_morning_view(active, idx)
             elif t == "NIGHT_WRAPUP":

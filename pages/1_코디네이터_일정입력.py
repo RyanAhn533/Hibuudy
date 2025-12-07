@@ -9,6 +9,12 @@ from typing import Dict, List
 
 import streamlit as st
 
+try:
+    # 이미지 자체를 클릭해서 선택하기 위해 사용
+    from streamlit_clickable_images import clickable_images
+except ImportError:
+    clickable_images = None
+
 from utils.weather_ai import analyze_weather_and_suggest_clothes
 from utils.topbar import render_topbar
 from utils.schedule_ai import generate_schedule_from_text
@@ -274,7 +280,7 @@ def coordinator_page():
                                 with st.spinner("사진을 찾고 있습니다..."):
                                     try:
                                         results = search_and_filter_food_images(
-                                            menu_name, max_results=6
+                                            menu_name, max_results=9
                                         )
                                     except Exception as e:
                                         st.error(f"사진 검색 오류: {e}")
@@ -283,22 +289,45 @@ def coordinator_page():
 
                             img_results = st.session_state.get(state_key_img, [])
                             if img_results:
-                                st.caption("추천 사진 중 하나를 골라주세요.")
-                                cols_img = st.columns(3)
-                                for r_idx, img_info in enumerate(img_results[:6]):
-                                    col = cols_img[r_idx % 3]
-                                    with col:
+                                st.caption("추천 사진 중 하나를 골라주세요. (이미지를 클릭하세요)")
+
+                                # streamlit-clickable-images가 설치되어 있는 경우
+                                if clickable_images is not None:
+                                    thumbs = []
+                                    valid_indices = []
+                                    for r_idx, img_info in enumerate(img_results[:12]):
                                         thumb = img_info.get("thumbnail") or img_info.get(
                                             "link"
                                         )
                                         url = img_info.get("link")
-                                        if thumb:
-                                            st.image(thumb, use_container_width=True)
+                                        if not (thumb or url):
+                                            continue
+                                        thumbs.append(thumb or url)
+                                        valid_indices.append(r_idx)
 
-                                        if st.button(
-                                            "이 사진 사용",
-                                            key=f"use_img_{idx}_{m_idx}_{r_idx}",
-                                        ):
+                                    if thumbs:
+                                        clicked = clickable_images(
+                                            thumbs,
+                                            titles=[
+                                                f"이미지 {i+1}"
+                                                for i in range(len(thumbs))
+                                            ],
+                                            div_style={
+                                                "display": "flex",
+                                                "flex-wrap": "wrap",
+                                                "justify-content": "center",
+                                            },
+                                            img_style={
+                                                "margin": "5px",
+                                                "height": "150px",
+                                            },
+                                            key=f"clickable_imgs_{idx}_{m_idx}",
+                                        )
+                                        # 클릭되면 0 이상 인덱스 반환
+                                        if clicked > -1:
+                                            original_idx = valid_indices[clicked]
+                                            img_info = img_results[original_idx]
+                                            url = img_info.get("link")
                                             try:
                                                 local_path = download_image_to_assets(
                                                     url, menu_name
@@ -312,6 +341,42 @@ def coordinator_page():
                                                 st.success("사진이 적용되었습니다.")
                                             except Exception as e:
                                                 st.error(f"사진 저장 오류: {e}")
+                                else:
+                                    # 패키지가 없으면 기존 버튼 방식으로 fallback
+                                    st.info(
+                                        "이미지를 직접 클릭해서 선택하려면 "
+                                        "`streamlit-clickable-images` 패키지를 "
+                                        "설치해 주세요. (pip install streamlit-clickable-images)\n"
+                                        "지금은 버튼으로 선택할 수 있습니다."
+                                    )
+                                    cols_img = st.columns(3)
+                                    for r_idx, img_info in enumerate(img_results[:6]):
+                                        col = cols_img[r_idx % 3]
+                                        with col:
+                                            thumb = img_info.get("thumbnail") or img_info.get(
+                                                "link"
+                                            )
+                                            url = img_info.get("link")
+                                            if thumb:
+                                                st.image(thumb, use_container_width=True)
+
+                                            if st.button(
+                                                "이 사진 사용",
+                                                key=f"use_img_{idx}_{m_idx}_{r_idx}",
+                                            ):
+                                                try:
+                                                    local_path = download_image_to_assets(
+                                                        url, menu_name
+                                                    )
+                                                    menu_obj = st.session_state[
+                                                        SCHEDULE_STATE_KEY
+                                                    ][idx]["menus"][m_idx]
+                                                    menu_obj["image"] = local_path
+                                                    menu_obj["image_url"] = url
+                                                    changed = True
+                                                    st.success("사진이 적용되었습니다.")
+                                                except Exception as e:
+                                                    st.error(f"사진 저장 오류: {e}")
 
                             st.markdown("---")
 
