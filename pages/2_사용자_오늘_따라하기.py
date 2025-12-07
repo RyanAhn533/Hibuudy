@@ -16,6 +16,16 @@ from utils.runtime import find_active_item, annotate_schedule_with_status
 from utils.recipes import get_recipe, get_health_routine
 from utils.tts import synthesize_tts  # TTS 유틸
 
+# ─────────────────────────────────────────────
+# 타임존 설정 (Asia/Seoul 고정)
+# ─────────────────────────────────────────────
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # Python 3.8 이하에서 backports 사용 가능
+    from backports.zoneinfo import ZoneInfo
+
+KST = ZoneInfo("Asia/Seoul")
+
 SCHEDULE_PATH = os.path.join("data", "schedule_today.json")
 AUTO_REFRESH_SEC = 30  # 몇 초마다 자동으로 화면 새로고침할지
 PRE_NOTICE_MINUTES = 5  # 다음 활동 시작 몇 분 전에 준비 알림을 줄지
@@ -459,6 +469,12 @@ def _get_slot_index(schedule, target_slot):
 def _auto_tts_logic(
     now: datetime, date_str: str, active: Optional[dict], next_item: Optional[dict]
 ):
+    # 디버그: 현재 시각 / 스케줄 날짜 / 활성 슬롯 / 다음 슬롯 확인
+    print(
+        f"[DEBUG] [_auto_tts_logic] now={now.isoformat()}, "
+        f"date_str={date_str}, active={active}, next={next_item}"
+    )
+
     try:
         schedule_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except Exception:
@@ -522,9 +538,15 @@ def _auto_tts_logic(
     if next_item and next_item.get("time"):
         try:
             slot_time = datetime.strptime(next_item["time"], "%H:%M").time()
-            slot_dt = datetime.combine(schedule_date, slot_time)
+            # schedule_date는 date, slot_time은 time → KST 타임존 붙여서 비교
+            slot_dt = datetime.combine(schedule_date, slot_time).replace(tzinfo=KST)
             diff_min = (slot_dt - now).total_seconds() / 60.0
-        except Exception:
+            print(
+                f"[DEBUG] next slot_dt={slot_dt.isoformat()}, "
+                f"diff_min={diff_min}"
+            )
+        except Exception as e:
+            print(f"[DEBUG] error computing diff_min: {e}")
             diff_min = None
 
         if diff_min is not None and 0 < diff_min <= PRE_NOTICE_MINUTES:
@@ -564,8 +586,10 @@ def user_page():
         )
         return
 
-    now = datetime.now()
+    # KST 기준 현재 시간
+    now = datetime.now(KST)
     now_time = now.time()
+    print(f"[DEBUG] user_page now={now.isoformat()}, now_time={now_time}")
 
     active, next_item = find_active_item(schedule, now_time)
     annotated = annotate_schedule_with_status(schedule, now_time)
