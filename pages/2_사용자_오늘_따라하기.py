@@ -1,751 +1,467 @@
 # pages/2_사용자_오늘_따라하기.py
 # -*- coding: utf-8 -*-
+"""
+[목표]
+- 심한 발달장애인/노인 사용자 기준으로 2페이지를 "안내 화면"으로 단순화
+- 버튼 최소화: (1) 최초 1회 '소리 켜기' (2) '지금 다시 듣기' (3) '오늘 일정 다시 듣기'
+- 자동 음성 안내: 최초 진입 / 슬롯 변경 / (선택) 다음 일정 준비 알림
+- 타입(GENERAL/HEALTH 등) 노출 금지: 화면에는 한국어 자연어만 표시
+- 숫자/시간이 TTS에서 영어로 읽히는 문제 완화: "08:00" 같은 표현은 "8시" / "8시 30분"으로 변환
+- 건강(운동)에서 선택(앉아서/서서) 제거: 코디네이터가 넣은 guide_script만 따라가게
+- 취미/여가 영상 추천 UI 제거: video_url이 있으면 보여주고, 없으면 안내만
+"""
+
 import base64
 import json
 import os
+import re
 from datetime import datetime
-from typing import Optional
-
-from urllib.parse import quote as urlquote  # 메뉴 이름을 이미지 검색 쿼리로 쓰기 위해 인코딩
+from typing import Optional, Tuple, List, Dict
 
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh  # 세션 유지 자동 새로고침
+from streamlit_autorefresh import st_autorefresh
 
 from utils.topbar import render_topbar
 from utils.runtime import find_active_item, annotate_schedule_with_status
-from utils.recipes import get_recipe, get_health_routine
-from utils.tts import synthesize_tts  # TTS 유틸
+from utils.tts import synthesize_tts
 
-# ─────────────────────────────────────────────
-# 타임존 설정 (Asia/Seoul 고정)
-# ─────────────────────────────────────────────
 try:
     from zoneinfo import ZoneInfo
-except ImportError:  # Python 3.8 이하에서 backports 사용 가능
+except ImportError:
     from backports.zoneinfo import ZoneInfo
 
 KST = ZoneInfo("Asia/Seoul")
 
 SCHEDULE_PATH = os.path.join("data", "schedule_today.json")
-AUTO_REFRESH_SEC = 30  # 몇 초마다 자동으로 화면 새로고침할지
-PRE_NOTICE_MINUTES = 5  # 다음 활동 시작 몇 분 전에 준비 알림을 줄지
+
+AUTO_REFRESH_SEC = 20        # 더 촘촘하게 갱신 (상태 전환 반응성 ↑)
+PRE_NOTICE_MINUTES = 5       # 다음 활동 준비 알림(원하면 0으로 끄면 됨)
 
 
 # ─────────────────────────────────────────────
-# 공통 유틸
+# 0) 스케줄 로드
 # ─────────────────────────────────────────────
-def _load_schedule():
-    """data/schedule_today.json에서 스케줄과 날짜를 읽어온다."""
+def _load_schedule() -> Optional[Tuple[List[Dict], str]]:
     if not os.path.exists(SCHEDULE_PATH):
-        print(f"[DEBUG] SCHEDULE_PATH not found: {SCHEDULE_PATH}")
+        print(f"[DEBUG] schedule not found: {SCHEDULE_PATH}")
         return None
+
     with open(SCHEDULE_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     schedule = data.get("schedule", []) or []
-    schedule_sorted = sorted(schedule, key=lambda it: (it.get("time") or "00:00"))
+    schedule = sorted(schedule, key=lambda it: (it.get("time") or "00:00"))
+    date_str = data.get("date") or ""
 
-    print(
-        f"[DEBUG] Loaded schedule: date={data.get('date')}, "
-        f"items={len(schedule_sorted)}"
-    )
-    return schedule_sorted, data.get("date")
+    print(f"[DEBUG] loaded schedule: date={date_str}, items={len(schedule)}")
+    return schedule, date_str
 
 
-def _play_tts_auto(text: str):
+# ─────────────────────────────────────────────
+# 1) TTS 텍스트 전처리 (숫자/시간 영어 읽힘 완화)
+# ─────────────────────────────────────────────
+_TIME_RE = re.compile(r"\b(\d{1,2}):(\d{2})\b")
+
+def _time_to_korean_hhmm(text: str) -> str:
     """
-    자동으로 재생되는 TTS.
-    (일부 브라우저는 첫 상호작용 전 자동 재생을 막을 수 있음)
+    "08:00" -> "8시"
+    "13:30" -> "13시 30분"
     """
+    def repl(m):
+        hh = int(m.group(1))
+        mm = int(m.group(2))
+        if mm == 0:
+            return f"{hh}시"
+        return f"{hh}시 {mm}분"
+    return _TIME_RE.sub(repl, text)
+
+def _digits_to_korean(text: str) -> str:
+    """
+    매우 단순한 숫자 읽기 보정.
+    - 0~59 범위(분/단계) 정도는 한국어로 읽히는 경향이 좋아짐.
+    - 너무 복잡한 수(전화번호 등)는 오히려 깨질 수 있어 최소 적용.
+    """
+    digit_map = {
+        "0": "영", "1": "일", "2": "이", "3": "삼", "4": "사",
+        "5": "오", "6": "육", "7": "칠", "8": "팔", "9": "구"
+    }
+    # 1~2자리 숫자만 부분적으로 변환 (과도한 변환 방지)
+    def repl(m):
+        s = m.group(0)
+        if len(s) == 1:
+            return digit_map.get(s, s)
+        # 2자리: 10~59만 변환(단계/분/횟수에 주로 등장)
+        n = int(s)
+        if 10 <= n <= 59:
+            # 예: 12 -> "일이"처럼 되면 이상해서, 10단위는 한국식 표현을 약식으로만
+            tens = n // 10
+            ones = n % 10
+            tens_word = {1:"십",2:"이십",3:"삼십",4:"사십",5:"오십"}.get(tens, "")
+            if ones == 0:
+                return tens_word
+            return tens_word + digit_map.get(str(ones), "")
+        return s
+
+    return re.sub(r"\b\d{1,2}\b", repl, text)
+
+def _sanitize_tts_text(text: str) -> str:
     text = (text or "").strip()
     if not text:
-        print("[DEBUG] _play_tts_auto: empty text, skip")
+        return ""
+    text = _time_to_korean_hhmm(text)
+    text = _digits_to_korean(text)
+    # 타입 코드/대괄호가 혹시 섞이면 제거
+    text = re.sub(r"\[[A-Z_]+\]\s*", "", text)
+    return text.strip()
+
+
+# ─────────────────────────────────────────────
+# 2) 오디오 재생 (자동/수동)
+# ─────────────────────────────────────────────
+def _play_tts_autoplay(text: str):
+    """
+    autoplay는 브라우저 정책상 첫 상호작용 전에는 막힐 수 있음.
+    따라서 "소리 켜기"가 된 뒤에만 호출하도록 설계.
+    """
+    text = _sanitize_tts_text(text)
+    if not text:
         return
 
-    print(f"[DEBUG] _play_tts_auto: text='{text[:50]}...'")
     audio_bytes = synthesize_tts(text)
     if not audio_bytes:
-        print("[DEBUG] _play_tts_auto: synthesize_tts returned None/empty")
         return
 
     b64 = base64.b64encode(audio_bytes).decode("utf-8")
-    audio_html = f"""
-    <audio autoplay>
-      <source src="data:audio/mp3;base64,{b64}" type="audio/mpeg">
-      브라우저에서 오디오를 지원하지 않습니다.
-    </audio>
-    """
-    st.markdown(audio_html, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <audio autoplay>
+          <source src="data:audio/mp3;base64,{b64}" type="audio/mpeg">
+        </audio>
+        """,
+        unsafe_allow_html=True,
+    )
 
-
-def _tts_button(text: str, key: str, label: str = "🔊 듣기"):
-    text = (text or "").strip()
+def _play_tts_manual(text: str):
+    """버튼 누른 뒤 재생(정책 통과 확률 매우 높음)."""
+    text = _sanitize_tts_text(text)
     if not text:
         return
-    if st.button(label, key=key):
-        print(f"[DEBUG] _tts_button clicked: key={key}, text='{text[:50]}...'")
-        audio_bytes = synthesize_tts(text)
-        if audio_bytes:
-            st.audio(audio_bytes, format="audio/mp3")
+    audio_bytes = synthesize_tts(text)
+    if audio_bytes:
+        st.audio(audio_bytes, format="audio/mp3")
 
 
-def _build_slot_tts_text(slot: dict) -> str:
-    t = slot.get("type", "GENERAL")
-    task = slot.get("task", "")
-    guide = slot.get("guide_script") or []
-    first = guide[0] if guide else ""
-
+# ─────────────────────────────────────────────
+# 3) 슬롯 문장 만들기 (타입 노출 금지)
+# ─────────────────────────────────────────────
+def _slot_headline_korean(t: str) -> str:
+    t = (t or "GENERAL").upper()
     if t == "MORNING_BRIEFING":
-        head = "지금은 아침 준비 시간이에요."
-    elif t == "COOKING":
-        head = "지금은 요리하고 밥을 먹는 시간이에요."
-    elif t == "HEALTH":
-        head = "지금은 운동하고 건강을 챙기는 시간이에요."
-    elif t == "CLOTHING":
-        head = "지금은 옷 입기 연습 시간이에요."
-    elif t == "NIGHT_WRAPUP":
-        head = "지금은 오늘 하루를 마무리하는 시간이에요."
-    else:
-        head = "지금은 활동 시간이에요."
+        return "아침 준비"
+    if t == "COOKING":
+        return "식사"
+    if t == "HEALTH":
+        return "운동"
+    if t == "CLOTHING":
+        return "옷 입기"
+    if t == "NIGHT_WRAPUP":
+        return "하루 마무리"
+    return "활동"
 
-    parts = [head]
+def _build_now_tts(slot: Dict) -> str:
+    """지금 활동 자동 안내용 한 문장(짧고 단정)."""
+    t = slot.get("type", "GENERAL")
+    task = (slot.get("task") or "").strip()
+    guide = slot.get("guide_script") or []
+    first = (guide[0] or "").strip() if guide else ""
+
+    head = _slot_headline_korean(t)
+    parts = [f"지금은 {head} 시간이에요."]
     if task:
-        parts.append(f"이번 활동은 {task} 입니다.")
+        parts.append(f"지금 할 일은 {task}예요.")
     if first:
         parts.append(first)
     return " ".join(parts)
 
+def _build_pre_notice_tts(next_slot: Dict) -> str:
+    time_str = (next_slot.get("time") or "").strip()
+    head = _slot_headline_korean(next_slot.get("type", "GENERAL"))
+    task = (next_slot.get("task") or "").strip()
+    if time_str and task:
+        return f"잠시 후 {time_str}에 {head}이 있어요. {task} 준비해요."
+    if time_str:
+        return f"잠시 후 {time_str}에 다음 활동이 있어요. 준비해요."
+    return "잠시 후 다음 활동이 있어요. 준비해요."
 
-def _make_slot_key(date_str: str, slot: Optional[dict]) -> Optional[str]:
+def _build_day_overview_tts(schedule: List[Dict], date_str: str) -> str:
+    """
+    '오늘 일정 전체를 한 번에' 짧게 읽어줌.
+    너무 길어지면 사용자에게 부담이므로 핵심만.
+    """
+    # 최대 N개로 제한(너무 길면 기억/집중 깨짐)
+    N = 6
+    items = schedule[:N]
+    chunks = []
+    for it in items:
+        t = _slot_headline_korean(it.get("type", "GENERAL"))
+        task = (it.get("task") or "").strip()
+        time_str = (it.get("time") or "").strip()
+        if time_str and task:
+            chunks.append(f"{time_str}, {t}, {task}")
+        elif time_str:
+            chunks.append(f"{time_str}, 다음 활동")
+        elif task:
+            chunks.append(task)
+
+    if not chunks:
+        return "오늘 일정이 아직 없어요."
+
+    joined = " / ".join(chunks)
+    extra = ""
+    if len(schedule) > N:
+        extra = " 그 밖의 일정은 화면에서 계속 안내해 드려요."
+    return f"오늘은 {date_str}이에요. 오늘 일정은 {joined} 입니다.{extra}"
+
+
+# ─────────────────────────────────────────────
+# 4) 슬롯 식별키 (중복 재생 방지)
+# ─────────────────────────────────────────────
+def _make_slot_key(date_str: str, slot: Optional[Dict]) -> Optional[str]:
     if not slot:
         return None
-    return f"{date_str}_{slot.get('time')}_{slot.get('type')}_{slot.get('task')}"
+    return f"{date_str}__{slot.get('time')}__{slot.get('type')}__{slot.get('task')}"
 
 
-def _get_menu_image_url(menu: dict) -> Optional[str]:
+# ─────────────────────────────────────────────
+# 5) 자동 안내 로직 (성공률 최우선)
+# ─────────────────────────────────────────────
+def _auto_voice_controller(now: datetime, date_str: str, schedule: List[Dict], active: Optional[Dict], next_item: Optional[Dict]):
     """
-    COOKING 메뉴 하나에 대해 보여줄 이미지 URL을 결정한다.
-
-    우선순위:
-    1) 로컬 경로가 실제 존재하면 그걸 사용
-    2) image_url(웹 URL)이 있으면 그걸 사용
-    3) 메뉴 이름 기반 Unsplash 기본 이미지
+    정책 상 자동재생은 '소리 켜기(1회)' 이후에만 시행.
+    또한 st_autorefresh 때문에 rerun이 잦으므로, 슬롯 키로 중복 방지.
     """
-    # 1) 로컬 이미지 경로
-    img_path = menu.get("image")
-    if isinstance(img_path, str) and img_path.strip():
-        if os.path.exists(img_path):
-            return img_path
-        alt_path = os.path.join(os.getcwd(), img_path)
-        if os.path.exists(alt_path):
-            return alt_path
-        print(f"[DEBUG] _get_menu_image_url: local image not found -> {img_path}")
+    # 날짜 바뀌면 상태 초기화
+    if st.session_state.get("voice_date") != date_str:
+        st.session_state["voice_date"] = date_str
+        st.session_state["day_overview_done"] = False
+        st.session_state["last_slot_key_spoken"] = None
+        st.session_state["last_pre_notice_spoken"] = None
 
-    # 2) 원본 웹 URL
-    img_url = menu.get("image_url")
-    if isinstance(img_url, str) and img_url.strip():
-        return img_url
+    if "sound_enabled" not in st.session_state:
+        st.session_state["sound_enabled"] = False
+    if "day_overview_done" not in st.session_state:
+        st.session_state["day_overview_done"] = False
+    if "last_slot_key_spoken" not in st.session_state:
+        st.session_state["last_slot_key_spoken"] = None
+    if "last_pre_notice_spoken" not in st.session_state:
+        st.session_state["last_pre_notice_spoken"] = None
 
-    # 3) 기본 이미지 (Unsplash)
-    name = (menu.get("name") or "").strip()
-    if not name:
-        return None
-
-    cache_key = f"menu_img_cache::{name}"
-    if cache_key in st.session_state:
-        return st.session_state[cache_key]
-
-    query = urlquote(name)
-    url = f"https://source.unsplash.com/featured/?{query}"
-    st.session_state[cache_key] = url
-    print(f"[DEBUG] _get_menu_image_url: name={name}, url={url}")
-    return url
-
-
-# ─────────────────────────────────────────────
-# 단계 안내 컴포넌트
-# ─────────────────────────────────────────────
-def _render_stepper(lines, state_key: str, title: str):
-    if state_key not in st.session_state:
-        st.session_state[state_key] = 0
-
-    if not lines:
-        lines = ["코디네이터에게 멘트를 추가해 달라고 부탁해 주세요."]
-
-    idx = st.session_state[state_key]
-    idx = max(0, min(idx, len(lines) - 1))
-
-    st.markdown(f"### {title}")
-    st.markdown(f"**{idx+1} / {len(lines)} 단계**")
-
-    current_text = lines[idx]
-    st.write(current_text)
-
-    _tts_button(
-        current_text,
-        key=state_key + "_tts_btn",
-        label="🔊 이 문장 듣기",
-    )
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("처음부터", key=state_key + "_reset"):
-            st.session_state[state_key] = 0
-    with col2:
-        if st.button("⬅ 이전", disabled=(idx == 0), key=state_key + "_prev"):
-            st.session_state[state_key] = max(0, idx - 1)
-    with col3:
-        if st.button("다음 ➡", disabled=(idx == len(lines) - 1), key=state_key + "_next"):
-            st.session_state[state_key] = min(len(lines) - 1, idx + 1)
-
-
-# ─────────────────────────────────────────────
-# COOKING 뷰 (사용자용 Agent 느낌 핵심)
-# ─────────────────────────────────────────────
-def _render_cooking_view(slot, slot_index: int):
-    st.subheader("지금은 **요리·식사 시간**이에요 🍽")
-    _tts_button(
-        "지금은 요리하고 밥을 먹는 시간이에요.",
-        key=f"cook_intro_{slot_index}",
-        label="🔊 지금이 어떤 시간인지 듣기",
-    )
-
-    guide = slot.get("guide_script", [])
-    if guide:
-        _render_stepper(guide, f"guide_cooking_{slot_index}", "지금 안내")
-
-    menus = slot.get("menus") or slot.get("menu_candidates") or []
-    if not menus:
-        st.info(
-            "아직 메뉴가 준비되지 않았어요.\n"
-            "코디네이터에게 메뉴를 설정해 달라고 부탁해 주세요."
-        )
+    # 아직 소리 허용 전이면 자동재생은 하지 않음
+    if not st.session_state["sound_enabled"]:
         return
 
-    select_key = f"selected_menu_{slot_index}"
-    step_key = f"cook_step_{slot_index}"
-
-    st.markdown("### 먹고 싶은 메뉴를 골라요")
-    _tts_button(
-        "먹고 싶은 메뉴를 골라요. 아래 사진과 버튼 중에서 하나를 골라 주세요.",
-        key=f"cook_choose_{slot_index}",
-        label="🔊 메뉴 고르는 방법 듣기",
-    )
-
-    cols = st.columns(len(menus))
-    for i, menu in enumerate(menus):
-        name = menu.get("name", "").strip()
-        recipe = get_recipe(name) or {}
-        emoji = recipe.get("emoji", "🍽")
-
-        with cols[i]:
-            img_url = _get_menu_image_url(menu)
-            if img_url:
-                st.image(img_url, caption=name or "메뉴", use_container_width=True)
-            else:
-                if os.path.exists("assets/images/default_food.png"):
-                    st.image(
-                        "assets/images/default_food.png",
-                        caption=name or "메뉴",
-                        use_container_width=True,
-                    )
-                else:
-                    st.write("이미지가 아직 준비되지 않았어요.")
-
-            # 메뉴 설명 TTS
-            if name:
-                menu_desc_text = f"{name} 메뉴예요. 이 버튼을 누르면 이 메뉴를 선택합니다."
-            else:
-                menu_desc_text = "이 버튼을 누르면 이 메뉴를 선택합니다."
-
-            _tts_button(
-                menu_desc_text,
-                key=f"cook_menu_tts_{slot_index}_{i}",
-                label="🔊 이 메뉴 설명 듣기",
-            )
-
-            # 선택 버튼
-            button_label = f"{emoji} {name}" if name else f"{emoji} 메뉴 선택"
-            if st.button(button_label, key=f"menu_btn_{slot_index}_{i}"):
-                print(
-                    f"[DEBUG] cooking menu selected: "
-                    f"slot_index={slot_index}, menu={name}"
-                )
-                st.session_state[select_key] = name
-                st.session_state[step_key] = 0
-
-    chosen = st.session_state.get(select_key)
-    if not chosen:
-        return
-
-    # 선택된 메뉴의 영상 보여주기
-    chosen_menu = next((m for m in menus if m.get("name") == chosen), None)
-    if chosen_menu:
-        vurl = chosen_menu.get("video_url")
-        if vurl:
-            st.markdown("---")
-            st.markdown("### 요리 방법 영상 보기")
-            st.video(vurl)
-            _tts_button(
-                "선택한 메뉴의 요리 방법 영상이에요. 아래 영상을 보면서 같이 따라 해봐요.",
-                key=f"cook_video_tts_{slot_index}",
-                label="🔊 영상 설명 듣기",
-            )
-
-    # 레시피가 없어도 동작하도록 fallback
-    recipe = get_recipe(chosen)
-    if not recipe:
-        recipe = {
-            "name": chosen,
-            "tools": [],
-            "ingredients": [],
-            "steps": [
-                "식사 전에는 손을 깨끗이 씻어요.",
-                "천천히, 꼭꼭 씹으면서 먹어요.",
-                "다 먹으면 그릇을 싱크대로 가져다 놓아요.",
-            ],
-        }
-
-    tools = recipe.get("tools", [])
-    ingredients = recipe.get("ingredients", [])
-    steps = recipe.get("steps", [])
-
-    st.markdown("---")
-    st.markdown(f"## {recipe['name']} 준비하기")
-    _tts_button(
-        f"{recipe['name']}을 준비해 볼게요. 먼저 도구와 재료를 확인하고, 순서대로 따라가면 됩니다.",
-        key=f"cook_recipe_intro_{slot_index}",
-        label="🔊 준비 설명 듣기",
-    )
-
-    if tools:
-        st.markdown("### 준비 도구")
-        for t in tools:
-            st.markdown(f"- {t}")
-        _tts_button(
-            "준비 도구는 " + " , ".join(tools) + " 입니다.",
-            key=f"cook_tools_{slot_index}",
-            label="🔊 도구 목록 듣기",
-        )
-
-    if ingredients:
-        st.markdown("### 준비 재료")
-        for ing in ingredients:
-            st.markdown(f"- {ing}")
-        _tts_button(
-            "준비 재료는 " + " , ".join(ingredients) + " 입니다.",
-            key=f"cook_ingredients_{slot_index}",
-            label="🔊 재료 목록 듣기",
-        )
-
-    if not steps:
-        st.warning("레시피 단계 정보가 없습니다.")
-        return
-
-    if step_key not in st.session_state:
-        st.session_state[step_key] = 0
-
-    idx = st.session_state[step_key]
-    idx = max(0, min(idx, len(steps) - 1))
-
-    st.markdown("---")
-    st.markdown(f"### 만들기 단계 ({idx+1} / {len(steps)} 단계)")
-    current_step = steps[idx]
-    st.write(current_step)
-
-    _tts_button(
-        current_step,
-        key=step_key + "_tts_btn",
-        label="🔊 이 단계 듣기",
-    )
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("처음부터", key=step_key + "_reset"):
-            st.session_state[step_key] = 0
-    with col2:
-        if st.button("⬅ 이전 단계", disabled=(idx == 0), key=step_key + "_prev"):
-            st.session_state[step_key] = max(0, idx - 1)
-    with col3:
-        if st.button("다음 단계 ➡", disabled=(idx == len(steps) - 1), key=step_key + "_next"):
-            st.session_state[step_key] = min(len(steps) - 1, idx + 1)
-
-
-# ─────────────────────────────────────────────
-# HEALTH / NIGHT / MORNING / GENERAL / CLOTHING
-# ─────────────────────────────────────────────
-def _render_health_view(slot, slot_index: int):
-    st.subheader("지금은 **운동 / 건강 시간**이에요 💪")
-    _tts_button(
-        "지금은 운동하고 몸을 움직이는 시간이에요.",
-        key=f"health_intro_{slot_index}",
-        label="🔊 지금이 어떤 시간인지 듣기",
-    )
-
-    guide = slot.get("guide_script", [])
-    if guide:
-        _render_stepper(guide, f"guide_health_{slot_index}", "지금 안내")
-
-    # 운동 설명 영상 (코디네이터가 선택한 영상)
-    current_video = slot.get("video_url")
-    if current_video:
-        st.markdown("### 운동 설명 영상 보기")
-        st.video(current_video)
-        _tts_button(
-            "선택된 운동 설명 영상이에요. 영상을 따라 같이 운동해 볼까요?",
-            key=f"health_video_tts_{slot_index}",
-            label="🔊 영상 설명 듣기",
-        )
-
-    modes = slot.get("health_modes") or [
-        {"id": "sit", "name": "앉아서 하는 운동"},
-        {"id": "stand", "name": "서서 하는 운동"},
-    ]
-
-    select_key = f"selected_health_{slot_index}"
-    step_key = f"health_step_{slot_index}"
-
-    st.markdown("### 어떤 운동을 할까요?")
-    _tts_button(
-        "어떤 운동을 할지 고르세요. 아래 버튼 중에서 하나를 선택하면, 그 운동 방법을 알려줄게요.",
-        key=f"health_choose_{slot_index}",
-        label="🔊 운동 고르는 방법 듣기",
-    )
-
-    cols = st.columns(len(modes))
-    for i, mode in enumerate(modes):
-        with cols[i]:
-            _tts_button(
-                f"{mode['name']}을 선택하는 버튼입니다.",
-                key=f"health_mode_tts_{slot_index}_{i}",
-                label="🔊 이 운동 설명 듣기",
-            )
-            if st.button(mode["name"], key=f"health_btn_{slot_index}_{i}"):
-                st.session_state[select_key] = mode["id"]
-                st.session_state[step_key] = 0
-
-    chosen = st.session_state.get(select_key)
-    if not chosen:
-        return
-
-    routine = get_health_routine(chosen)
-    if not routine:
-        st.warning("이 운동에 대한 설명이 아직 준비되지 않았어요.")
-        return
-
-    steps = routine.get("steps", [])
-    if not steps:
-        st.warning("운동 단계 정보가 없습니다.")
-        return
-
-    _render_stepper(steps, step_key, routine["name"])
-
-
-def _render_night_view(slot, slot_index: int):
-    st.subheader("지금은 **하루 마무리 시간**이에요 🌙")
-    _tts_button(
-        "지금은 오늘 하루를 마무리하는 시간이에요.",
-        key=f"night_intro_{slot_index}",
-        label="🔊 지금이 어떤 시간인지 듣기",
-    )
-    guide = slot.get("guide_script", [])
-    _render_stepper(guide, f"guide_night_{slot_index}", "마무리 안내")
-
-
-def _render_morning_view(slot, slot_index: int):
-    st.subheader("지금은 **아침 인사 시간**이에요 ☀️")
-    _tts_button(
-        "지금은 아침 인사 시간이에요.",
-        key=f"morning_intro_{slot_index}",
-        label="🔊 지금이 어떤 시간인지 듣기",
-    )
-    guide = slot.get("guide_script", [])
-    _render_stepper(guide, f"guide_morning_{slot_index}", "अ침 안내")
-
-
-def _render_clothing_view(slot, slot_index: int):
-    st.subheader("지금은 **옷 입기 연습 시간**이에요 👕")
-    _tts_button(
-        "지금은 옷 입기 연습을 하는 시간이에요.",
-        key=f"clothing_intro_{slot_index}",
-        label="🔊 지금이 어떤 시간인지 듣기",
-    )
-
-    guide = slot.get("guide_script", [])
-    if guide:
-        _render_stepper(guide, f"guide_clothing_{slot_index}", "옷 입기 안내")
-
-    current_video = slot.get("video_url")
-    if current_video:
-        st.markdown("### 옷 입기 설명 영상 보기")
-        st.video(current_video)
-        _tts_button(
-            "선택된 옷 입기 설명 영상이에요. 영상을 보면서 천천히 따라 해봐요.",
-            key=f"clothing_video_tts_{slot_index}",
-            label="🔊 영상 설명 듣기",
-        )
-    else:
-        st.info("코디네이터에게 옷 입기 설명 영상을 설정해 달라고 부탁해 주세요.")
-
-
-def _render_general_view(slot, slot_index: int):
-    st.subheader("지금은 **일반 활동 시간**이에요.")
-    task = slot.get("task", "")
-    st.markdown(f"### 활동: {task}")
-    _tts_button(
-        f"지금은 일반 활동 시간이에요. 이번 활동은 {task} 입니다.",
-        key=f"general_intro_{slot_index}",
-        label="🔊 활동 설명 듣기",
-    )
-    guide = slot.get("guide_script", [])
-    _render_stepper(guide, f"guide_general_{slot_index}", "활동 안내")
-
-
-# ─────────────────────────────────────────────
-# 기타 유틸
-# ─────────────────────────────────────────────
-def _get_slot_index(schedule, target_slot):
-    for i, item in enumerate(schedule):
-        if (
-            item.get("time") == target_slot.get("time")
-            and item.get("type") == target_slot.get("type")
-            and item.get("task") == target_slot.get("task")
-        ):
-            return i
-    return 0
-
-
-# ─────────────────────────────────────────────
-# 자동 TTS 상호작용 로직 (간단 버전)
-# ─────────────────────────────────────────────
-def _auto_tts_logic(
-    now: datetime, date_str: str, active: Optional[dict], next_item: Optional[dict]
-):
-    # 디버그: 현재 시각 / 스케줄 날짜 / 활성 슬롯 / 다음 슬롯 확인
-    print(
-        f"[DEBUG] [_auto_tts_logic] now={now.isoformat()}, "
-        f"date_str={date_str}, active={active}, next={next_item}"
-    )
-
-    try:
-        schedule_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-    except Exception:
-        schedule_date = now.date()
-
-    if schedule_date != now.date():
-        print("[DEBUG] [_auto_tts_logic] schedule date != today, skip auto TTS")
-        return
-
-    if st.session_state.get("greeting_date") != date_str:
-        st.session_state["greeting_tts_done"] = False
-        st.session_state["greeting_date"] = date_str
-        st.session_state["last_tts_slot_key"] = None
-        st.session_state["last_pre_notice_slot_key"] = None
-
-    if "greeting_tts_done" not in st.session_state:
-        st.session_state["greeting_tts_done"] = False
-    if "last_tts_slot_key" not in st.session_state:
-        st.session_state["last_tts_slot_key"] = None
-    if "last_pre_notice_slot_key" not in st.session_state:
-        st.session_state["last_pre_notice_slot_key"] = None
-
-    greeting_done = st.session_state["greeting_tts_done"]
-    last_slot_key = st.session_state["last_tts_slot_key"]
-    last_pre_notice_key = st.session_state["last_pre_notice_slot_key"]
-
-    current_slot_key = _make_slot_key(date_str, active)
-    next_slot_key = _make_slot_key(date_str, next_item)
-
-    hour = now.hour
-    if hour < 12:
-        greeting = "좋은 아침이에요."
-    elif hour < 18:
-        greeting = "좋은 오후예요."
-    else:
-        greeting = "좋은 저녁이에요."
-
-    base_greeting_text = f"{greeting} 오늘도 하이버디랑 함께 해볼까요?"
-
-    # 첫 진입
-    if not greeting_done:
+    # 1) 최초 1회: 오늘 일정 전체 요약
+    if not st.session_state["day_overview_done"]:
+        overview = _build_day_overview_tts(schedule, date_str)
+        _play_tts_autoplay(overview)
+        st.session_state["day_overview_done"] = True
+        # 이어서 현재 슬롯도 바로(가능하면)
         if active:
-            slot_text = _build_slot_tts_text(active)
-            full = f"{base_greeting_text} {slot_text}"
-        else:
-            full = base_greeting_text
-
-        _play_tts_auto(full)
-        st.session_state["greeting_tts_done"] = True
-        st.session_state["last_tts_slot_key"] = current_slot_key
+            cur_text = _build_now_tts(active)
+            _play_tts_autoplay(cur_text)
+            st.session_state["last_slot_key_spoken"] = _make_slot_key(date_str, active)
         return
 
-    # 슬롯 변경 시
-    if active and current_slot_key != last_slot_key:
-        slot_text = _build_slot_tts_text(active)
-        _play_tts_auto(slot_text)
-        st.session_state["last_tts_slot_key"] = current_slot_key
+    # 2) 슬롯 변경 시: 지금 활동 안내
+    cur_key = _make_slot_key(date_str, active)
+    if active and cur_key and cur_key != st.session_state["last_slot_key_spoken"]:
+        _play_tts_autoplay(_build_now_tts(active))
+        st.session_state["last_slot_key_spoken"] = cur_key
         return
 
-    # 다음 활동 준비 알림
+    # 3) 다음 활동 준비 알림 (옵션)
+    if PRE_NOTICE_MINUTES <= 0:
+        return
+
     if next_item and next_item.get("time"):
         try:
+            schedule_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except Exception:
+            schedule_date = now.date()
+
+        try:
             slot_time = datetime.strptime(next_item["time"], "%H:%M").time()
-            # schedule_date는 date, slot_time은 time → KST 타임존 붙여서 비교
             slot_dt = datetime.combine(schedule_date, slot_time).replace(tzinfo=KST)
             diff_min = (slot_dt - now).total_seconds() / 60.0
-            print(
-                f"[DEBUG] next slot_dt={slot_dt.isoformat()}, "
-                f"diff_min={diff_min}"
-            )
         except Exception as e:
-            print(f"[DEBUG] error computing diff_min: {e}")
+            print(f"[DEBUG] pre-notice calc error: {e}")
             diff_min = None
 
         if diff_min is not None and 0 < diff_min <= PRE_NOTICE_MINUTES:
-            if next_slot_key and next_slot_key != last_pre_notice_key:
-                pre_text = _build_slot_tts_text(next_item)
-                pre_text = (
-                    f"{next_item['time']}에 시작하는 활동을 준비해 볼까요? {pre_text}"
-                )
-                _play_tts_auto(pre_text)
-                st.session_state["last_pre_notice_slot_key"] = next_slot_key
+            nxt_key = _make_slot_key(date_str, next_item)
+            if nxt_key and nxt_key != st.session_state["last_pre_notice_spoken"]:
+                _play_tts_autoplay(_build_pre_notice_tts(next_item))
+                st.session_state["last_pre_notice_spoken"] = nxt_key
                 return
 
 
 # ─────────────────────────────────────────────
-# 메인 엔트리
+# 6) UI 컴포넌트 (최소)
+# ─────────────────────────────────────────────
+def _render_sound_gate():
+    """
+    정책 우회용 1회 버튼.
+    - 반드시 "처음에는 버튼을 눌러야 소리가 나요" 안내를 포함.
+    - 버튼을 누르면 즉시 짧은 확인 음성도 재생(정책 통과율 ↑).
+    """
+    st.markdown("### 🔈 소리 안내를 켜 주세요")
+    st.info("처음에는 **버튼을 한 번 눌러야** 소리가 나와요.\n\n버튼은 **오늘 한 번만** 누르면 됩니다.")
+
+    # 큰 버튼 느낌(색/크기)
+    if st.button("✅ 소리 켜기 (한 번만 누르면 됩니다)", use_container_width=True, type="primary"):
+        st.session_state["sound_enabled"] = True
+        # 버튼 직후는 사용자 상호작용이므로 거의 확실하게 재생됨
+        _play_tts_manual("소리가 켜졌어요. 이제부터는 자동으로 안내해 드릴게요.")
+
+
+def _render_big_card(title: str, task: str, icon: str = "🟦"):
+    st.markdown(
+        f"""
+        <div style="
+            border-radius: 24px;
+            padding: 24px;
+            border: 2px solid #e6e6e6;
+            background: #ffffff;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        ">
+            <div style="font-size: 56px; line-height: 1.1;">{icon}</div>
+            <div style="font-size: 40px; font-weight: 800; margin-top: 6px;">{title}</div>
+            <div style="font-size: 34px; font-weight: 700; margin-top: 10px;">{task}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_simple_video(slot: Dict):
+    """
+    영상은 '있으면 보여주기'만.
+    추천/검색/선택 UI는 2페이지에서 제거.
+    """
+    vurl = (slot.get("video_url") or "").strip()
+    if not vurl:
+        return
+    st.markdown("---")
+    st.markdown("### 🎬 설명 영상")
+    st.video(vurl)
+
+
+# ─────────────────────────────────────────────
+# 7) 메인
 # ─────────────────────────────────────────────
 def user_page():
     render_topbar()
 
-    st_autorefresh(
-        interval=AUTO_REFRESH_SEC * 1000,
-        key="auto_refresh",
-    )
+    # 세션 유지 자동 새로고침
+    st_autorefresh(interval=AUTO_REFRESH_SEC * 1000, key="auto_refresh_user")
 
     data = _load_schedule()
     if not data:
-        st.error(
-            "data/schedule_today.json 파일을 찾을 수 없습니다.\n"
-            "코디네이터 페이지에서 먼저 일정을 저장해 주세요."
-        )
+        st.error("오늘 일정 파일이 없어요.\n코디네이터 화면에서 먼저 일정을 저장해 주세요.")
         return
 
     schedule, date_str = data
     if not schedule:
-        st.warning(
-            "스케줄이 비어 있습니다. 코디네이터에게 일정을 확인해 달라고 부탁해 주세요."
-        )
+        st.warning("오늘 일정이 비어 있어요.\n코디네이터에게 일정을 확인해 달라고 부탁해 주세요.")
         return
 
-    # KST 기준 현재 시간
     now = datetime.now(KST)
-    now_time = now.time()
-    print(f"[DEBUG] user_page now={now.isoformat()}, now_time={now_time}")
+    active, next_item = find_active_item(schedule, now.time())
+    annotated = annotate_schedule_with_status(schedule, now.time())
 
-    active, next_item = find_active_item(schedule, now_time)
-    annotated = annotate_schedule_with_status(schedule, now_time)
+    # 자동 음성 제어 (소리 켜기 이후에만)
+    _auto_voice_controller(now, date_str, schedule, active, next_item)
 
-    _auto_tts_logic(now, date_str, active, next_item)
+    # ── 상단 최소 정보 ──
+    st.markdown("## HiBuddy · 따라하기")
+    st.caption("이 화면은 하루 동안 켜두는 화면이에요.")
 
-    hour = now.hour
-    if hour < 12:
-        greeting = "좋은 아침이에요 ☀️"
-    elif hour < 18:
-        greeting = "좋은 오후예요 😊"
-    else:
-        greeting = "좋은 저녁이에요 🌙"
+    # 소리 게이트(최초 1회)
+    if "sound_enabled" not in st.session_state:
+        st.session_state["sound_enabled"] = False
 
-    base_greeting_text = f"{greeting} 오늘도 하이버디랑 함께 해볼까요?"
-
-    st.markdown(f"## {base_greeting_text}")
-    st.caption("※ 이 화면은 발달장애인 사용자가 하루 동안 켜두는 화면입니다.")
-
-    col_main, col_side = st.columns([3, 1])
-
-    with col_main:
-        st.markdown(f"### 오늘 날짜: **{date_str}**")
-        st.markdown(f"### 지금 시간: **{now.strftime('%H:%M')}**")
+    if not st.session_state["sound_enabled"]:
+        _render_sound_gate()
         st.markdown("---")
 
-        if not active:
-            st.header("아직 첫 활동 전이에요 🙂")
-            if next_item:
-                st.write("곧 시작될 첫 활동:")
-                st.write(
-                    f"- {next_item.get('time')} · "
-                    f"[{next_item.get('type')}] {next_item.get('task')}"
-                )
-        else:
-            idx = _get_slot_index(schedule, active)
-            t = active.get("type", "GENERAL")
-            task = active.get("task", "")
+    # ── 메인: 지금 할 일 1개만 크게 ──
+    st.markdown(f"### 오늘: **{date_str}** · 지금: **{now.strftime('%H:%M')}**")
+    st.markdown("---")
 
-            if t == "MORNING_BRIEFING":
-                header_text = "지금은 아침 준비 시간이에요 ☀️"
-            elif t == "COOKING":
-                header_text = "지금은 맛있는 식사 시간이에요 🍽"
-            elif t == "HEALTH":
-                header_text = "지금은 내 몸을 돌보는 시간이에요 💪"
-            elif t == "CLOTHING":
-                header_text = "지금은 옷 입기 연습 시간이에요 👕"
-            elif t == "NIGHT_WRAPUP":
-                header_text = "지금은 오늘을 마무리하는 시간이에요 🌙"
-            else:
-                header_text = "지금은 활동 시간이에요 🙂"
-
-            st.header(header_text)
-            st.markdown(f"#### 오늘 할 일: **{task}**")
-
-            today_task_text = f"{header_text} 오늘 할 일은 {task} 입니다."
-            _tts_button(
-                today_task_text,
-                key=f"slot_task_tts_{idx}",
-                label="🔊 오늘 할 일 설명 듣기",
-            )
-
-            if t == "COOKING":
-                _render_cooking_view(active, idx)
-            elif t == "HEALTH":
-                _render_health_view(active, idx)
-            elif t == "CLOTHING":
-                _render_clothing_view(active, idx)
-            elif t == "MORNING_BRIEFING":
-                _render_morning_view(active, idx)
-            elif t == "NIGHT_WRAPUP":
-                _render_night_view(active, idx)
-            else:
-                _render_general_view(active, idx)
-
-    with col_side:
-        st.markdown("### ⏭ 다음 활동")
+    if not active:
+        # 아직 첫 활동 전
+        _render_big_card("지금은 쉬는 시간", "조금만 기다려요", icon="⏳")
         if next_item:
-            st.markdown(
-                f"**{next_item.get('time')}** · "
-                f"[{next_item.get('type')}] {next_item.get('task')}"
-            )
-        else:
-            st.write("오늘 일정은 모두 끝났어요.\n편안하게 쉬어요. 😌")
+            n_task = (next_item.get("task") or "").strip()
+            n_time = (next_item.get("time") or "").strip()
+            st.markdown("---")
+            st.markdown("### 다음 할 일")
+            st.write(f"{_sanitize_tts_text(n_time)}에 {n_task}")
+    else:
+        t = active.get("type", "GENERAL")
+        title = f"지금은 {_slot_headline_korean(t)} 시간"
+        task = (active.get("task") or "").strip() or "할 일이 있어요"
+        icon_map = {
+            "MORNING_BRIEFING": "☀️",
+            "COOKING": "🍽️",
+            "HEALTH": "💪",
+            "CLOTHING": "👕",
+            "NIGHT_WRAPUP": "🌙",
+            "GENERAL": "🟦",
+        }
+        icon = icon_map.get((t or "GENERAL").upper(), "🟦")
+        _render_big_card(title, task, icon=icon)
 
-        st.markdown("---")
-        st.markdown("### 🗓 오늘 타임라인")
+        # guide_script는 "읽기"가 아니라 "보이기"만(필요 최소)
+        guide = active.get("guide_script") or []
+        if guide:
+            st.markdown("---")
+            st.markdown("### 안내")
+            # 너무 길면 부담: 최대 3줄만 화면에
+            for line in guide[:3]:
+                st.write(line)
 
-        for item in annotated:
-            label = (
-                f"{item.get('time', '??:??')} · "
-                f"[{item.get('type')}] {item.get('task')}"
-            )
-            status = item.get("status")
-            if status == "active":
-                st.markdown(f"- ✅ **{label}**")
-            elif status == "past":
-                st.markdown(f"- ⚪ {label}")
+        # 영상은 있으면 보여주기만
+        _render_simple_video(active)
+
+    # ── 버튼 2~3개만: 다시 듣기 ──
+    st.markdown("---")
+    col1, col2, col3 = st.columns([2, 2, 2])
+
+    with col1:
+        if st.button("🔁 지금 다시 듣기", use_container_width=True):
+            if active:
+                _play_tts_manual(_build_now_tts(active))
             else:
-                st.markdown(f"- 🕒 {label}")
+                _play_tts_manual("지금은 잠시 기다리는 시간이에요.")
 
-        st.markdown("---")
-        if st.button("화면 수동 새로고침"):
-            st.rerun()
+    with col2:
+        if st.button("📅 오늘 일정 다시 듣기", use_container_width=True):
+            _play_tts_manual(_build_day_overview_tts(schedule, date_str))
+
+    with col3:
+        # 보호자/코디용 디버그 보기(사용자에겐 숨기고 싶으면 expander로)
+        with st.expander("오늘 타임라인 보기(보호자용)", expanded=False):
+            for item in annotated:
+                # 타입 노출 금지: 시간 + 할 일만
+                label = f"{item.get('time','??:??')} · {item.get('task','')}"
+                status = item.get("status")
+                if status == "active":
+                    st.markdown(f"- ✅ **{label}**")
+                elif status == "past":
+                    st.markdown(f"- ⚪ {label}")
+                else:
+                    st.markdown(f"- 🕒 {label}")
 
 
 if __name__ == "__main__":
