@@ -15,14 +15,14 @@ YouTube Data API v3를 이용해서
       "description": 설명(str),
       "video_id": 영상 ID(str),
       "url": 전체 URL(str, https://www.youtube.com/watch?v=...),
-      "thumbnail": 썸네일 URL(str),
-      "embed_url": 임베드 URL(str, https://www.youtube.com/embed/...)
+      "thumbnail": 썸네일 URL(str, 보통 medium 혹은 default)
   }
 """
 
 from typing import Dict, List
 import json
 import re
+
 import requests
 
 from .config import (
@@ -48,7 +48,7 @@ def _normalize_menu_name(raw: str) -> str:
 
     유튜브 검색용으로는 핵심 음식 이름만 남기는 게 좋으므로:
     1) 이모지/특수문자 제거
-    2) ":", "/", "|" 기준으로 나눠서 핵심 덩어리만 사용
+    2) ":", "/", "|" 기준으로 나눠서 첫 덩어리만 사용
     3) 괄호 안 설명 제거
     4) 양/단위(1인분, 200g 등) 같은 숫자/단위는 웬만하면 제거
     """
@@ -58,17 +58,12 @@ def _normalize_menu_name(raw: str) -> str:
     text = raw.strip()
 
     # 1) 이모지/특수문자 대략 제거
-    text = re.sub(r"[^\w\sㄱ-ㅎ가-힣:/()|·]", " ", text)
+    text = re.sub(r"[^\w\sㄱ-ㅎ가-힣:/()|]", " ", text)
 
-    # 2) 구분자 기준으로 정리
-    # - ":"는 "아침: 카레라이스" → 오른쪽을 쓰는 게 맞음
-    if ":" in text:
-        text = text.split(":", 1)[-1]
-
-    # - 나머지는 "카레 / 샐러드 세트" → 첫 덩어리(카레)만 쓰는 게 보통 더 정확함
-    for sep in ["|", "/", "·"]:
+    # 2) 구분자 기준으로 첫 덩어리만 사용
+    for sep in [":", "|", "/", "·"]:
         if sep in text:
-            text = text.split(sep, 1)[0]
+            text = text.split(sep)[-1]  # "아침: 카레라이스" → " 카레라이스"
 
     text = text.strip()
 
@@ -94,6 +89,9 @@ def _generate_youtube_queries_with_gpt(
     """
     GPT를 이용해서 발달장애인용 유튜브 영상에 적합한
     한국어 검색 쿼리 여러 개를 생성한다.
+
+    - base_query: 기본이 되는 검색어 (예: "카레 요리 발달장애 쉬운 설명 따라하기 단계별")
+    - domain: "cooking" / "exercise" / "clothing" 등 용도 구분용 태그
     """
     base_query = (base_query or "").strip()
     if not base_query:
@@ -119,11 +117,11 @@ def _generate_youtube_queries_with_gpt(
 
 조건:
 - 기본 의미는 다음 검색어와 비슷해야 한다: "{base_query}"
-- 다음 키워드를 적절히 섞어서 발달장애인에게 친화적인 영상을 찾도록 돕는다
+- 다음과 같은 키워드를 적절히 섞어서, 발달장애인에게 친화적인 영상을 찾도록 돕는다.
   - 발달장애, 지적장애, 쉬운 설명, 천천히, 단계별, 따라하기, 자막, 그림, 시각적 안내
-- 각 검색어는 25자 이내의 자연스러운 한국어 검색 문장 또는 단어 조합으로 만든다
-- 광고, 먹방, ASMR, 쇼츠 위주의 검색은 피하도록 만든다
-- 결과는 JSON 형식만 반환한다
+- 각 검색어는 25자 이내의 자연스러운 한국어 검색 문장 또는 단어 조합으로 만든다.
+- 광고, 먹방, ASMR, 쇼츠 위주의 검색은 피하도록 만든다.
+- 결과는 JSON 형식만 반환한다.
 
 반드시 다음 형식으로만 출력해라:
 {{
@@ -147,7 +145,6 @@ def _generate_youtube_queries_with_gpt(
         data = json.loads(raw)
         queries = data.get("queries", [])
         cleaned: List[str] = []
-
         for q in queries:
             qs = str(q).strip()
             if qs:
@@ -169,38 +166,12 @@ def _generate_youtube_queries_with_gpt(
 # 2. YouTube API 검색 (기본)
 # ─────────────────────────────────────────────
 
-def _pick_thumbnail_url(thumbnails: Dict, video_id: str) -> str:
-    """
-    썸네일이 비면 UI에서 '미리보기'가 깨져 보이는 경우가 많아서
-    가능한 모든 키를 순서대로 탐색하고,
-    그래도 없으면 ytimg fallback을 만든다.
-    """
-    thumbnails = thumbnails or {}
-    for k in ["maxres", "standard", "high", "medium", "default"]:
-        if k in thumbnails and (thumbnails[k] or {}).get("url"):
-            return thumbnails[k]["url"]
-
-    # 최후의 fallback (거의 항상 존재)
-    if video_id:
-        return f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-    return ""
-
-
-def _make_watch_url(video_id: str) -> str:
-    return f"https://www.youtube.com/watch?v={video_id}" if video_id else ""
-
-
-def _make_embed_url(video_id: str) -> str:
-    return f"https://www.youtube.com/embed/{video_id}" if video_id else ""
-
-
 def _search_youtube_via_api(query: str, max_results: int = 6) -> List[Dict]:
     """
     YouTube Data API v3 의 search.list 엔드포인트를 이용한 유튜브 영상 검색.
     - part=snippet
     - type=video
     - safeSearch=strict
-    - videoEmbeddable=true (미리보기/임베드 깨짐 방지에 도움)
     """
     q = (query or "").strip()
     if not q:
@@ -215,52 +186,39 @@ def _search_youtube_via_api(query: str, max_results: int = 6) -> List[Dict]:
         "maxResults": max(1, min(max_results, 10)),
         "q": q,
         "safeSearch": "strict",
-
-        # ✅ “미리보기 안 나옴” 이슈에 실제로 도움되는 옵션들
-        "videoEmbeddable": "true",
-        "videoSyndicated": "true",
-
-        # (선택) 한국 결과가 더 잘 나오게
-        "relevanceLanguage": "ko",
-        "regionCode": "KR",
-
-        # (선택) snippet만 쓰니까 fields로 가볍게
-        "fields": "items(id/videoId,snippet(title,description,thumbnails))",
     }
 
     print(f"[YOUTUBE_API] query={q}, max_results={max_results}")
-    try:
-        resp = requests.get(YOUTUBE_SEARCH_URL, params=params, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        # 여기서 터지면 UI는 그냥 빈 리스트 받아서 아무 것도 못 그림
-        print(f"[YOUTUBE_API] request_failed error={e}")
-        return []
+    resp = requests.get(YOUTUBE_SEARCH_URL, params=params, timeout=10)
+    resp.raise_for_status()
+    data = resp.json()
 
-    items = data.get("items", []) or []
+    items = data.get("items", [])
     results: List[Dict] = []
 
     for item in items:
         id_info = item.get("id", {}) or {}
-        video_id = id_info.get("videoId", "") or ""
-        if not video_id:
-            continue
-
+        video_id = id_info.get("videoId", "")
         snippet = item.get("snippet", {}) or {}
-        title = snippet.get("title", "") or ""
-        description = snippet.get("description", "") or ""
+
+        title = snippet.get("title", "")
+        description = snippet.get("description", "")
 
         thumbnails = snippet.get("thumbnails", {}) or {}
-        thumb_url = _pick_thumbnail_url(thumbnails, video_id=video_id)
+        thumb_url = ""
+        if "medium" in thumbnails:
+            thumb_url = thumbnails["medium"].get("url", "") or ""
+        elif "default" in thumbnails:
+            thumb_url = thumbnails["default"].get("url", "") or ""
+
+        url = f"https://www.youtube.com/watch?v={video_id}" if video_id else ""
 
         results.append(
             {
                 "title": title,
                 "description": description,
                 "video_id": video_id,
-                "url": _make_watch_url(video_id),
-                "embed_url": _make_embed_url(video_id),
+                "url": url,
                 "thumbnail": thumb_url,
             }
         )
@@ -273,6 +231,7 @@ def _search_youtube_via_api_multi(queries: List[str], per_query_max: int, domain
     """
     여러 검색어로 유튜브를 검색해서 결과를 합친다.
     - 중복 video_id는 제거
+    - per_query_max: 쿼리 하나당 YouTube에서 가져올 개수 상한
     """
     if not queries:
         return []
@@ -365,12 +324,6 @@ def _score_video_for_dd(video: Dict, domain: str) -> int:
     if len(desc) < 10:
         score -= 1
 
-    # 썸네일/URL이 비면 UI 카드가 깨지므로 패널티
-    if not (video.get("thumbnail") or "").strip():
-        score -= 2
-    if not (video.get("url") or "").strip():
-        score -= 2
-
     return score
 
 
@@ -409,6 +362,13 @@ def _has_dd_keywords(q: str) -> bool:
 def search_cooking_videos_for_dd(menu_name_or_query: str, max_results: int = 6) -> List[Dict]:
     """
     발달장애인용 요리 영상 검색.
+
+    - 코디네이터가 직접 입력한 유튜브 검색어가 들어오는 경우:
+      예) "발달장애인 쉬운 라면 끓이는 법 자막"
+      → 그 검색어 그대로로만 검색하고, GPT 확장 없이 단일 쿼리만 사용
+    - 단순 메뉴 이름만 들어오는 경우:
+      예) "라면", "카레"
+      → 메뉴 이름을 정제(normalize)하고, GPT로 여러 검색어를 생성해서 검색
     """
     raw = (menu_name_or_query or "").strip()
     if not raw:
@@ -417,9 +377,11 @@ def search_cooking_videos_for_dd(menu_name_or_query: str, max_results: int = 6) 
     print(f"[YOUTUBE_COOKING] input='{raw}'")
 
     if _has_dd_keywords(raw):
+        # 코디네이터가 이미 충분히 구체적인 검색어를 만든 경우
         queries = [raw]
         print(f"[YOUTUBE_COOKING] use_raw_query_only={queries}")
     else:
+        # 예전 방식: 메뉴 이름을 정제해서 기본 쿼리 생성 후 GPT로 확장
         menu_core = _normalize_menu_name(raw)
         base_query = f"{menu_core} 요리 발달장애 쉬운 설명 따라하기 단계별"
         gpt_queries = _generate_youtube_queries_with_gpt(base_query, domain="cooking")
@@ -434,7 +396,9 @@ def search_cooking_videos_for_dd(menu_name_or_query: str, max_results: int = 6) 
 def search_exercise_videos_for_dd(task_or_query: str, max_results: int = 6) -> List[Dict]:
     """
     발달장애인용 운동 영상 검색.
-    (예전 코드처럼 빈 입력이면 기본값을 넣어서라도 결과가 뜨게)
+
+    - 코디네이터가 직접 만든 검색어가 들어오면 그대로 사용
+    - 그렇지 않으면 task 문장을 바탕으로 템플릿 + GPT 확장 사용
     """
     base = (task_or_query or "").strip()
     print(f"[YOUTUBE_EXERCISE] input='{base}'")
@@ -459,6 +423,9 @@ def search_exercise_videos_for_dd(task_or_query: str, max_results: int = 6) -> L
 def search_clothing_videos_for_dd(task_or_query: str, max_results: int = 6) -> List[Dict]:
     """
     발달장애인용 옷 입기 영상 검색.
+
+    - 코디네이터가 직접 만든 검색어가 들어오면 그대로 사용
+    - 그렇지 않으면 task 문장을 바탕으로 템플릿 + GPT 확장 사용
     """
     base = (task_or_query or "").strip()
     print(f"[YOUTUBE_CLOTHING] input='{base}'")
@@ -479,7 +446,6 @@ def search_clothing_videos_for_dd(task_or_query: str, max_results: int = 6) -> L
     ranked = _rerank_for_dd(raw_results, domain="clothing")
     return ranked[:max_results]
 
-
 # ─────────────────────────────────────────────
 # 5. 코디네이터 "직접 검색어"용 RAW 검색 래퍼
 #    (GPT 확장 없이, 입력한 검색어 그대로 사용)
@@ -489,9 +455,13 @@ def _search_videos_for_dd_raw(query: str, max_results: int, domain: str) -> List
     """
     코디네이터가 직접 입력한 유튜브 검색어를
     그대로 YouTube API에 넘기고, DD 친화도 점수로만 재정렬하는 버전.
+
+    - GPT로 검색어를 바꾸지 않음
+    - 검색어만 바꿔도 결과가 확실히 달라지게 하고 싶을 때 사용
     """
     q = (query or "").strip()
     if not q:
+        # 안전한 기본값
         if domain == "cooking":
             q = "발달장애인 쉬운 요리 따라하기"
         elif domain == "exercise":
@@ -508,12 +478,21 @@ def _search_videos_for_dd_raw(query: str, max_results: int, domain: str) -> List
 
 
 def search_cooking_videos_for_dd_raw(query: str, max_results: int = 6) -> List[Dict]:
+    """
+    GPT 확장 없이, 코디네이터가 입력한 검색어 그대로 쓰는 요리 영상 검색.
+    """
     return _search_videos_for_dd_raw(query, max_results=max_results, domain="cooking")
 
 
 def search_exercise_videos_for_dd_raw(query: str, max_results: int = 6) -> List[Dict]:
+    """
+    GPT 확장 없이, 코디네이터가 입력한 검색어 그대로 쓰는 운동 영상 검색.
+    """
     return _search_videos_for_dd_raw(query, max_results=max_results, domain="exercise")
 
 
 def search_clothing_videos_for_dd_raw(query: str, max_results: int = 6) -> List[Dict]:
+    """
+    GPT 확장 없이, 코디네이터가 입력한 검색어 그대로 쓰는 옷 입기 영상 검색.
+    """
     return _search_videos_for_dd_raw(query, max_results=max_results, domain="clothing")
