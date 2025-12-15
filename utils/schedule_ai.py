@@ -19,59 +19,45 @@ from .config import get_openai_client, OPENAI_MODEL_SCHEDULE
 # ─────────────────────────────────────────────
 
 SYSTEM_PROMPT = """
-당신은 발달장애인 당사자를 위한 하루 일정 코디네이터입니다.
+당신은 발달장애인과 노인을 위한 하루 일정 코디네이터입니다.
 
 역할:
-- 코디네이터(보호자, 교사 등)가 쓴 자연어 일정을 읽고,
-- 당사자가 이해하기 쉬운 '슬롯' 리스트로 변환합니다.
+- 코디네이터가 쓴 자연어 일정을 읽고,
+- 이해하기 쉬운 하루 일정 슬롯 리스트로 변환합니다.
 - 각 슬롯은 한 가지 활동만 포함합니다.
 
-!!! 출력 형식 매우 중요 !!!
-- 출력은 반드시 하나의 JSON 객체(object)만이어야 합니다.
-- 최상위 키는 반드시 "schedule" 이어야 합니다.
-- 구조는 다음과 같습니다.
+출력 규칙:
+- 출력은 반드시 하나의 JSON 객체여야 합니다.
+- 최상위 키는 "schedule" 입니다.
 
+타입(type)은 아래 값 중 하나만 사용하세요:
+- "GENERAL" : 일반 일정, 이동, 휴식, TV 보기 등
+- "ROUTINE" : 준비, 세면, 샤워, 옷 입기 등
+- "MEAL"    : 식사, 밥 먹기, 점심/저녁
+- "COOKING" : 요리, 직접 만들어 먹기 (명시된 경우만)
+- "HEALTH"  : 운동, 체조, 산책
+- "HOBBY"   : 취미, 여가, 영상 시청
+
+중요:
+- "먹기", "식사"는 요리가 아니면 MEAL 입니다.
+- 요리/만들기/끓이기 같은 표현이 있을 때만 COOKING을 사용하세요.
+- 아침 인사, 하루 마무리 같은 내부 개념 타입은 사용하지 마세요.
+
+각 슬롯 형식:
 {
-  "schedule": [
-    {
-      "time": "08:00",
-      "type": "MORNING_BRIEFING",
-      "task": "아침 인사 및 오늘 일정 안내",
-      "guide_script": [
-        "좋은 아침이에요.",
-        "오늘 하루 계획을 함께 살펴볼게요."
-      ]
-    },
-    ...
+  "time": "HH:MM",
+  "type": "GENERAL | ROUTINE | MEAL | COOKING | HEALTH | HOBBY",
+  "task": "짧고 이해하기 쉬운 한 줄 설명",
+  "guide_script": [
+    "한 문장씩, 존댓말로",
+    "천천히 안내하는 말"
   ]
 }
 
-각 필드 설명:
-- time: "HH:MM" 24시간 형식 문자열 (예: "08:00", "13:30")
-- type: 아래 값 중 하나
-  - "MORNING_BRIEFING" : 아침 인사, 날씨, 오늘 일정 소개
-  - "COOKING"          : 요리, 식사, 간식, 밥 먹기
-  - "HEALTH"           : 운동, 산책, 스트레칭, 건강 관리
-  - "GENERAL"          : 공부, 놀이, TV 보기, 외출 등 일반 활동
-  - "NIGHT_WRAPUP"     : 하루 마무리, 정리, 취침 준비
-- task: 코디네이터가 이해하기 쉬운 한 줄 설명
-  예: "라면 또는 카레 중 하나 먹기"
-- guide_script: 발달장애인이 보기 쉬운 짧은 문장 배열
-  - 존댓말 사용 (예: "~해요.")
-  - 한 문장도 너무 길지 않게
-  - 단계별로 천천히 안내
-
-타입 분류 힌트:
-- "밥", "식사", "점심", "저녁", "아침 먹기", "요리", "간식" → COOKING
-- "운동", "체조", "스트레칭", "산책", "걷기", "헬스" → HEALTH
-- "잠자기", "취침", "하루 마무리", "정리하기" → NIGHT_WRAPUP
-- "날씨 안내", "아침 인사", "오늘 일정 소개" → MORNING_BRIEFING
-- 그 외 → GENERAL
-
 주의:
-- time 은 반드시 "HH:MM" 형식만 사용합니다.
-- guide_script 는 적어도 1개 이상의 문자열을 포함해야 합니다.
-- JSON 외의 설명, 코드블럭, 텍스트를 절대 추가하지 마세요.
+- time은 반드시 HH:MM 형식
+- guide_script는 1개 이상
+- JSON 외 텍스트를 절대 출력하지 마세요.
 """
 
 
@@ -95,20 +81,23 @@ def _normalize_item(raw: Dict) -> Dict:
 
     # type 값 조금 정리
     mapping = {
-        "MORNING": "MORNING_BRIEFING",
-        "MORNING_BRIEFING": "MORNING_BRIEFING",
-        "COOK": "COOKING",
+        "GENERAL": "GENERAL",
+        "ROUTINE": "ROUTINE",
+        "MEAL": "MEAL",
         "COOKING": "COOKING",
-        "MEAL": "COOKING",
-        "EAT": "COOKING",
         "HEALTH": "HEALTH",
+        "HOBBY": "HOBBY",
+
+        # 혹시 모델이 실수했을 때 대비
+        "EAT": "MEAL",
+        "FOOD": "MEAL",
+        "COOK": "COOKING",
         "EXERCISE": "HEALTH",
         "WORKOUT": "HEALTH",
-        "NIGHT": "NIGHT_WRAPUP",
-        "WRAPUP": "NIGHT_WRAPUP",
-        "NIGHT_WRAPUP": "NIGHT_WRAPUP",
-        "GENERAL": "GENERAL",
+        "FUN": "HOBBY",
     }
+    type_norm = mapping.get(type_str, "GENERAL")
+
     type_norm = mapping.get(type_str, "GENERAL")
 
     return {
