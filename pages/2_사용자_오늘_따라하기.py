@@ -27,7 +27,7 @@ except ImportError:
 KST = ZoneInfo("Asia/Seoul")
 
 SCHEDULE_PATH = os.path.join("data", "schedule_today.json")
-AUTO_REFRESH_SEC = 30
+AUTO_REFRESH_SEC = 10
 PRE_NOTICE_MINUTES = 5
 
 # ─────────────────────────────────────────────
@@ -102,16 +102,46 @@ def _enqueue_tts(text: str):
 
 
 def _play_next_tts_if_any():
-    """rerun마다 큐에서 1개만 꺼내 autoplay 시도."""
+    """
+    rerun마다 큐에서 '가능한 만큼' 합쳐서 1번에 재생.
+    (브라우저는 여러 <audio autoplay>를 연속으로 깔면 대부분 막히거나 마지막만 재생됨)
+    """
     q = st.session_state.get(TTS_QUEUE_KEY, [])
     if not q:
         return
 
-    item = q.pop(0)
-    st.session_state[TTS_QUEUE_KEY] = q
-    st.session_state[TTS_LAST_MSG_KEY] = item["id"]
+    MAX_CHARS = 800  # 너무 길면 TTS 품질/응답/재생이 망가질 수 있어서 제한
+    merged = []
+    merged_ids = []
 
-    audio_bytes = synthesize_tts(item["text"])
+    total = 0
+    while q:
+        item = q[0]
+        txt = (item.get("text") or "").strip()
+        if not txt:
+            q.pop(0)
+            continue
+
+        # 첫 문장은 무조건 포함, 이후는 길이 제한 내에서만 추가
+        if merged and (total + 1 + len(txt) > MAX_CHARS):
+            break
+
+        q.pop(0)
+        merged.append(txt)
+        merged_ids.append(item.get("id"))
+        total += len(txt) + 1
+
+    st.session_state[TTS_QUEUE_KEY] = q
+
+    final_text = " ".join(merged).strip()
+    if not final_text:
+        return
+
+    # 마지막으로 재생한 msg_id 업데이트(합쳐진 텍스트 기준)
+    msg_id = hashlib.md5(final_text.encode("utf-8")).hexdigest()
+    st.session_state[TTS_LAST_MSG_KEY] = msg_id
+
+    audio_bytes = synthesize_tts(final_text)
     if not audio_bytes:
         return
 
@@ -123,6 +153,7 @@ def _play_next_tts_if_any():
     </audio>
     """
     st.markdown(audio_html, unsafe_allow_html=True)
+
 
 
 def _make_slot_key(date_str: str, slot: Optional[dict]) -> Optional[str]:
