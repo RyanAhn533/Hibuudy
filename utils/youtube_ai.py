@@ -338,7 +338,8 @@ def _rerank_for_dd(videos: List[Dict], domain: str) -> List[Dict]:
         vv["_dd_score"] = s
         scored.append(vv)
 
-    return sorted(scored, key=lambda x: x.get("_dd_score", 0), reverse=True)
+    scored_sorted = sorted(scored, key=lambda x: x.get("_dd_score", 0), reverse=True)
+    return scored_sorted
 
 
 # ─────────────────────────────────────────────
@@ -361,6 +362,13 @@ def _has_dd_keywords(q: str) -> bool:
 def search_cooking_videos_for_dd(menu_name_or_query: str, max_results: int = 6) -> List[Dict]:
     """
     발달장애인용 요리 영상 검색.
+
+    - 코디네이터가 직접 입력한 유튜브 검색어가 들어오는 경우:
+      예) "발달장애인 쉬운 라면 끓이는 법 자막"
+      → 그 검색어 그대로로만 검색하고, GPT 확장 없이 단일 쿼리만 사용
+    - 단순 메뉴 이름만 들어오는 경우:
+      예) "라면", "카레"
+      → 메뉴 이름을 정제(normalize)하고, GPT로 여러 검색어를 생성해서 검색
     """
     raw = (menu_name_or_query or "").strip()
     if not raw:
@@ -369,9 +377,11 @@ def search_cooking_videos_for_dd(menu_name_or_query: str, max_results: int = 6) 
     print(f"[YOUTUBE_COOKING] input='{raw}'")
 
     if _has_dd_keywords(raw):
+        # 코디네이터가 이미 충분히 구체적인 검색어를 만든 경우
         queries = [raw]
         print(f"[YOUTUBE_COOKING] use_raw_query_only={queries}")
     else:
+        # 예전 방식: 메뉴 이름을 정제해서 기본 쿼리 생성 후 GPT로 확장
         menu_core = _normalize_menu_name(raw)
         base_query = f"{menu_core} 요리 발달장애 쉬운 설명 따라하기 단계별"
         gpt_queries = _generate_youtube_queries_with_gpt(base_query, domain="cooking")
@@ -387,23 +397,20 @@ def search_exercise_videos_for_dd(task_or_query: str, max_results: int = 6) -> L
     """
     발달장애인용 운동 영상 검색.
 
-    ✅ 변경점:
-    - 입력이 비면 '앉아서 하는 쉬운 운동' 같은 기본값을 넣지 않는다.
-    - 즉, 코디네이터/상위 UI에서 "운동"을 선택하지 않거나 빈 입력이면
-      여기서는 아무 것도 검색하지 않고 [] 반환 → 선택지/기본안이 UI에 뜰 일이 없음.
+    - 코디네이터가 직접 만든 검색어가 들어오면 그대로 사용
+    - 그렇지 않으면 task 문장을 바탕으로 템플릿 + GPT 확장 사용
     """
     base = (task_or_query or "").strip()
     print(f"[YOUTUBE_EXERCISE] input='{base}'")
 
-    # ✅ 기본값/선택지 제거: 비어 있으면 검색 자체를 하지 않음
     if not base:
-        return []
+        base = "앉아서 하는 쉬운 운동"
 
     if _has_dd_keywords(base):
         queries = [base]
         print(f"[YOUTUBE_EXERCISE] use_raw_query_only={queries}")
     else:
-        base_query = f"발달장애 {base} 운동 따라하기 천천히 단계별"
+        base_query = f"발달장애 {base} 운동 쉬운 동작 따라하기 천천히"
         gpt_queries = _generate_youtube_queries_with_gpt(base_query, domain="exercise")
         print(f"[YOUTUBE_EXERCISE] base_query='{base_query}', gpt_queries={gpt_queries}")
         queries = gpt_queries
@@ -416,12 +423,15 @@ def search_exercise_videos_for_dd(task_or_query: str, max_results: int = 6) -> L
 def search_clothing_videos_for_dd(task_or_query: str, max_results: int = 6) -> List[Dict]:
     """
     발달장애인용 옷 입기 영상 검색.
+
+    - 코디네이터가 직접 만든 검색어가 들어오면 그대로 사용
+    - 그렇지 않으면 task 문장을 바탕으로 템플릿 + GPT 확장 사용
     """
     base = (task_or_query or "").strip()
     print(f"[YOUTUBE_CLOTHING] input='{base}'")
 
     if not base:
-        return []
+        base = "티셔츠 입기 연습"
 
     if _has_dd_keywords(base):
         queries = [base]
@@ -435,7 +445,6 @@ def search_clothing_videos_for_dd(task_or_query: str, max_results: int = 6) -> L
     raw_results = _search_youtube_via_api_multi(queries, per_query_max=4, domain="clothing")
     ranked = _rerank_for_dd(raw_results, domain="clothing")
     return ranked[:max_results]
-
 
 # ─────────────────────────────────────────────
 # 5. 코디네이터 "직접 검색어"용 RAW 검색 래퍼
@@ -452,11 +461,11 @@ def _search_videos_for_dd_raw(query: str, max_results: int, domain: str) -> List
     """
     q = (query or "").strip()
     if not q:
-        # ✅ 여기서도 운동은 기본값을 주지 않게 처리
+        # 안전한 기본값
         if domain == "cooking":
             q = "발달장애인 쉬운 요리 따라하기"
         elif domain == "exercise":
-            return []  # 운동 RAW도 빈 입력이면 검색 안 함
+            q = "발달장애인 쉬운 운동 따라하기"
         elif domain == "clothing":
             q = "발달장애인 옷 입기 연습"
         else:
@@ -469,12 +478,21 @@ def _search_videos_for_dd_raw(query: str, max_results: int, domain: str) -> List
 
 
 def search_cooking_videos_for_dd_raw(query: str, max_results: int = 6) -> List[Dict]:
+    """
+    GPT 확장 없이, 코디네이터가 입력한 검색어 그대로 쓰는 요리 영상 검색.
+    """
     return _search_videos_for_dd_raw(query, max_results=max_results, domain="cooking")
 
 
 def search_exercise_videos_for_dd_raw(query: str, max_results: int = 6) -> List[Dict]:
+    """
+    GPT 확장 없이, 코디네이터가 입력한 검색어 그대로 쓰는 운동 영상 검색.
+    """
     return _search_videos_for_dd_raw(query, max_results=max_results, domain="exercise")
 
 
 def search_clothing_videos_for_dd_raw(query: str, max_results: int = 6) -> List[Dict]:
+    """
+    GPT 확장 없이, 코디네이터가 입력한 검색어 그대로 쓰는 옷 입기 영상 검색.
+    """
     return _search_videos_for_dd_raw(query, max_results=max_results, domain="clothing")
