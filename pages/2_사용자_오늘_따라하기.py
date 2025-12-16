@@ -418,6 +418,32 @@ def _get_menu_image_url(menu_name: str, slot: Dict) -> str:
     q = urlquote(menu_name)
     return f"https://source.unsplash.com/featured/?food,{q}"
 
+def _normalize_menus(slot: Dict) -> List[Dict]:
+    """
+    코디네이터 저장 포맷:
+      menus = [{"name":..., "image":..., "video_url":...}, ...]
+    과거/예전 포맷(문자열 리스트)도 같이 지원.
+    반환: [{"name": str, "image": str, "video_url": str}, ...]
+    """
+    menus = slot.get("menus") or slot.get("menu_candidates") or []
+    out: List[Dict] = []
+
+    if not isinstance(menus, list):
+        return out
+
+    for m in menus:
+        if isinstance(m, dict):
+            name = str(m.get("name", "")).strip()
+            image = str(m.get("image", "")).strip()
+            video_url = str(m.get("video_url", "")).strip()
+            if name:
+                out.append({"name": name, "image": image, "video_url": video_url})
+        else:
+            name = str(m).strip()
+            if name:
+                out.append({"name": name, "image": "", "video_url": ""})
+
+    return out
 
 def _render_cooking_view(slot: Dict, date_str: str):
     st.header("요리하기")
@@ -426,32 +452,52 @@ def _render_cooking_view(slot: Dict, date_str: str):
     if guide:
         _render_steps_with_listen([str(x) for x in guide], base_key=f"cook_{date_str}_{slot.get('time','')}", title="오늘 요리 안내")
 
-    menus = slot.get("menus") or slot.get("menu_candidates") or []
-    if not isinstance(menus, list):
-        menus = []
+    menus = _normalize_menus(slot)
+
 
     # NOTE: JS 알람용으로 "선택 메뉴"를 세션에 하나 더 저장(최소 변경)
     # - 기존 네 코드에서 menu selection key가 더 복잡하면 여기만 맞춰주면 됨
     if menus:
         st.subheader("메뉴 선택")
         cols = st.columns(min(3, len(menus)))
-        for i, name in enumerate(menus[:9]):
+        for i, m in enumerate(menus[:9]):
+            name = m["name"]
             with cols[i % len(cols)]:
-                img = _get_menu_image_url(str(name), slot)
+                img = m["image"] or _get_menu_image_url(name, slot)
                 st.image(img, use_container_width=True)
                 if st.button(f"'{name}' 선택", key=f"btn_sel_menu_{date_str}_{slot.get('time','')}_{i}"):
-                    st.session_state["selected_menu_for_js"] = str(name)
+                    st.session_state["selected_menu_for_js"] = name
+
 
         chosen = st.session_state.get("selected_menu_for_js", "")
         if chosen:
             st.success(f"선택된 메뉴: {chosen}")
 
+            # ✅ 코디네이터 저장 포맷 우선 지원:
+            # menus = [{"name":..., "image":..., "video_url":...}, ...]
+            # chosen 메뉴에 해당하는 menu dict의 video_url을 가장 먼저 사용
             video_url = ""
-            videos = slot.get("videos") or slot.get("video_urls") or {}
-            if isinstance(videos, dict):
-                video_url = str(videos.get(chosen, "")) if chosen in videos else ""
+
+            menus_list = slot.get("menus") or slot.get("menu_candidates") or []
+            chosen_obj = None
+            if isinstance(menus_list, list):
+                for m in menus_list:
+                    if isinstance(m, dict) and str(m.get("name", "")).strip() == str(chosen).strip():
+                        chosen_obj = m
+                        break
+
+            if chosen_obj and chosen_obj.get("video_url"):
+                video_url = str(chosen_obj.get("video_url") or "").strip()
+
+            # ✅ 하위 호환: slot["videos"] / slot["video_urls"] 딕셔너리 매핑도 지원
             if not video_url:
-                video_url = str(slot.get("video_url", "") or "")
+                videos = slot.get("videos") or slot.get("video_urls") or {}
+                if isinstance(videos, dict):
+                    video_url = str(videos.get(chosen, "") or "").strip()
+
+            # ✅ 최후 fallback: slot["video_url"]
+            if not video_url:
+                video_url = str(slot.get("video_url", "") or "").strip()
 
             if video_url:
                 st.video(video_url)
@@ -471,11 +517,14 @@ def _render_cooking_view(slot: Dict, date_str: str):
                     st.write("• " + "\n• ".join([str(x) for x in ings if str(x).strip()]))
 
                 if isinstance(steps, list) and steps:
-                    _render_steps_with_listen([str(x) for x in steps], base_key=f"recipe_{date_str}_{slot.get('time','')}", title="레시피 단계")
+                    _render_steps_with_listen(
+                        [str(x) for x in steps],
+                        base_key=f"recipe_{date_str}_{slot.get('time','')}",
+                        title="레시피 단계",
+                    )
             else:
                 st.info("이 메뉴의 상세 레시피가 등록되어 있지 않아요.")
-    else:
-        st.info("메뉴 후보가 없습니다.")
+
 
 
 def _render_health_view(slot: Dict, date_str: str):
@@ -606,6 +655,8 @@ def user_page():
             "MORNING_BRIEFING": "아침 준비",
             "COOKING": "요리/식사",
             "HEALTH": "운동",
+            "REST": "쉬는 시간",
+            "LEISURE": "여가",
             "CLOTHING": "옷 입기",
             "NIGHT_WRAPUP": "마무리",
         }.get(slot_type, "활동")
@@ -621,16 +672,32 @@ def user_page():
 
         if slot_type == "COOKING":
             _render_cooking_view(active, date_str)
+
+        elif slot_type == "MEAL":
+            # 코디네이터에서 MEAL이 남아있을 수 있으니 COOKING으로 처리
+            _render_cooking_view(active, date_str)
+
         elif slot_type == "HEALTH":
             _render_health_view(active, date_str)
+
         elif slot_type == "CLOTHING":
             _render_clothing_view(active, date_str)
+
+        elif slot_type == "REST":
+            _render_general_view(active, date_str, "쉬는 시간")
+
+        elif slot_type == "LEISURE":
+            _render_general_view(active, date_str, "여가")
+
         elif slot_type == "MORNING_BRIEFING":
             _render_general_view(active, date_str, "아침 준비")
+
         elif slot_type == "NIGHT_WRAPUP":
             _render_general_view(active, date_str, "하루 마무리")
+
         else:
             _render_general_view(active, date_str, "활동")
+
 
     with side_col:
         st.markdown("### 다음 활동")
