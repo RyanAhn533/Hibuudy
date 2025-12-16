@@ -8,18 +8,13 @@ from datetime import date
 from typing import Dict, List
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 try:
     # 이미지 자체를 클릭해서 선택하기 위해 사용
     from streamlit_clickable_images import clickable_images
 except ImportError:
     clickable_images = None
-
-# ✅ 날씨 기능은 "있으면 쓰고, 없으면 비활성화" (API키/설정 너가 나중에 붙일 수 있게)
-try:
-    from utils.weather_ai import analyze_weather_and_suggest_clothes  # type: ignore
-except Exception:
-    analyze_weather_and_suggest_clothes = None
 
 from utils.topbar import render_topbar
 from utils.schedule_ai import generate_schedule_from_text
@@ -33,7 +28,7 @@ from utils.image_ai import search_and_filter_food_images, download_image_to_asse
 from utils.youtube_ai import (
     search_cooking_videos_for_dd_raw,
     search_exercise_videos_for_dd_raw,
-    search_clothing_videos_for_dd_raw,
+    search_clothing_videos_for_dd_raw,  # 유지(혹시 다른 곳에서 쓸 수도 있어 import는 남겨둠)
 )
 
 SCHEDULE_STATE_KEY = "hibuddy_schedule"
@@ -151,6 +146,45 @@ def _edit_guide_script(idx: int):
     )
     lines = [ln.strip() for ln in new_text.splitlines() if ln.strip()]
     st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = lines
+
+
+# -------------------------------
+# 영상 렌더링: 작게 고정(유튜브)
+# -------------------------------
+def _to_youtube_embed(url: str) -> str:
+    url = (url or "").strip()
+    if not url:
+        return ""
+
+    # https://www.youtube.com/watch?v=VIDEO_ID
+    if "watch?v=" in url:
+        vid = url.split("watch?v=")[1].split("&")[0]
+        return f"https://www.youtube.com/embed/{vid}"
+
+    # https://youtu.be/VIDEO_ID
+    if "youtu.be/" in url:
+        vid = url.split("youtu.be/")[1].split("?")[0].split("&")[0]
+        return f"https://www.youtube.com/embed/{vid}"
+
+    # 이미 embed 형식이면 그대로
+    if "youtube.com/embed/" in url:
+        return url
+
+    return ""
+
+
+def render_video_small(url: str, width: int = 360, height: int = 220):
+    url = (url or "").strip()
+    if not url:
+        return
+
+    embed = _to_youtube_embed(url)
+    if embed:
+        components.iframe(embed, width=width, height=height)
+    else:
+        # 유튜브가 아닌 URL이거나 파싱 실패 시 fallback
+        # (그래도 너무 크게 나오는 st.video는 피하고 iframe로 처리)
+        components.iframe(url, width=width, height=height)
 
 
 def coordinator_page():
@@ -298,7 +332,7 @@ def coordinator_page():
 
                             if menu.get("video_url"):
                                 st.caption("현재 선택된 요리/식사 영상")
-                                st.video(menu["video_url"])
+                                render_video_small(menu["video_url"], width=360, height=220)
 
                         # 오른쪽: 이미지 추천 + 영상 추천
                         with cols[1]:
@@ -313,7 +347,6 @@ def coordinator_page():
                             )
                             st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["img_query"] = img_query
 
-                            # ✅ image_ai.py 시그니처에 맞춤: max_results / link / download(menu_name)
                             if st.button("사진 추천 받기", key=f"search_img_{idx}_{m_idx}"):
                                 with st.spinner("사진을 찾는 중입니다."):
                                     try:
@@ -334,7 +367,7 @@ def coordinator_page():
                                         thumb = img_info.get("thumbnail") or img_info.get("link")
                                         url = img_info.get("link")
                                         if thumb:
-                                            st.image(thumb, use_container_width=True)
+                                            st.image(thumb, width=240)  # ✅ 썸네일 크기 축소
                                         if st.button("이 사진 사용", key=f"use_img_{idx}_{m_idx}_{r_idx}"):
                                             try:
                                                 local_path = download_image_to_assets(url, menu_name)
@@ -403,7 +436,7 @@ def coordinator_page():
                                 for v_idx, v in enumerate(yt_results[:rec_n]):
                                     st.markdown(f"- {v.get('title','')}")
                                     if v.get("thumbnail"):
-                                        st.image(v["thumbnail"], use_container_width=True)
+                                        st.image(v["thumbnail"], width=240)  # ✅ 썸네일 크기 축소
                                     if st.button("이 영상 사용", key=f"use_yt_food_{idx}_{m_idx}_{v_idx}"):
                                         st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["video_url"] = v.get("url", "")
                                         changed = True
@@ -441,7 +474,7 @@ def coordinator_page():
                 current_video = item.get("video_url")
                 if current_video:
                     st.caption("현재 선택된 운동 영상")
-                    st.video(current_video)
+                    render_video_small(current_video, width=360, height=220)
 
                 if st.button("운동 영상 추천 받기", key=f"search_yt_health_{idx}"):
                     with st.spinner("운동 영상을 찾는 중입니다."):
@@ -458,7 +491,7 @@ def coordinator_page():
                     for v_idx, v in enumerate(yt_results[:rec_n]):
                         st.markdown(f"- {v.get('title','')}")
                         if v.get("thumbnail"):
-                            st.image(v["thumbnail"], use_container_width=True)
+                            st.image(v["thumbnail"], width=240)  # ✅ 썸네일 크기 축소
                         if st.button("이 영상 사용", key=f"use_yt_health_{idx}_{v_idx}"):
                             st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = v.get("url", "")
                             changed = True
@@ -467,61 +500,46 @@ def coordinator_page():
             # ---------------- CLOTHING ----------------
             elif type_ == "CLOTHING":
                 st.markdown("#### 옷 입기 활동 설정")
+                st.caption("옷 입기에서는 유튜브 추천/날씨 기반 옷추천 기능을 제거했습니다.")
+                st.caption("필요하면 아래 칸에 참고용 영상 URL을 직접 넣을 수 있습니다 (선택).")
 
-                st.markdown("##### 오늘 날씨 기반 옷차림 안내문 만들기")
-                if analyze_weather_and_suggest_clothes is None:
-                    st.info(
-                        "날씨/옷차림 기능은 아직 비활성화 상태입니다.\n"
-                        "- utils/weather_ai.py 및 config(날씨 API 키) 설정 후 활성화하세요."
-                    )
-                else:
-                    default_location = st.session_state.get("weather_location_default", "서울")
-                    location = st.text_input(
-                        "날씨를 확인할 지역 (예: 서울, 서울시 강남구)",
-                        value=default_location,
-                        key=f"clothing_location_{idx}",
-                    )
-                    st.session_state["weather_location_default"] = location
-
-                    if st.button("오늘 날씨로 옷차림 안내문 생성", key=f"btn_weather_clothes_{idx}"):
-                        if location.strip():
-                            with st.spinner("날씨를 확인하고 옷차림 안내문을 만드는 중입니다."):
-                                try:
-                                    guide_lines = analyze_weather_and_suggest_clothes(location)
-                                except Exception as e:
-                                    st.error(f"날씨/옷차림 오류: {e}")
-                                    guide_lines = []
-                            if guide_lines:
-                                st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = guide_lines
-                                changed = True
-                                st.success("guide_script에 반영되었습니다.")
-                        else:
-                            st.warning("지역을 먼저 입력해 주세요.")
-
-                st.markdown("---")
-                st.markdown("##### 옷 입기 연습 영상 선택")
-
-                yt_key = f"yt_clothing_{idx}"
-                default_clothing_query = item.get(
-                    "video_query_clothing",
-                    f"발달장애인 {task} 옷 입기 연습" if task else "발달장애인 옷 입기 연습",
+                current_video = item.get("video_url", "")
+                url = st.text_input(
+                    "참고 영상 URL(선택)",
+                    value=current_video,
+                    key=f"clothing_video_url_{idx}",
+                    placeholder="https://www.youtube.com/watch?v=...",
                 )
-                clothing_yt_query = st.text_input(
-                    "옷 입기 영상 유튜브 검색어",
-                    value=default_clothing_query,
-                    key=f"yt_clothing_query_{idx}",
+                st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = url.strip()
+                if url.strip():
+                    st.caption("현재 선택된 참고 영상")
+                    render_video_small(url.strip(), width=360, height=220)
+                    changed = True
+
+            # ---------------- LEISURE ----------------
+            elif type_ == "LEISURE":
+                st.markdown("#### 여가 활동 설정")
+                st.caption("여가 활동은 '검색해서 고르기' 또는 'URL 직접 입력' 둘 다 가능합니다.")
+
+                # 1) 검색 UI
+                yt_key = f"yt_leisure_{idx}"
+                default_leisure_query = item.get(
+                    "video_query_leisure",
+                    f"발달장애인 쉬운 {task} 여가 활동" if task else "발달장애인 쉬운 여가 활동",
                 )
-                st.session_state[SCHEDULE_STATE_KEY][idx]["video_query_clothing"] = clothing_yt_query
+                leisure_query = st.text_input(
+                    "여가 영상 유튜브 검색어",
+                    value=default_leisure_query,
+                    key=f"yt_leisure_query_{idx}",
+                )
+                st.session_state[SCHEDULE_STATE_KEY][idx]["video_query_leisure"] = leisure_query
 
-                current_video = item.get("video_url")
-                if current_video:
-                    st.caption("현재 선택된 옷 입기 영상")
-                    st.video(current_video)
-
-                if st.button("옷 입기 영상 추천 받기", key=f"search_yt_clothing_{idx}"):
-                    with st.spinner("관련 영상을 찾는 중입니다."):
+                if st.button("여가 영상 추천 받기", key=f"search_yt_leisure_{idx}"):
+                    with st.spinner("관련 여가 영상을 찾는 중입니다."):
                         try:
-                            yt_results = search_clothing_videos_for_dd_raw(clothing_yt_query, max_results=rec_n)
+                            # ✅ 현재 utils.youtube_ai에 여가 전용 함수가 없으니,
+                            #    일단 범용적으로 잘 동작하는 exercise 검색 함수를 재사용합니다.
+                            yt_results = search_exercise_videos_for_dd_raw(leisure_query, max_results=rec_n)
                         except Exception as e:
                             st.error(f"영상 추천 오류: {e}")
                             yt_results = []
@@ -529,24 +547,22 @@ def coordinator_page():
 
                 yt_results = st.session_state.get(yt_key, [])
                 if yt_results:
-                    st.caption("추천된 영상 목록입니다. 하나를 선택해주세요.")
+                    st.caption("추천 여가 영상 목록입니다. 하나를 선택해주세요.")
                     for v_idx, v in enumerate(yt_results[:rec_n]):
                         st.markdown(f"- {v.get('title','')}")
                         if v.get("thumbnail"):
-                            st.image(v["thumbnail"], use_container_width=True)
-                        if st.button("이 영상 사용", key=f"use_yt_clothing_{idx}_{v_idx}"):
+                            st.image(v["thumbnail"], width=240)  # ✅ 썸네일 크기 축소
+                        if st.button("이 영상 사용", key=f"use_yt_leisure_{idx}_{v_idx}"):
                             st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = v.get("url", "")
                             changed = True
                             st.success("영상이 적용되었습니다.")
 
-            # ---------------- LEISURE ----------------
-            elif type_ == "LEISURE":
-                st.markdown("#### 여가 활동 설정")
-                st.caption("여가 활동은 영상 URL을 직접 넣어도 됩니다. (예: 유튜브 링크)")
+                st.markdown("---")
 
+                # 2) URL 직접 입력(옵션)
                 current_video = item.get("video_url", "")
                 url = st.text_input(
-                    "여가 영상 URL",
+                    "여가 영상 URL(직접 입력도 가능)",
                     value=current_video,
                     key=f"leisure_video_url_{idx}",
                     placeholder="https://www.youtube.com/watch?v=...",
@@ -554,7 +570,7 @@ def coordinator_page():
                 st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = url.strip()
                 if url.strip():
                     st.caption("현재 선택된 여가 영상")
-                    st.video(url.strip())
+                    render_video_small(url.strip(), width=360, height=220)
                     changed = True
 
             else:
