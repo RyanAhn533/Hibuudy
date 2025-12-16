@@ -3,6 +3,11 @@ import streamlit as st
 from utils.topbar import render_topbar
 
 
+# ✅ Streamlit이 실제로 인식하는 페이지 파일명으로 고정
+COORDINATOR_PAGE = "pages/1_코디네이터_일정입력.py"
+USER_PAGE = "pages/2_사용자_오늘_따라하기.py"
+
+
 def main():
     st.set_page_config(
         page_title="HiBuddy · 하루 스케줄러",
@@ -75,26 +80,6 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # ─────────────────────────────────────────────
-    # 상단 헤더
-    # ─────────────────────────────────────────────
-    st.markdown('<div class="hibuddy-title">HiBuddy · 발달장애인 하루 스케줄러</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="hibuddy-sub">하루 일정을 “만들기”와 “따라하기”로 나누어, 화면을 단순하게 구성했습니다</div>',
-        unsafe_allow_html=True,
-    )
-
-    # 칩(요약)
-    st.markdown(
-        """
-        <span class="hibuddy-chip">큰 글씨</span>
-        <span class="hibuddy-chip">큰 버튼</span>
-        <span class="hibuddy-chip">한 번에 한 가지 활동</span>
-        <span class="hibuddy-chip">사진/영상 활용</span>
-        """,
-        unsafe_allow_html=True,
-    )
-
     st.write("")
 
     # ─────────────────────────────────────────────
@@ -131,10 +116,11 @@ def main():
     col1, col2 = st.columns(2, gap="large")
     with col1:
         if st.button("일정 만들기 (코디네이터)"):
-            st.switch_page("pages/1_코디네이터_오늘_일정_설계.py")
+            st.switch_page(COORDINATOR_PAGE)
+
     with col2:
         if st.button("따라 하기 (사용자 화면)"):
-            st.switch_page("pages/2_사용자_오늘_따라하기.py")
+            st.switch_page(USER_PAGE)
 
     st.write("")
 
