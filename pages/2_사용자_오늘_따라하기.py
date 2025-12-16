@@ -534,30 +534,6 @@ def _render_health_view(slot: Dict, date_str: str):
     if video_url:
         st.video(video_url)
 
-    st.subheader("운동 방식 선택")
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("앉아서 하는 운동", key="health_choose_seated"):
-            st.session_state["health_routine_id"] = "seated"
-    with c2:
-        if st.button("서서 하는 운동", key="health_choose_standing"):
-            st.session_state["health_routine_id"] = "standing"
-
-    routine_id = st.session_state.get("health_routine_id", "seated")
-    routine = get_health_routine(routine_id)
-    if routine:
-        title = routine.get("title") or ("앉아서 하는 운동" if routine_id == "seated" else "서서 하는 운동")
-        steps = routine.get("steps") or []
-        if isinstance(steps, list) and steps:
-            _render_steps_with_listen([str(x) for x in steps], base_key=f"health_{routine_id}_{date_str}_{slot.get('time','')}", title=title)
-    else:
-        st.info("운동 루틴을 불러오지 못했습니다.")
-
-    guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
-    if guide:
-        st.divider()
-        _render_steps_with_listen([str(x) for x in guide], base_key=f"health_guide_{date_str}_{slot.get('time','')}", title="추가 안내")
-
 
 def _render_clothing_view(slot: Dict, date_str: str):
     st.header("옷 입기 연습")
