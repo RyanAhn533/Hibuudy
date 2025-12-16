@@ -500,8 +500,6 @@ def coordinator_page():
             # ---------------- CLOTHING ----------------
             elif type_ == "CLOTHING":
                 st.markdown("#### 옷 입기 활동 설정")
-                st.caption("옷 입기에서는 유튜브 추천/날씨 기반 옷추천 기능을 제거했습니다.")
-                st.caption("필요하면 아래 칸에 참고용 영상 URL을 직접 넣을 수 있습니다 (선택).")
 
                 current_video = item.get("video_url", "")
                 url = st.text_input(
