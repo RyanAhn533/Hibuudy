@@ -104,30 +104,37 @@ def _apply_type_guardrails(schedule: List[Dict]) -> List[Dict]:
         task = _clean_task(it.get("task") or "")
         t = (it.get("type") or "").strip().upper()
 
+        # 옷 입기 우선
         if any(k in task for k in clothing_kw):
             it["type"] = "CLOTHING"
             continue
 
+        # 준비/위생
         if any(k in task for k in routine_kw):
             it["type"] = "ROUTINE"
             continue
 
+        # 운동
         if any(k in task for k in health_kw):
             it["type"] = "HEALTH"
             continue
 
+        # 취미/여가
         if any(k in task for k in hobby_kw):
             it["type"] = "HOBBY"
             continue
 
+        # 식사 vs 요리 분리
         if any(k in task for k in meal_kw):
             has_cooking = any(k in task for k in cooking_intent_kw)
             it["type"] = "COOKING" if has_cooking else "MEAL"
             continue
 
+        # 기본
         if not it.get("type"):
             it["type"] = "GENERAL"
         else:
+            # 혹시 이상한 타입이면 GENERAL로
             if t not in TYPE_LABEL:
                 it["type"] = "GENERAL"
 
@@ -188,55 +195,6 @@ def _auto_attach_cooking_candidates(schedule: List[Dict]) -> List[Dict]:
     return schedule
 
 
-# ─────────────────────────────────────────────
-# ✅ 유튜브 결과 "미리보기 카드" 렌더러 (핵심)
-# ─────────────────────────────────────────────
-def render_youtube_results(
-    yt_results: List[Dict],
-    on_pick,
-    pick_key_prefix: str,
-    show_player: bool = True,
-):
-    """
-    yt_results: youtube_ai.py가 반환한 리스트
-    on_pick(v: Dict, v_idx: int) -> None : 선택 처리 콜백
-    """
-    if not yt_results:
-        st.info("검색 결과가 없습니다.")
-        return
-
-    for v_idx, v in enumerate(yt_results):
-        title = v.get("title", "(제목 없음)")
-        url = (v.get("url") or "").strip()
-        embed_url = (v.get("embed_url") or "").strip()
-        thumb = (v.get("thumbnail") or "").strip()
-        desc = (v.get("description") or "").strip()
-
-        with st.container(border=True):
-            st.markdown(f"**{title}**")
-
-            cols = st.columns([1, 2])
-            with cols[0]:
-                if thumb:
-                    st.image(thumb, use_container_width=True)
-            with cols[1]:
-                if show_player:
-                    # st.video는 watch_url도 되지만 embed_url이 더 안정적인 경우가 많음
-                    if embed_url:
-                        st.video(embed_url)
-                    elif url:
-                        st.video(url)
-
-                if desc:
-                    st.caption(desc[:140] + ("..." if len(desc) > 140 else ""))
-
-                if url:
-                    st.link_button("유튜브에서 열기", url)
-
-                if st.button("✅ 이 영상 사용", type="primary", key=f"{pick_key_prefix}_{v_idx}"):
-                    on_pick(v, v_idx)
-
-
 # ---- 메인 화면 ----
 def coordinator_page():
     _init_state()
@@ -282,6 +240,7 @@ def coordinator_page():
         st.info("위에서 ‘✅ 일정 만들기’를 눌러주세요.")
         return
 
+    # ✅ 여기서 타입 코드([GENERAL] 등) 완전 숨김
     for item in schedule_view:
         time_str = item.get("time", "??:??")
         task = _clean_task(item.get("task", ""))
@@ -305,6 +264,7 @@ def coordinator_page():
         type_code = st.session_state[SCHEDULE_STATE_KEY][orig_idx].get("type", "GENERAL")
         task = _clean_task(st.session_state[SCHEDULE_STATE_KEY][orig_idx].get("task", ""))
 
+        # ✅ expander 제목도 영문 코드 안 보이게: 한글 라벨만
         with st.expander(f"⏰ {time_str} · {to_label(type_code)} · {task}", expanded=False):
             st.markdown("### 1) 시간 / 종류 / 할 일")
 
@@ -314,6 +274,7 @@ def coordinator_page():
                 new_time = st.text_input("시간(HH:MM)", value=time_str, key=f"time_{item_id}")
 
             with col2:
+                # 노인층용: 한글만, 선택지 최소
                 label_options = ["일정(기타)", "준비/위생", "식사", "요리", "운동", "옷 입기", "취미/여가"]
                 current_label = to_label(type_code)
                 new_label = st.selectbox(
@@ -367,6 +328,7 @@ def coordinator_page():
 
             st.markdown("---")
 
+            # 타입별 추가 설정: 노인층은 "필수만" 노출
             type_code_now = st.session_state[SCHEDULE_STATE_KEY][orig_idx].get("type", "GENERAL")
 
             # ---------------- COOKING ----------------
@@ -415,22 +377,17 @@ def coordinator_page():
 
                         yt_results = st.session_state.get(f"cook_res_{item_id}_{m_idx}", [])
                         if yt_results:
-                            def _pick(v, _idx):
-                                st.session_state[SCHEDULE_STATE_KEY][orig_idx]["menus"][m_idx]["video_url"] = v.get("url", "")
-                                st.success("적용했습니다.")
-                                st.rerun()
-
-                            render_youtube_results(
-                                yt_results,
-                                on_pick=_pick,
-                                pick_key_prefix=f"use_cook_{item_id}_{m_idx}",
-                                show_player=True,
-                            )
+                            for v_idx, v in enumerate(yt_results):
+                                st.markdown(f"- {v.get('title', '(제목 없음)')}")
+                                if st.button("✅ 이 영상 사용", type="primary", key=f"use_cook_{item_id}_{m_idx}_{v_idx}"):
+                                    st.session_state[SCHEDULE_STATE_KEY][orig_idx]["menus"][m_idx]["video_url"] = v["url"]
+                                    st.success("적용했습니다.")
+                                    st.rerun()
 
             # ---------------- HEALTH ----------------
             elif type_code_now == "HEALTH":
                 st.markdown("### 2) 운동 영상")
-                st.caption("영상 미리보기로 보고 선택할 수 있습니다.")
+                st.caption("복잡한 선택은 없애고, 영상만 고를 수 있게 했습니다.")
 
                 default_q = st.session_state[SCHEDULE_STATE_KEY][orig_idx].get(
                     "video_query_health",
@@ -450,17 +407,12 @@ def coordinator_page():
 
                 yt_results = st.session_state.get(f"health_res_{item_id}", [])
                 if yt_results:
-                    def _pick(v, _idx):
-                        st.session_state[SCHEDULE_STATE_KEY][orig_idx]["video_url"] = v.get("url", "")
-                        st.success("적용했습니다.")
-                        st.rerun()
-
-                    render_youtube_results(
-                        yt_results,
-                        on_pick=_pick,
-                        pick_key_prefix=f"use_health_{item_id}",
-                        show_player=True,
-                    )
+                    for v_idx, v in enumerate(yt_results):
+                        st.markdown(f"- {v.get('title', '(제목 없음)')}")
+                        if st.button("✅ 이 영상 사용", type="primary", key=f"use_health_{item_id}_{v_idx}"):
+                            st.session_state[SCHEDULE_STATE_KEY][orig_idx]["video_url"] = v["url"]
+                            st.success("적용했습니다.")
+                            st.rerun()
 
             # ---------------- CLOTHING ----------------
             elif type_code_now == "CLOTHING":
@@ -484,22 +436,17 @@ def coordinator_page():
 
                 yt_results = st.session_state.get(f"cloth_res_{item_id}", [])
                 if yt_results:
-                    def _pick(v, _idx):
-                        st.session_state[SCHEDULE_STATE_KEY][orig_idx]["video_url"] = v.get("url", "")
-                        st.success("적용했습니다.")
-                        st.rerun()
-
-                    render_youtube_results(
-                        yt_results,
-                        on_pick=_pick,
-                        pick_key_prefix=f"use_cloth_{item_id}",
-                        show_player=True,
-                    )
+                    for v_idx, v in enumerate(yt_results):
+                        st.markdown(f"- {v.get('title', '(제목 없음)')}")
+                        if st.button("✅ 이 영상 사용", type="primary", key=f"use_cloth_{item_id}_{v_idx}"):
+                            st.session_state[SCHEDULE_STATE_KEY][orig_idx]["video_url"] = v["url"]
+                            st.success("적용했습니다.")
+                            st.rerun()
 
             # ---------------- HOBBY ----------------
             elif type_code_now == "HOBBY":
                 st.markdown("### 2) 취미/여가 영상")
-                st.caption("영상 미리보기로 보고 선택할 수 있습니다.")
+                st.caption("드론/스포츠 같은 복잡한 선택은 빼고, 영상만 추천받습니다.")
 
                 default_q = st.session_state[SCHEDULE_STATE_KEY][orig_idx].get(
                     "video_query_hobby",
@@ -511,6 +458,7 @@ def coordinator_page():
                 if st.button("▶️ 영상 추천받기", type="primary", key=f"hobby_rec_{item_id}"):
                     with st.spinner("영상을 찾고 있습니다..."):
                         try:
+                            # 취미용 전용 함수가 없으면 일단 exercise 검색 함수로 fallback(검색어 기반이라 동작은 함)
                             yt_results = search_exercise_videos_for_dd_raw(q, max_results=4)
                         except Exception as e:
                             st.error(f"검색 오류: {e}")
@@ -519,17 +467,12 @@ def coordinator_page():
 
                 yt_results = st.session_state.get(f"hobby_res_{item_id}", [])
                 if yt_results:
-                    def _pick(v, _idx):
-                        st.session_state[SCHEDULE_STATE_KEY][orig_idx]["video_url"] = v.get("url", "")
-                        st.success("적용했습니다.")
-                        st.rerun()
-
-                    render_youtube_results(
-                        yt_results,
-                        on_pick=_pick,
-                        pick_key_prefix=f"use_hobby_{item_id}",
-                        show_player=True,
-                    )
+                    for v_idx, v in enumerate(yt_results):
+                        st.markdown(f"- {v.get('title', '(제목 없음)')}")
+                        if st.button("✅ 이 영상 사용", type="primary", key=f"use_hobby_{item_id}_{v_idx}"):
+                            st.session_state[SCHEDULE_STATE_KEY][orig_idx]["video_url"] = v["url"]
+                            st.success("적용했습니다.")
+                            st.rerun()
 
             else:
                 st.caption("추가 설정이 필요 없습니다.")
