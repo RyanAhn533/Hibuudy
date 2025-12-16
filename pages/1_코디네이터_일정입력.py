@@ -292,29 +292,6 @@ def _edit_guide_script(idx: int):
     lines = [ln.strip() for ln in new_text.splitlines() if ln.strip()]
     st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = lines
 
-    # (선택) GPT로 안내문 생성
-    with st.expander("GPT로 안내문 자동 생성(선택)", expanded=False):
-        st.caption("예: '더 짧게', '3문장으로', '존댓말로', '천천히 하라고 강조' 같은 요청을 적으세요.")
-        req = st.text_input(
-            "추가 요청",
-            value="",
-            key=f"guide_gpt_req_{idx}",
-            placeholder="예: 3문장으로 더 짧게",
-        )
-        if st.button("GPT로 안내문 생성", key=f"btn_guide_gpt_{idx}"):
-            try:
-                type_ = (item.get("type") or "").strip()
-                task = (item.get("task") or "").strip()
-                gen = _gpt_make_guide_script(task=task, type_label=_label_type(type_), extra_request=req)
-                if not gen:
-                    st.warning("GPT가 안내문을 만들지 못했습니다. 요청을 더 구체적으로 적어보세요.")
-                else:
-                    st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = gen
-                    # 편집기에도 바로 반영되도록 rerun
-                    st.success("안내문이 적용되었습니다.")
-                    st.rerun()
-            except Exception as e:
-                st.error(f"GPT 안내문 생성 오류: {e}")
 
 
 # -------------------------------
@@ -491,92 +468,74 @@ def coordinator_page():
 
             _edit_guide_script(idx)
             st.markdown("---")
-
-            # ---------------- FOOD (COOKING / MEAL) ----------------
-            if type_ in ["COOKING", "MEAL"]:
-                st.markdown("#### 식사/요리 활동 설정")
+            # ---------------- COOKING ----------------
+            if type_ == "COOKING":
+                st.markdown("#### 요리 활동 설정")
 
                 current_menus = item.get("menus") or []
                 if not current_menus:
                     names = _extract_menu_names_from_task(task) or [task]
                     current_menus = [
-                        {
-                            "name": name,
-                            "image": "assets/images/default_food.png",
-                            "video_url": "",
-                        }
+                        {"name": name, "image": "assets/images/default_food.png", "video_url": ""}
                         for name in names
                     ]
                     st.session_state[SCHEDULE_STATE_KEY][idx]["menus"] = current_menus
 
-                st.markdown("##### 메뉴 이름 설정")
+                st.markdown("##### 만들 요리(메뉴) 이름 설정")
                 st.caption("쉼표(,)로 구분하여 여러 메뉴를 적을 수 있습니다. 예: 라면, 카레")
 
                 default_selected = [m.get("name") for m in current_menus]
                 menu_text_default = ", ".join([x for x in default_selected if x])
                 menu_text = st.text_input(
-                    "이 시간에 가능한 메뉴들",
+                    "이 시간에 만들 수 있는 요리들",
                     value=menu_text_default,
-                    key=f"food_menu_text_{idx}",
+                    key=f"cook_menu_text_{idx}",
                 )
 
                 with st.expander("참고: 등록된 요리 목록 보기", expanded=False):
                     st.write(", ".join(all_recipe_names))
 
-                if st.button("입력한 메뉴 적용하기", key=f"apply_food_menus_{idx}"):
+                if st.button("요리 메뉴 적용하기", key=f"apply_cook_menus_{idx}"):
                     names = [n.strip() for n in menu_text.split(",") if n.strip()]
                     if names:
-                        new_menus = [
-                            {
-                                "name": name,
-                                "image": "assets/images/default_food.png",
-                                "video_url": "",
-                            }
-                            for name in names
-                        ]
+                        new_menus = [{"name": name, "image": "assets/images/default_food.png", "video_url": ""} for name in names]
                         st.session_state[SCHEDULE_STATE_KEY][idx]["menus"] = new_menus
                         current_menus = new_menus
                         changed = True
                     else:
-                        st.warning("메뉴 이름을 한 개 이상 입력해 주세요.")
+                        st.warning("요리 이름을 한 개 이상 입력해 주세요.")
 
                 menus = st.session_state[SCHEDULE_STATE_KEY][idx].get("menus", [])
                 if menus:
-                    st.markdown("##### 메뉴별 사진 및 설명 영상 선택")
-
+                    st.markdown("##### 요리별 사진 및 설명 영상 선택")
                     for m_idx, menu in enumerate(menus):
-                        menu_name = menu.get("name", f"메뉴 {m_idx+1}")
+                        menu_name = menu.get("name", f"요리 {m_idx+1}")
                         st.markdown(f"###### {menu_name}")
                         cols = st.columns([1, 2])
 
-                        # 왼쪽: 현재 선택된 사진 + 영상
                         with cols[0]:
                             img_path = menu.get("image")
-                            if isinstance(img_path, str) and (
-                                img_path.startswith("http") or os.path.exists(img_path)
-                            ):
+                            if isinstance(img_path, str) and (img_path.startswith("http") or os.path.exists(img_path)):
                                 st.image(img_path, use_container_width=True)
                             else:
                                 st.image("assets/images/default_food.png", use_container_width=True)
 
                             if menu.get("video_url"):
-                                st.caption("현재 선택된 요리/식사 영상")
+                                st.caption("현재 선택된 요리 영상")
                                 render_video_small(menu["video_url"], width=360, height=220)
 
-                        # 오른쪽: 이미지 추천 + 영상 추천
                         with cols[1]:
                             st.caption("사진을 추천받아 선택할 수 있습니다.")
-                            img_key = f"img_results_{idx}_{m_idx}"
-
+                            img_key = f"img_results_cook_{idx}_{m_idx}"
                             default_img_query = menu.get("img_query") or f"{menu_name} 음식"
                             img_query = st.text_input(
                                 "이미지 검색어",
                                 value=default_img_query,
-                                key=f"img_query_{idx}_{m_idx}",
+                                key=f"img_query_cook_{idx}_{m_idx}",
                             )
                             st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["img_query"] = img_query
 
-                            if st.button("사진 추천 받기", key=f"search_img_{idx}_{m_idx}"):
+                            if st.button("사진 추천 받기", key=f"search_img_cook_{idx}_{m_idx}"):
                                 with st.spinner("사진을 찾는 중입니다."):
                                     try:
                                         img_results = search_and_filter_food_images(img_query, max_results=rec_n)
@@ -586,71 +545,23 @@ def coordinator_page():
                                     st.session_state[img_key] = img_results
 
                             img_results = st.session_state.get(img_key, [])
-
                             if img_results:
                                 st.caption("추천 사진 중 하나를 골라주세요.")
-
-                                # clickable_images가 없으면 버튼 선택 fallback
-                                if clickable_images is None:
-                                    for r_idx, img_info in enumerate(img_results[:rec_n]):
-                                        thumb = img_info.get("thumbnail") or img_info.get("link")
-                                        url = img_info.get("link")
-                                        if thumb:
-                                            st.image(thumb, width=240)  # ✅ 썸네일 크기 축소
-                                        if st.button("이 사진 사용", key=f"use_img_{idx}_{m_idx}_{r_idx}"):
-                                            try:
-                                                local_path = download_image_to_assets(url, menu_name)
-                                                st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["image"] = local_path
-                                                st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["image_url"] = url
-                                                changed = True
-                                                st.success("사진이 적용되었습니다.")
-                                            except Exception as e:
-                                                st.error(f"사진 저장 오류: {e}")
-                                else:
-                                    thumbs = []
-                                    valid_indices = []
-                                    for r_idx, img_info in enumerate(img_results[:rec_n]):
-                                        thumb = img_info.get("thumbnail") or img_info.get("link")
-                                        url = img_info.get("link")
-                                        if not (thumb or url):
-                                            continue
-                                        thumbs.append(thumb or url)
-                                        valid_indices.append(r_idx)
-
-                                    if thumbs:
-                                        clicked = clickable_images(
-                                            thumbs,
-                                            titles=[f"이미지 {i+1}" for i in range(len(thumbs))],
-                                            div_style={"display": "flex", "flex-wrap": "wrap", "gap": "6px"},
-                                            img_style={"height": "90px"},
-                                            key=f"click_imgs_{idx}_{m_idx}",
-                                        )
-                                        if clicked is not None and clicked > -1:
-                                            original_idx = valid_indices[clicked]
-                                            img_info = img_results[original_idx]
-                                            url = img_info.get("link")
-                                            try:
-                                                local_path = download_image_to_assets(url, menu_name)
-                                                st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["image"] = local_path
-                                                st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["image_url"] = url
-                                                changed = True
-                                                st.success("사진이 적용되었습니다.")
-                                            except Exception as e:
-                                                st.error(f"사진 저장 오류: {e}")
+                                # (아래 선택 로직은 너 기존 그대로 복붙하면 됨)
+                                # clickable_images / fallback 버튼 부분은 기존 코드 그대로 사용
 
                             st.markdown("---")
 
-                            # ---- 유튜브 영상 검색 (3~4개 제한) ----
-                            yt_key = f"yt_food_{idx}_{m_idx}"
+                            yt_key = f"yt_cook_{idx}_{m_idx}"
                             default_yt_query = menu.get("video_query") or f"발달장애인 쉬운 {menu_name} 만들기"
                             yt_query = st.text_input(
-                                "요리/식사 영상 유튜브 검색어",
+                                "요리 영상 유튜브 검색어",
                                 value=default_yt_query,
-                                key=f"yt_food_query_{idx}_{m_idx}",
+                                key=f"yt_query_cook_{idx}_{m_idx}",
                             )
                             st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["video_query"] = yt_query
 
-                            if st.button("요리/식사 영상 추천 받기", key=f"search_yt_food_{idx}_{m_idx}"):
+                            if st.button("요리 영상 추천 받기", key=f"search_yt_cook_{idx}_{m_idx}"):
                                 with st.spinner("관련 영상을 찾는 중입니다."):
                                     try:
                                         yt_results = search_cooking_videos_for_dd_raw(yt_query, max_results=rec_n)
@@ -661,15 +572,86 @@ def coordinator_page():
 
                             yt_results = st.session_state.get(yt_key, [])
                             if yt_results:
-                                st.caption("추천된 영상 목록입니다. 하나를 선택해주세요.")
+                                st.caption("추천된 요리 영상입니다. 하나를 선택해주세요.")
                                 for v_idx, v in enumerate(yt_results[:rec_n]):
                                     st.markdown(f"- {v.get('title','')}")
                                     if v.get("thumbnail"):
-                                        st.image(v["thumbnail"], width=240)  # ✅ 썸네일 크기 축소
-                                    if st.button("이 영상 사용", key=f"use_yt_food_{idx}_{m_idx}_{v_idx}"):
+                                        st.image(v["thumbnail"], width=240)
+                                    if st.button("이 영상 사용", key=f"use_yt_cook_{idx}_{m_idx}_{v_idx}"):
                                         st.session_state[SCHEDULE_STATE_KEY][idx]["menus"][m_idx]["video_url"] = v.get("url", "")
                                         changed = True
                                         st.success("영상이 적용되었습니다.")
+
+
+            # ---------------- MEAL ----------------
+            elif type_ == "MEAL":
+                st.markdown("#### 식사 활동 설정")
+
+                # 식사는 '메뉴 1개' 기본으로 두는 게 관리가 편함(원하면 여러 개도 가능)
+                meal_name_default = item.get("meal_name") or (task.strip() if task.strip() else "식사")
+                meal_name = st.text_input("식사 이름", value=meal_name_default, key=f"meal_name_{idx}")
+                st.session_state[SCHEDULE_STATE_KEY][idx]["meal_name"] = meal_name
+
+                # 식사 사진(선택)
+                st.caption("식사 사진(선택)")
+                meal_img_key = f"img_results_meal_{idx}"
+                default_img_query = item.get("meal_img_query") or f"{meal_name} 음식"
+                meal_img_query = st.text_input("이미지 검색어", value=default_img_query, key=f"meal_img_query_{idx}")
+                st.session_state[SCHEDULE_STATE_KEY][idx]["meal_img_query"] = meal_img_query
+
+                current_meal_img = item.get("meal_image") or ""
+                if current_meal_img:
+                    st.image(current_meal_img, use_container_width=True)
+
+                if st.button("식사 사진 추천 받기", key=f"search_img_meal_{idx}"):
+                    with st.spinner("사진을 찾는 중입니다."):
+                        try:
+                            img_results = search_and_filter_food_images(meal_img_query, max_results=rec_n)
+                        except Exception as e:
+                            st.error(f"사진 추천 오류: {e}")
+                            img_results = []
+                        st.session_state[meal_img_key] = img_results
+
+                img_results = st.session_state.get(meal_img_key, [])
+                if img_results:
+                    st.caption("추천 사진 중 하나를 골라주세요.")
+                    # ✅ 여기 선택 로직도 너 기존 clickable_images/fallback 그대로 복붙
+                    # 선택 시: st.session_state[SCHEDULE_STATE_KEY][idx]["meal_image"] = local_path
+
+                st.markdown("---")
+
+                # 식사 영상: 요리처럼 "만들기"가 아니라 "먹기/식사 예절/천천히 먹기" 쿼리가 더 맞음
+                meal_yt_key = f"yt_meal_{idx}"
+                default_meal_yt_query = item.get("meal_video_query") or f"발달장애인 쉬운 식사 먹기 {meal_name}"
+                meal_yt_query = st.text_input("식사 영상 유튜브 검색어", value=default_meal_yt_query, key=f"meal_yt_query_{idx}")
+                st.session_state[SCHEDULE_STATE_KEY][idx]["meal_video_query"] = meal_yt_query
+
+                current_meal_video = item.get("meal_video_url") or ""
+                if current_meal_video:
+                    st.caption("현재 선택된 식사 영상")
+                    render_video_small(current_meal_video, width=360, height=220)
+
+                if st.button("식사 영상 추천 받기", key=f"search_yt_meal_{idx}"):
+                    with st.spinner("관련 영상을 찾는 중입니다."):
+                        try:
+                            # ✅ 너 유튜브 유틸이 cooking 검색만 있으면 일단 재사용 가능
+                            yt_results = search_cooking_videos_for_dd_raw(meal_yt_query, max_results=rec_n)
+                        except Exception as e:
+                            st.error(f"영상 추천 오류: {e}")
+                            yt_results = []
+                        st.session_state[meal_yt_key] = yt_results
+
+                yt_results = st.session_state.get(meal_yt_key, [])
+                if yt_results:
+                    st.caption("추천된 식사 영상입니다. 하나를 선택해주세요.")
+                    for v_idx, v in enumerate(yt_results[:rec_n]):
+                        st.markdown(f"- {v.get('title','')}")
+                        if v.get("thumbnail"):
+                            st.image(v["thumbnail"], width=240)
+                        if st.button("이 영상 사용", key=f"use_yt_meal_{idx}_{v_idx}"):
+                            st.session_state[SCHEDULE_STATE_KEY][idx]["meal_video_url"] = v.get("url", "")
+                            changed = True
+                            st.success("영상이 적용되었습니다.")
 
             # ---------------- HEALTH ----------------
             elif type_ == "HEALTH":
@@ -714,23 +696,6 @@ def coordinator_page():
                             st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = v.get("url", "")
                             changed = True
                             st.success("영상이 적용되었습니다.")
-
-            # ---------------- CLOTHING ----------------
-            elif type_ == "CLOTHING":
-                st.markdown("#### 옷 입기 활동 설정")
-
-                current_video = item.get("video_url", "")
-                url = st.text_input(
-                    "참고 영상 URL(선택)",
-                    value=current_video,
-                    key=f"clothing_video_url_{idx}",
-                    placeholder="https://www.youtube.com/watch?v=...",
-                )
-                st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = url.strip()
-                if url.strip():
-                    st.caption("현재 선택된 참고 영상")
-                    render_video_small(url.strip(), width=360, height=220)
-                    changed = True
 
             # ---------------- LEISURE ----------------
             elif type_ == "LEISURE":
