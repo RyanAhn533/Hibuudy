@@ -68,6 +68,30 @@ def _save_schedule_to_file(schedule: List[Dict]) -> str:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     return path
 
+def _normalize_type_by_task(schedule: List[Dict]) -> List[Dict]:
+    def has(text: str, keys) -> bool:
+        t = (text or "").strip()
+        return any(k in t for k in keys)
+
+    for it in schedule:
+        task = (it.get("task") or "").strip()
+        ty = (it.get("type") or "").strip().upper()
+
+        # 쉬는/휴식 → REST
+        if has(task, ["쉬", "휴식", "잠깐", "물", "화장실"]):
+            it["type"] = "REST"
+            continue
+
+        # 옷 입기 → CLOTHING
+        if has(task, ["옷", "갈아", "입기", "코디", "외출 준비"]):
+            it["type"] = "CLOTHING"
+            continue
+
+        # MEAL → COOKING (사용자 페이지 호환)
+        if ty == "MEAL":
+            it["type"] = "COOKING"
+
+    return schedule
 
 def _extract_menu_names_from_task(task: str) -> List[str]:
     """
@@ -563,10 +587,13 @@ def coordinator_page():
 
     if st.button("일정 저장 (schedule_today.json)", type="primary"):
         try:
-            path = _save_schedule_to_file(st.session_state[SCHEDULE_STATE_KEY])
+            sched = st.session_state[SCHEDULE_STATE_KEY]
+            sched = _normalize_type_by_task(sched)  # ✅ 이 줄 추가
+            path = _save_schedule_to_file(sched)    # ✅ sched로 저장
             st.success(f"저장 완료! 저장 위치: {path}")
         except Exception as e:
             st.error(f"저장 중 오류: {e}")
+
 
 
 if __name__ == "__main__":
