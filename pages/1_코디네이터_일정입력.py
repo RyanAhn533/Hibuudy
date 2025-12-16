@@ -559,22 +559,6 @@ def coordinator_page():
 
                 st.markdown("---")
 
-                # 2) URL 직접 입력(옵션)
-                current_video = item.get("video_url", "")
-                url = st.text_input(
-                    "여가 영상 URL(직접 입력도 가능)",
-                    value=current_video,
-                    key=f"leisure_video_url_{idx}",
-                    placeholder="https://www.youtube.com/watch?v=...",
-                )
-                st.session_state[SCHEDULE_STATE_KEY][idx]["video_url"] = url.strip()
-                if url.strip():
-                    st.caption("현재 선택된 여가 영상")
-                    render_video_small(url.strip(), width=360, height=220)
-                    changed = True
-
-            else:
-                st.caption("이 활동은 추가 설정이 필요하지 않습니다.")
 
     st.markdown("---")
     st.header("4. 오늘 일정 저장하기")
