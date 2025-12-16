@@ -534,6 +534,30 @@ def _render_health_view(slot: Dict, date_str: str):
     if video_url:
         st.video(video_url)
 
+    st.subheader("운동 방식 선택")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("앉아서 하는 운동", key="health_choose_seated"):
+            st.session_state["health_routine_id"] = "seated"
+    with c2:
+        if st.button("서서 하는 운동", key="health_choose_standing"):
+            st.session_state["health_routine_id"] = "standing"
+
+    routine_id = st.session_state.get("health_routine_id", "seated")
+    routine = get_health_routine(routine_id)
+    if routine:
+        title = routine.get("title") or ("앉아서 하는 운동" if routine_id == "seated" else "서서 하는 운동")
+        steps = routine.get("steps") or []
+        if isinstance(steps, list) and steps:
+            _render_steps_with_listen([str(x) for x in steps], base_key=f"health_{routine_id}_{date_str}_{slot.get('time','')}", title=title)
+    else:
+        st.info("운동 루틴을 불러오지 못했습니다.")
+
+    guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
+    if guide:
+        st.divider()
+        _render_steps_with_listen([str(x) for x in guide], base_key=f"health_guide_{date_str}_{slot.get('time','')}", title="추가 안내")
+
 
 def _render_clothing_view(slot: Dict, date_str: str):
     st.header("옷 입기 연습")
@@ -609,8 +633,8 @@ def user_page():
         st.markdown(f"### 현재 시간: {now.strftime('%Y-%m-%d %H:%M:%S')}")
 
         # 수동 재생(자동이 막히거나 끊긴 경우 대비)
-        with st.expander("소리가 안 들리면 여기에서 테스트", expanded=False):
-            _tts_button("지금부터 안내를 시작할게요.", key="tts_test_1", label="🔊 테스트 음성 재생")
+        with st.expander("모바일에서는 음성 허용을 꼭 눌러줘야해요", expanded=False):
+            _tts_button("지금부터 안내를 시작할게요.", key="tts_test_1", label="🔊 음성 허용 및 테스트")
             st.caption("모바일(iOS 등)에서는 ‘소리 켜기’를 한 번 눌러야 자동 재생이 안정적이에요.")
 
         if not active:

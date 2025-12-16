@@ -4,7 +4,7 @@
 import os
 import json
 import re
-from datetime import date
+from datetime import date, datetime
 from typing import Dict, List
 
 import streamlit as st
@@ -68,6 +68,7 @@ def _save_schedule_to_file(schedule: List[Dict]) -> str:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     return path
 
+
 def _normalize_type_by_task(schedule: List[Dict]) -> List[Dict]:
     def has(text: str, keys) -> bool:
         t = (text or "").strip()
@@ -92,6 +93,7 @@ def _normalize_type_by_task(schedule: List[Dict]) -> List[Dict]:
             it["type"] = "COOKING"
 
     return schedule
+
 
 def _extract_menu_names_from_task(task: str) -> List[str]:
     """
@@ -153,11 +155,126 @@ def _auto_attach_food_candidates(schedule: List[Dict]) -> List[Dict]:
     return schedule
 
 
+# -------------------------------
+# GPT(안내문/일정 수정) 유틸
+#   - OPENAI_API_KEY 또는 st.secrets["OPENAI_API_KEY"] 필요
+#   - openai 패키지(공식 클라이언트) 설치 필요: pip install openai
+# -------------------------------
+def _get_openai_client():
+    try:
+        from openai import OpenAI  # 공식 파이썬 SDK
+    except Exception:
+        return None, "openai 패키지가 없습니다. (pip install openai)"
+
+    api_key = None
+    try:
+        api_key = st.secrets.get("OPENAI_API_KEY")  # Streamlit secrets 우선
+    except Exception:
+        api_key = None
+
+    api_key = api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return None, "OPENAI_API_KEY가 설정되지 않았습니다. (환경변수 또는 st.secrets)"
+
+    try:
+        client = OpenAI(api_key=api_key)
+        return client, None
+    except Exception as e:
+        return None, f"OpenAI 클라이언트 초기화 실패: {e}"
+
+
+def _safe_json_loads(s: str):
+    try:
+        return json.loads(s)
+    except Exception:
+        return None
+
+
+def _call_gpt_json(system: str, user: str, model: str = None) -> Dict:
+    client, err = _get_openai_client()
+    if err:
+        raise RuntimeError(err)
+
+    model = model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")  # 가벼운 기본값(원하면 env로 교체)
+
+    resp = client.chat.completions.create(
+        model=model,
+        response_format={"type": "json_object"},
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        temperature=0.3,
+    )
+    content = (resp.choices[0].message.content or "").strip()
+    data = _safe_json_loads(content) or {}
+    return data
+
+
+def _is_valid_hhmm(s: str) -> bool:
+    s = (s or "").strip()
+    if not re.match(r"^\d{2}:\d{2}$", s):
+        return False
+    try:
+        datetime.strptime(s, "%H:%M")
+        return True
+    except Exception:
+        return False
+
+
+def _gpt_make_guide_script(task: str, type_label: str, extra_request: str = "") -> List[str]:
+    system = (
+        "너는 발달장애인/노인 사용자에게 안내할 짧고 쉬운 문장을 만드는 도우미다. "
+        "출력은 반드시 JSON만. 한국어만. 과장 금지. 문장은 1~5개. "
+        "각 문장은 20자~45자 정도로 짧게. 숫자는 가능하면 한글로 풀어쓴다."
+    )
+    user = (
+        f"활동 종류: {type_label}\n"
+        f"할 일: {task}\n"
+        f"추가 요청: {extra_request}\n\n"
+        "JSON 스키마:\n"
+        '{ "guide_script": ["문장1", "문장2"] }'
+    )
+    data = _call_gpt_json(system, user)
+    lines = data.get("guide_script") or []
+    if not isinstance(lines, list):
+        return []
+    cleaned = [str(x).strip() for x in lines if str(x).strip()]
+    return cleaned[:5]
+
+
+def _gpt_edit_item(item: Dict, request: str) -> Dict:
+    """item(time/type/task/guide_script)를 요청에 맞게 수정한 JSON을 반환"""
+    system = (
+        "너는 일정표를 수정하는 코디네이터 도우미다. "
+        "사용자 요청에 따라 time(HH:MM), task(문장), type(내부 코드), guide_script(문장 리스트)를 수정한다. "
+        "반드시 JSON만 출력한다. 한국어만. 기존 의미를 최대한 유지한다. "
+        "type은 아래 중 하나만 허용: MORNING_BRIEFING, NIGHT_WRAPUP, GENERAL, ROUTINE, COOKING, MEAL, HEALTH, CLOTHING, LEISURE, REST"
+    )
+    current = {
+        "time": item.get("time", ""),
+        "type": item.get("type", ""),
+        "task": item.get("task", ""),
+        "guide_script": item.get("guide_script") or [],
+    }
+    user = (
+        f"현재 항목 JSON:\n{json.dumps(current, ensure_ascii=False)}\n\n"
+        f"수정 요청: {request}\n\n"
+        "출력 JSON 스키마(필요한 키만 포함 가능):\n"
+        '{ "time": "HH:MM", "type": "GENERAL", "task": "…", "guide_script": ["…","…"] }'
+    )
+    data = _call_gpt_json(system, user)
+    if not isinstance(data, dict):
+        return {}
+    # 허용키만
+    allowed = {"time", "type", "task", "guide_script"}
+    return {k: v for k, v in data.items() if k in allowed}
+
+
 def _edit_guide_script(idx: int):
-    """
-    guide_script를 사용자가 저장 전 수정 가능하도록 text_area로 제공
-    """
+    """guide_script 수동 수정 + (선택) GPT로 자동 생성"""
     item = st.session_state[SCHEDULE_STATE_KEY][idx]
+
     current_lines = item.get("guide_script") or []
     default_text = "\n".join([str(x) for x in current_lines if str(x).strip()])
 
@@ -170,6 +287,30 @@ def _edit_guide_script(idx: int):
     )
     lines = [ln.strip() for ln in new_text.splitlines() if ln.strip()]
     st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = lines
+
+    # (선택) GPT로 안내문 생성
+    with st.expander("GPT로 안내문 자동 생성(선택)", expanded=False):
+        st.caption("예: '더 짧게', '3문장으로', '존댓말로', '천천히 하라고 강조' 같은 요청을 적으세요.")
+        req = st.text_input(
+            "추가 요청",
+            value="",
+            key=f"guide_gpt_req_{idx}",
+            placeholder="예: 3문장으로 더 짧게",
+        )
+        if st.button("GPT로 안내문 생성", key=f"btn_guide_gpt_{idx}"):
+            try:
+                type_ = (item.get("type") or "").strip()
+                task = (item.get("task") or "").strip()
+                gen = _gpt_make_guide_script(task=task, type_label=_label_type(type_), extra_request=req)
+                if not gen:
+                    st.warning("GPT가 안내문을 만들지 못했습니다. 요청을 더 구체적으로 적어보세요.")
+                else:
+                    st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = gen
+                    # 편집기에도 바로 반영되도록 rerun
+                    st.success("안내문이 적용되었습니다.")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"GPT 안내문 생성 오류: {e}")
 
 
 # -------------------------------
@@ -270,7 +411,7 @@ def coordinator_page():
 
     all_recipe_names = get_all_recipe_names()
     all_health_modes = get_health_modes()
-    health_name_map = {m["name"]: m for m in all_health_modes}
+    health_name_map = {m["name"]: m for m in all_health_modes}  # (유지) 데이터 호환 목적
 
     changed = False
 
@@ -284,6 +425,66 @@ def coordinator_page():
             f"[{time_str}] {_label_type(type_)} · {task}",
             expanded=(type_ in expand_types),
         ):
+            # ✅ 코디네이터가 시간/할 일을 직접 수정할 수 있도록 입력창 제공
+            col_a, col_b = st.columns([1, 3])
+            with col_a:
+                new_time = st.text_input(
+                    "시간(HH:MM)",
+                    value=str(time_str),
+                    key=f"edit_time_{idx}",
+                ).strip()
+            with col_b:
+                new_task = st.text_input(
+                    "할 일(문장)",
+                    value=str(task),
+                    key=f"edit_task_{idx}",
+                ).strip()
+
+            if new_time and new_time != time_str:
+                if _is_valid_hhmm(new_time):
+                    st.session_state[SCHEDULE_STATE_KEY][idx]["time"] = new_time
+                    changed = True
+                else:
+                    st.warning("시간 형식이 올바르지 않습니다. 예: 08:30")
+
+            if new_task != task:
+                st.session_state[SCHEDULE_STATE_KEY][idx]["task"] = new_task
+                task = new_task
+                changed = True
+
+            # (선택) GPT로 이 항목(time/task/guide_script 등) 한 번에 수정
+            with st.expander("GPT로 이 일정 수정(선택)", expanded=False):
+                gpt_req = st.text_input(
+                    "수정 요청",
+                    value="",
+                    key=f"gpt_edit_req_{idx}",
+                    placeholder="예: 시간을 19:30으로 바꾸고 안내문을 더 짧게",
+                )
+                if st.button("GPT로 수정 적용", key=f"btn_gpt_edit_{idx}"):
+                    try:
+                        patch = _gpt_edit_item(st.session_state[SCHEDULE_STATE_KEY][idx], gpt_req)
+                        if "time" in patch:
+                            if _is_valid_hhmm(str(patch["time"])):
+                                st.session_state[SCHEDULE_STATE_KEY][idx]["time"] = str(patch["time"])
+                                changed = True
+                            else:
+                                st.warning("GPT가 준 시간이 HH:MM 형식이 아닙니다. (적용 안 함)")
+                        if "task" in patch:
+                            st.session_state[SCHEDULE_STATE_KEY][idx]["task"] = str(patch["task"]).strip()
+                            changed = True
+                        if "type" in patch:
+                            st.session_state[SCHEDULE_STATE_KEY][idx]["type"] = str(patch["type"]).strip()
+                            changed = True
+                        if "guide_script" in patch and isinstance(patch["guide_script"], list):
+                            gs = [str(x).strip() for x in patch["guide_script"] if str(x).strip()]
+                            st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = gs[:5]
+                            changed = True
+
+                        st.success("GPT 수정이 적용되었습니다.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"GPT 일정 수정 오류: {e}")
+
             _edit_guide_script(idx)
             st.markdown("---")
 
@@ -470,18 +671,7 @@ def coordinator_page():
             elif type_ == "HEALTH":
                 st.markdown("#### 운동 활동 설정")
 
-                mode_names = [m["name"] for m in all_health_modes]
-                current_mode = item.get("health_mode_name") or (mode_names[0] if mode_names else "")
-
-                selected = st.radio(
-                    "이 시간에 가능한 운동 종류를 선택하세요",
-                    options=mode_names,
-                    index=mode_names.index(current_mode) if current_mode in mode_names else 0,
-                    key=f"health_mode_{idx}",
-                )
-                st.session_state[SCHEDULE_STATE_KEY][idx]["health_mode_name"] = selected
-                mode_obj = health_name_map.get(selected, {})
-                st.session_state[SCHEDULE_STATE_KEY][idx]["health_mode"] = mode_obj
+                # (요청 반영) 운동 방식 선택 UI는 제거했습니다.
 
                 yt_key = f"yt_health_{idx}"
                 default_health_query = item.get(
@@ -581,7 +771,6 @@ def coordinator_page():
 
                 st.markdown("---")
 
-
     st.markdown("---")
     st.header("4. 오늘 일정 저장하기")
 
@@ -593,7 +782,6 @@ def coordinator_page():
             st.success(f"저장 완료! 저장 위치: {path}")
         except Exception as e:
             st.error(f"저장 중 오류: {e}")
-
 
 
 if __name__ == "__main__":
