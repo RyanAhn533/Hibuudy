@@ -1,6 +1,10 @@
 # pages/1_코디네이터_오늘_일정_설계.py
 # -*- coding: utf-8 -*-
-
+import sys
+from pathlib import Path
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 import os
 import json
 import re
