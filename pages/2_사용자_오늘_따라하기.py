@@ -3,7 +3,7 @@
 import base64
 import json
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional, List, Dict
 
 from urllib.parse import quote as urlquote  # 메뉴 이름을 이미지 검색 쿼리로 쓰기 위해 인코딩
@@ -32,6 +32,9 @@ PRE_NOTICE_MINUTES = 5
 
 # 알람 사운드 파일(있으면 사용)
 ALARM_SOUND_PATH = os.path.join("assets", "sounds", "alarm.mp3")
+
+# 재생 중 autorefresh를 멈추기 위한 기본 가드 시간(초)
+PLAYING_GUARD_SECONDS = 25
 
 
 # ─────────────────────────────────────────────
@@ -86,9 +89,7 @@ def _make_silence_wav(duration_sec: float = 0.2, sample_rate: int = 8000) -> byt
     num_samples = int(sample_rate * duration_sec)
     data_size = num_samples * block_align
 
-    # RIFF header
     riff = b"RIFF" + struct.pack("<I", 36 + data_size) + b"WAVE"
-    # fmt chunk
     fmt = (
         b"fmt "
         + struct.pack("<I", 16)
@@ -99,10 +100,33 @@ def _make_silence_wav(duration_sec: float = 0.2, sample_rate: int = 8000) -> byt
         + struct.pack("<H", block_align)
         + struct.pack("<H", bits_per_sample)
     )
-    # data chunk
     data = b"data" + struct.pack("<I", data_size) + (b"\x00\x00" * num_samples)
-
     return riff + fmt + data
+
+
+def _estimate_tts_seconds(text: str) -> int:
+    """
+    TTS 길이를 완벽히 알 수 없으니, 끊김 방지를 위한 대략적인 '재생 가드 시간'을 추정.
+    너무 공격적으로 잡지 말고, 최소 PLAYING_GUARD_SECONDS는 확보.
+    """
+    # 한국어 기준 대략 8~12자/초 정도로 가정(보수적으로 10자/초)
+    est = int(len(text) / 10) + 3
+    return max(PLAYING_GUARD_SECONDS, min(est, 90))
+
+
+def _set_playing_guard(now: datetime, seconds: int):
+    """
+    재생 중 autorefresh로 rerun이 걸리면 오디오가 끊길 수 있어, 일정 시간 동안 autorefresh를 멈춘다.
+    """
+    st.session_state["playing_until"] = (now + timedelta(seconds=seconds)).timestamp()
+
+
+def _is_playing_guard_active(now: datetime) -> bool:
+    until_ts = st.session_state.get("playing_until", 0.0)
+    try:
+        return float(until_ts) > now.timestamp()
+    except Exception:
+        return False
 
 
 # ─────────────────────────────────────────────
@@ -115,6 +139,10 @@ def _play_tts_auto(text: str):
     audio_bytes = synthesize_tts(text)
     if not audio_bytes:
         return
+
+    # 수동 복구용 저장
+    st.session_state["last_tts_bytes"] = audio_bytes
+    st.session_state["last_tts_text"] = text
 
     b64 = base64.b64encode(audio_bytes).decode("utf-8")
     html = f"""
@@ -135,14 +163,18 @@ def _tts_button(text: str, key: str, label: str = "🔊 듣기"):
             st.audio(audio_bytes, format="audio/mpeg")
 
 
-def _play_alarm_then_tts(alarm_bytes: Optional[bytes], tts_bytes: bytes):
+def _play_alarm_then_tts(alarm_bytes: Optional[bytes], tts_bytes: bytes, dom_suffix: str = ""):
     """
     (가능하면) 알람 → TTS를 연속으로 한 번에 재생.
-    Safari/iOS 계열에서 연속 autoplay가 까다로운 편이라,
-    같은 HTML 블록에서 audio onended 체인으로 처리.
+    Safari/iOS에서 연속 autoplay가 까다로워, 같은 HTML 블록에서 onended 체인으로 처리.
+
+    dom id 충돌( rerun 시 같은 id가 중복 )을 줄이려고 suffix를 붙인다.
     """
     tts_b64 = base64.b64encode(tts_bytes).decode("utf-8")
     tts_src = f"data:audio/mpeg;base64,{tts_b64}"
+
+    alarm_id = f"hibuddy_alarm_{dom_suffix}" if dom_suffix else "hibuddy_alarm"
+    tts_id = f"hibuddy_tts_{dom_suffix}" if dom_suffix else "hibuddy_tts"
 
     if alarm_bytes:
         alarm_b64 = base64.b64encode(alarm_bytes).decode("utf-8")
@@ -150,16 +182,16 @@ def _play_alarm_then_tts(alarm_bytes: Optional[bytes], tts_bytes: bytes):
 
         html = f"""
         <div>
-          <audio id="hibuddy_alarm" autoplay>
+          <audio id="{alarm_id}" autoplay>
             <source src="{alarm_src}" type="audio/mpeg" />
           </audio>
-          <audio id="hibuddy_tts">
+          <audio id="{tts_id}">
             <source src="{tts_src}" type="audio/mpeg" />
           </audio>
           <script>
             (function() {{
-              const a = document.getElementById("hibuddy_alarm");
-              const t = document.getElementById("hibuddy_tts");
+              const a = document.getElementById("{alarm_id}");
+              const t = document.getElementById("{tts_id}");
               if (!a || !t) return;
 
               a.onended = function() {{
@@ -178,7 +210,6 @@ def _play_alarm_then_tts(alarm_bytes: Optional[bytes], tts_bytes: bytes):
         """
         st.components.v1.html(html, height=0)
     else:
-        # 알람 파일 없으면 TTS만 autoplay
         html = f"""
         <audio autoplay="true">
           <source src="{tts_src}" type="audio/mpeg">
@@ -230,7 +261,6 @@ def _join_lines_for_tts(lines: List[str], prefix: str = "") -> str:
         s = str(line).strip()
         if not s:
             continue
-        # 너무 길면 끊어 읽기 좋게 약간 가공(최소)
         clean.append(f"{i}단계. {s}")
     if not clean:
         return prefix.strip()
@@ -247,10 +277,8 @@ def _build_full_narration_text(slot: Dict) -> str:
     """
     slot_type = (slot.get("type") or "").upper()
 
-    # 1) 요약
     summary = _build_slot_tts_text(slot)
 
-    # 2) 상세(guide_script 전체)
     guide_lines: List[str] = []
     guide = slot.get("guide_script")
     if isinstance(guide, list):
@@ -260,11 +288,9 @@ def _build_full_narration_text(slot: Dict) -> str:
     if guide_lines:
         detail = _join_lines_for_tts(guide_lines, prefix="자세한 안내를 드릴게요.")
 
-    # 3) 타입별 추가 상세(선택적으로)
     extra = ""
 
     if slot_type == "COOKING":
-        # 선택된 메뉴가 있으면 레시피를 '한 번에' 안내
         sel_key = f"selected_menu_{_make_slot_key(st.session_state.get('schedule_date_str', ''), slot)}"
         chosen = st.session_state.get(sel_key, "")
         if chosen:
@@ -282,11 +308,9 @@ def _build_full_narration_text(slot: Dict) -> str:
                     parts.append(_join_lines_for_tts([str(x) for x in steps], prefix="이제 조리 방법을 안내할게요."))
                 extra = " ".join(parts).strip()
         else:
-            # 메뉴를 아직 안 골랐으면 안내만
             extra = "메뉴를 선택한 뒤에, 레시피 안내가 자동으로 더 자세히 나와요."
 
     if slot_type == "HEALTH":
-        # 기본 루틴(앉아서)로 한 번에 안내 + 이후 단계별 다시 듣기 가능
         routine_id = st.session_state.get("health_routine_id", "seated")
         routine = get_health_routine(routine_id)
         if routine:
@@ -295,7 +319,6 @@ def _build_full_narration_text(slot: Dict) -> str:
             if isinstance(steps, list) and steps:
                 extra = f"{title} 루틴으로 안내할게요. " + _join_lines_for_tts([str(x) for x in steps])
 
-    # 최종 합치기
     parts_all = [summary]
     if detail:
         parts_all.append(detail)
@@ -322,7 +345,6 @@ def _render_audio_unlock_ui():
     st.info("모바일에서는 자동으로 소리가 안 나올 수 있어요. 아래 버튼을 한 번 눌러서 소리를 켜 주세요.")
     if st.button("소리 켜기", key="btn_unlock_audio"):
         st.session_state["audio_unlocked"] = True
-        # 사용자 제스처(버튼 클릭) 타이밍에 무음 오디오를 1번 재생해서 컨텍스트를 열어둔다.
         st.audio(_make_silence_wav(), format="audio/wav")
         st.success("소리가 켜졌어요. 이제 일정 시간이 되면 알람과 안내 음성이 자동으로 나와요.")
 
@@ -338,21 +360,17 @@ def _auto_tts_logic(now: datetime, date_str: str, active: Optional[Dict], next_i
     - 슬롯 시작 시: 알람 → 전체 안내를 한 번에 '쭉' (1회)
     - 5분 전 예고: (원하면 유지)
     """
-    # 스케줄 날짜 체크
     try:
         sched_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except Exception:
-        # date_str 파싱 실패면 안전하게 자동재생 끔
         return
 
     if sched_date != now.date():
         return
 
-    # 모바일 autoplay 대응: 오디오 언락 전에는 자동재생 시도하지 않음
     if not st.session_state.get("audio_unlocked", False):
         return
 
-    # 세션 플래그 초기화
     if "greeting_tts_done" not in st.session_state:
         st.session_state["greeting_tts_done"] = False
     if "last_tts_slot_key" not in st.session_state:
@@ -376,8 +394,11 @@ def _auto_tts_logic(now: datetime, date_str: str, active: Optional[Dict], next_i
         if active:
             base = base + " " + _build_slot_tts_text(active)
 
-        # 인사는 알람 없이 TTS만
         _play_tts_auto(base)
+
+        # 인사도 재생 중 끊김 방지 가드
+        _set_playing_guard(now, _estimate_tts_seconds(base))
+
         st.session_state["greeting_tts_done"] = True
         return
 
@@ -385,17 +406,23 @@ def _auto_tts_logic(now: datetime, date_str: str, active: Optional[Dict], next_i
     if active:
         current_key = _make_slot_key(date_str, active)
 
-        # 기존 "슬롯 변경 시 요약만"이 아니라,
-        # 전체 안내를 '한 번에 쭉' 읽는 걸 우선으로 한다.
         if st.session_state["full_narrated_slot_key"] != current_key:
-            # 알람 bytes (없으면 None)
             alarm_bytes = _read_bytes(ALARM_SOUND_PATH)
 
-            # 전체 안내 텍스트 생성 → TTS 1회 생성
             full_text = "띵동! 알림이 왔습니다. " + _build_full_narration_text(active)
             tts_bytes = synthesize_tts(full_text)
+
             if tts_bytes:
-                _play_alarm_then_tts(alarm_bytes, tts_bytes)
+                # 수동 복구용 저장(자동재생이 막혀도 버튼으로 바로 틀 수 있게)
+                st.session_state["last_tts_bytes"] = tts_bytes
+                st.session_state["last_tts_text"] = full_text
+
+                # 오디오 끊김 방지: 재생 예상 시간 동안 autorefresh 멈춤
+                _set_playing_guard(now, _estimate_tts_seconds(full_text))
+
+                # DOM id 충돌 줄이기(슬롯키 기반 suffix)
+                dom_suffix = base64.b64encode(current_key.encode("utf-8")).decode("utf-8")[:12]
+                _play_alarm_then_tts(alarm_bytes, tts_bytes, dom_suffix=dom_suffix)
 
             st.session_state["full_narrated_slot_key"] = current_key
             st.session_state["last_tts_slot_key"] = current_key
@@ -414,6 +441,9 @@ def _auto_tts_logic(now: datetime, date_str: str, active: Optional[Dict], next_i
         if 0 < diff_min <= PRE_NOTICE_MINUTES and st.session_state["last_pre_notice_slot_key"] != next_key:
             pre_text = f"{next_item.get('time','')}에 시작하는 활동을 준비해 볼까요? " + _build_slot_tts_text(next_item)
             _play_tts_auto(pre_text)
+
+            _set_playing_guard(now, _estimate_tts_seconds(pre_text))
+
             st.session_state["last_pre_notice_slot_key"] = next_key
             return
 
@@ -424,7 +454,6 @@ def _auto_tts_logic(now: datetime, date_str: str, active: Optional[Dict], next_i
 def _render_steps_with_listen(lines: List[str], base_key: str, title: str = "자세한 단계"):
     """
     단계들을 전부 보여주고, 각 단계별로 '다시 듣기' 버튼 제공.
-    (사용자가 '다음'을 눌러야만 진행되는 구조를 최소화)
     """
     if not lines:
         st.info("표시할 단계가 없습니다.")
@@ -432,11 +461,9 @@ def _render_steps_with_listen(lines: List[str], base_key: str, title: str = "자
 
     st.subheader(title)
 
-    # 전체 다시 듣기
     all_text = _join_lines_for_tts(lines, prefix="전체 단계를 다시 안내할게요.")
     _tts_button(all_text, key=f"{base_key}_listen_all", label="🔊 전체 안내 다시 듣기")
 
-    # 단계별 다시 듣기
     with st.expander("단계별 다시 듣기", expanded=True):
         for idx, line in enumerate(lines, start=1):
             s = str(line).strip()
@@ -461,7 +488,6 @@ def _get_menu_image_url(menu_name: str, slot: Dict) -> str:
     if isinstance(image_map, dict) and menu_name in image_map:
         return str(image_map[menu_name])
 
-    # Unsplash fallback
     q = urlquote(menu_name)
     return f"https://source.unsplash.com/featured/?food,{q}"
 
@@ -471,9 +497,12 @@ def _render_cooking_view(slot: Dict, date_str: str):
 
     guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
     if guide:
-        _render_steps_with_listen([str(x) for x in guide], base_key=f"cook_{_make_slot_key(date_str, slot)}", title="오늘 요리 안내")
+        _render_steps_with_listen(
+            [str(x) for x in guide],
+            base_key=f"cook_{_make_slot_key(date_str, slot)}",
+            title="오늘 요리 안내",
+        )
 
-    # 메뉴 선택 UI
     menus = slot.get("menus") or slot.get("menu_candidates") or []
     if not isinstance(menus, list):
         menus = []
@@ -484,7 +513,7 @@ def _render_cooking_view(slot: Dict, date_str: str):
     if menus:
         st.subheader("메뉴 선택")
         cols = st.columns(min(3, len(menus)))
-        for i, name in enumerate(menus[:9]):  # 메뉴 카드는 너무 많아지지 않게 제한
+        for i, name in enumerate(menus[:9]):
             with cols[i % len(cols)]:
                 img = _get_menu_image_url(str(name), slot)
                 st.image(img, use_container_width=True)
@@ -495,7 +524,6 @@ def _render_cooking_view(slot: Dict, date_str: str):
         if chosen:
             st.success(f"선택된 메뉴: {chosen}")
 
-            # 영상
             video_url = ""
             videos = slot.get("videos") or slot.get("video_urls") or {}
             if isinstance(videos, dict):
@@ -506,7 +534,6 @@ def _render_cooking_view(slot: Dict, date_str: str):
             if video_url:
                 st.video(video_url)
 
-            # 레시피 표시 + 단계별 듣기
             recipe = get_recipe(chosen)
             if recipe:
                 tools = recipe.get("tools") or []
@@ -536,7 +563,6 @@ def _render_health_view(slot: Dict, date_str: str):
     if video_url:
         st.video(video_url)
 
-    # 루틴 선택(선택은 자유지만, '단계 클릭 강제'는 없음)
     st.subheader("운동 방식 선택")
     c1, c2 = st.columns(2)
     with c1:
@@ -552,14 +578,22 @@ def _render_health_view(slot: Dict, date_str: str):
         title = routine.get("title") or ("앉아서 하는 운동" if routine_id == "seated" else "서서 하는 운동")
         steps = routine.get("steps") or []
         if isinstance(steps, list) and steps:
-            _render_steps_with_listen([str(x) for x in steps], base_key=f"health_{routine_id}_{_make_slot_key(date_str, slot)}", title=title)
+            _render_steps_with_listen(
+                [str(x) for x in steps],
+                base_key=f"health_{routine_id}_{_make_slot_key(date_str, slot)}",
+                title=title,
+            )
     else:
         st.info("운동 루틴을 불러오지 못했습니다.")
 
     guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
     if guide:
         st.divider()
-        _render_steps_with_listen([str(x) for x in guide], base_key=f"health_guide_{_make_slot_key(date_str, slot)}", title="추가 안내")
+        _render_steps_with_listen(
+            [str(x) for x in guide],
+            base_key=f"health_guide_{_make_slot_key(date_str, slot)}",
+            title="추가 안내",
+        )
 
 
 def _render_clothing_view(slot: Dict, date_str: str):
@@ -567,7 +601,11 @@ def _render_clothing_view(slot: Dict, date_str: str):
 
     guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
     if guide:
-        _render_steps_with_listen([str(x) for x in guide], base_key=f"cloth_{_make_slot_key(date_str, slot)}", title="옷 입기 안내")
+        _render_steps_with_listen(
+            [str(x) for x in guide],
+            base_key=f"cloth_{_make_slot_key(date_str, slot)}",
+            title="옷 입기 안내",
+        )
 
     video_url = str(slot.get("video_url", "") or "")
     if video_url:
@@ -580,7 +618,11 @@ def _render_general_view(slot: Dict, date_str: str, title: str):
     st.header(title)
     guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
     if guide:
-        _render_steps_with_listen([str(x) for x in guide], base_key=f"gen_{_make_slot_key(date_str, slot)}", title="안내")
+        _render_steps_with_listen(
+            [str(x) for x in guide],
+            base_key=f"gen_{_make_slot_key(date_str, slot)}",
+            title="안내",
+        )
 
 
 # ─────────────────────────────────────────────
@@ -596,25 +638,29 @@ def user_page():
 
     render_topbar()
 
-    # 자동 새로고침
-    st_autorefresh(interval=AUTO_REFRESH_SEC * 1000, key="hibuddy_autorefresh")
+    schedule, date_str = _load_schedule()
+    st.session_state["schedule_date_str"] = date_str  # 다른 함수에서 참조용
+
+    now = datetime.now(KST)
+
+    # ✅ 재생 중에는 autorefresh를 잠깐 멈춤 (오디오 끊김 방지)
+    if not _is_playing_guard_active(now):
+        st_autorefresh(interval=AUTO_REFRESH_SEC * 1000, key="hibuddy_autorefresh")
+    else:
+        # 재생 중임을 사용자에게 아주 작게 안내(UX 방해 최소)
+        st.caption("안내 음성이 재생 중이에요. 잠시만 기다려 주세요.")
 
     # 오디오 언락 UI (모바일 대응)
     _render_audio_unlock_ui()
-
-    schedule, date_str = _load_schedule()
-    st.session_state["schedule_date_str"] = date_str  # 다른 함수에서 참조용
 
     if not schedule:
         st.warning("오늘 일정이 비어있습니다. 코디네이터 페이지에서 일정을 추가해 주세요.")
         return
 
-    now = datetime.now(KST)
-    now_time = now.time()   # ✅ datetime.time 객체
+    now_time = now.time()  # ✅ datetime.time 객체
 
     active, next_item = find_active_item(schedule, now_time)
     annotated = annotate_schedule_with_status(schedule, now_time)
-
 
     # 자동 알람 + 전체 안내(TTS)
     _auto_tts_logic(now, date_str, active, next_item)
@@ -626,6 +672,18 @@ def user_page():
 
     with main_col:
         st.markdown(f"### 현재 시간: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # ✅ 자동재생 실패 대비: 항상 수동 재생 버튼을 “가볍게” 제공
+        # (자동재생이 막혀도 사용자가 한 번만 누르면 대부분 해결됨)
+        last_bytes = st.session_state.get("last_tts_bytes", None)
+        last_text = st.session_state.get("last_tts_text", "")
+        if last_bytes:
+            with st.expander("소리가 안 들리면 여기 눌러서 다시 재생", expanded=False):
+                st.write("자동으로 소리가 안 나오는 기기(iOS 등)에서는 아래 버튼을 눌러야 재생돼요.")
+                if st.button("🔊 안내 다시 재생", key="btn_manual_replay_last"):
+                    st.audio(last_bytes, format="audio/mpeg")
+                if last_text:
+                    st.caption("마지막 안내 문장(디버그용): " + last_text[:120] + ("..." if len(last_text) > 120 else ""))
 
         if not active:
             st.info("아직 첫 활동 전이에요.")
@@ -641,7 +699,6 @@ def user_page():
         slot_type = (active.get("type") or "").upper()
         task = str(active.get("task") or "").strip()
 
-        # 상단 요약(버튼으로 다시 듣기 가능)
         header_text = {
             "MORNING_BRIEFING": "아침 준비",
             "COOKING": "요리/식사",
@@ -659,7 +716,6 @@ def user_page():
 
         st.divider()
 
-        # 타입별 화면
         if slot_type == "COOKING":
             _render_cooking_view(active, date_str)
         elif slot_type == "HEALTH":
@@ -673,7 +729,6 @@ def user_page():
         else:
             _render_general_view(active, date_str, "활동")
 
-        # 전체 안내 다시 듣기(현재 슬롯 기준)
         st.divider()
         if st.session_state.get("audio_unlocked", False):
             if st.button("🔊 (현재 슬롯) 전체 안내 다시 듣기", key="btn_repeat_full_narration"):
