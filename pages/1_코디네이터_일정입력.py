@@ -155,7 +155,8 @@ def _edit_guide_script(idx: int):
 
 
 def coordinator_page():
-    render_topbar("코디네이터 · 오늘 일정 설계")
+    render_topbar()
+    st.title("코디네이터 · 오늘 일정 설계")  # 타이틀은 여기서 따로
     _init_state()
 
     st.header("1. 일정 내용 입력")
