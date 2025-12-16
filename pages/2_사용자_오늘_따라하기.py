@@ -610,10 +610,11 @@ def user_page():
         return
 
     now = datetime.now(KST)
-    now_time = now.strftime("%H:%M")
+    now_time = now.time()   # ✅ datetime.time 객체
 
     active, next_item = find_active_item(schedule, now_time)
     annotated = annotate_schedule_with_status(schedule, now_time)
+
 
     # 자동 알람 + 전체 안내(TTS)
     _auto_tts_logic(now, date_str, active, next_item)
