@@ -1,112 +1,47 @@
 import streamlit as st
+
 from utils.topbar import render_topbar
-
-
-def _big_step_card(title: str, icon: str, desc_lines: list, color: str = "info"):
-    """할머니도 보기 쉬운 큰 카드(아이콘 + 짧은 문장)"""
-    text = f"### {icon} {title}\n" + "\n".join([f"- {line}" for line in desc_lines])
-
-    if color == "success":
-        st.success(text)
-    elif color == "warning":
-        st.warning(text)
-    else:
-        st.info(text)
 
 
 def main():
     render_topbar()
 
-    # --- 제목: 짧고 크게 ---
-    st.markdown("# HiBuddy")
-    st.markdown("## 발달장애인 하루 스케줄 도우미")
-    st.caption("오늘 해야 할 일을 쉽게 만들고, 하루 동안 따라할 수 있게 안내합니다.")
+    st.markdown("## HiBuddy · 발달장애인 하루 스케줄러")
 
-    st.markdown("---")
+    st.markdown(
+        """
+        이 앱은 크게 두 가지 기능이 있습니다:
 
-    # --- 핵심 2가지 기능을 ‘그림+한 줄’로 ---
-    col1, col2 = st.columns(2, gap="large")
+        1. **코디네이터가 일정을 만드는 공간**
+           - 오늘 해야 할 일을 말로 적기만 하면  
+             → 프로그램이 자동으로 일정표 형태로 바꿔 줍니다.
+           - 요리 시간에는 "어떤 메뉴를 할지",  
+             운동 시간에는 "어떤 동작을 할지" 사진과 함께 저장할 수 있습니다.
+           - 모든 내용은 하루 일정 파일에 저장됩니다.  
+             (이 파일은 다음 화면에서 그대로 불러옵니다.)
 
-    with col1:
-        _big_step_card(
-            title="코디네이터 화면",
-            icon="🧑‍🏫",
-            desc_lines=[
-                "오늘 할 일을 적고 저장합니다.",
-                "중간 일정도 수정/삭제/이동할 수 있습니다.",
-                "필요하면 요리/운동/취미 영상도 넣을 수 있습니다.",
-            ],
-            color="info",
-        )
-
-    with col2:
-        _big_step_card(
-            title="사용자 화면(따라하기)",
-            icon="🧑‍🦽",
-            desc_lines=[
-                "지금 해야 할 일을 크게 보여줍니다.",
-                "필요하면 영상으로 따라할 수 있습니다.",
-                "다음 일정도 함께 보여줍니다.",
-            ],
-            color="success",
-        )
-
-    st.markdown("---")
-
-    # --- 사용 방법: 2단계만 크게 ---
-    st.markdown("## 사용 방법 (딱 2단계)")
-    _big_step_card(
-        title="1단계 · 코디네이터가 오늘 일정 만들기",
-        icon="①",
-        desc_lines=[
-            "왼쪽 메뉴에서 ‘1_코디네이터_오늘_일정_설계’로 이동합니다.",
-            "오늘의 일정을 입력하고 ‘저장’ 버튼을 누릅니다.",
-        ],
-        color="info",
-    )
-
-    _big_step_card(
-        title="2단계 · 사용자가 ‘오늘 따라하기’ 켜두기",
-        icon="②",
-        desc_lines=[
-            "왼쪽 메뉴에서 ‘2_사용자_오늘_따라하기’로 이동합니다.",
-            "사용자 스마트폰/태블릿에서 하루 동안 켜두면 됩니다.",
-        ],
-        color="success",
+        2. **사용자(발달장애인)가 따라 하는 화면**
+           - 하루 종일 켜두는, 따라 하기 전용 화면입니다.
+           - 지금 할 수 있는 **한 가지 활동만 크게 보여주어**  
+             사용자가 복잡하지 않게 집중할 수 있도록 구성되어 있습니다.
+             - 요리: 메뉴 사진 + 단계별 안내
+             - 운동: 한 동작씩 순서대로 안내
+             - 기타 활동: 이해하기 쉬운 짧은 설명
+           - 바로 다음 활동도 화면 옆에 작게 보여줍니다.
+        """
     )
 
     st.markdown("---")
+    st.markdown(
+        """
+        ### 사용 방법 안내
 
-    # --- 큰 버튼: 할머니도 누를 수 있게 ---
-    st.markdown("## 바로 이동")
-    c1, c2 = st.columns(2, gap="large")
-
-    with c1:
-        st.page_link(
-            "pages/1_코디네이터_오늘_일정_설계.py",
-            label="🧑‍🏫 코디네이터 일정 만들기",
-            icon="🧑‍🏫",
-        )
-        st.caption("오늘 할 일을 입력하고 저장하는 곳")
-
-    with c2:
-        st.page_link(
-            "pages/2_사용자_오늘_따라하기.py",
-            label="🧑‍🦽 사용자 오늘 따라하기",
-            icon="🧑‍🦽",
-        )
-        st.caption("사용자가 지금 해야 할 일을 크게 보는 화면")
-
-    st.markdown("---")
-
-    # --- 초간단 예시: 문장 2~3줄만 ---
-    st.markdown("## 입력 예시(짧게)")
-    st.code(
-        "10:00 옷 입기\n12:00 점심 먹기\n19:00 드라마 보기",
-        language="text",
+        1. 왼쪽 메뉴에서 **`1_코디네이터_오늘_일정_설계`** 페이지로 이동합니다.  
+           여기에서 오늘의 일정을 입력하고 저장합니다.
+        2. 그 다음 **`2_사용자_오늘_따라하기`** 페이지를 열어  
+           사용자가 하루 동안 안내를 따라갈 수 있도록 화면을 켜두세요.
+        """
     )
-
-    st.caption("문장을 길게 쓰지 않아도 됩니다. 시간과 할 일만 적어도 됩니다.")
 
 
 if __name__ == "__main__":
