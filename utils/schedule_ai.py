@@ -48,29 +48,38 @@ SYSTEM_PROMPT = """
 
 각 필드 설명:
 - time: "HH:MM" 24시간 형식 문자열 (예: "08:00", "13:30")
-- type: 아래 값 중 하나
+- type: 아래 값 중 하나 (대문자)
   - "MORNING_BRIEFING" : 아침 인사, 날씨, 오늘 일정 소개
-  - "COOKING"          : 요리, 식사, 간식, 밥 먹기
+  - "MEAL"             : 밥 먹기(식사), 간식 먹기(식사 행위 중심)
+  - "COOKING"          : 요리하기(조리/레시피 수행 중심)
   - "HEALTH"           : 운동, 산책, 스트레칭, 건강 관리
-  - "GENERAL"          : 공부, 놀이, TV 보기, 외출 등 일반 활동
+  - "CLOTHING"         : 옷 입기 연습, 옷 갈아입기
+  - "LEISURE"          : 쉬기, 놀이, TV 보기, 취미, 여가 시간
+  - "ROUTINE"          : 준비/위생(세수, 양치, 샤워, 정리정돈 등)
+  - "GENERAL"          : 공부, 외출, 병원, 이동 등 일반 활동
   - "NIGHT_WRAPUP"     : 하루 마무리, 정리, 취침 준비
+
 - task: 코디네이터가 이해하기 쉬운 한 줄 설명
   예: "라면 또는 카레 중 하나 먹기"
 - guide_script: 발달장애인이 보기 쉬운 짧은 문장 배열
   - 존댓말 사용 (예: "~해요.")
   - 한 문장도 너무 길지 않게
   - 단계별로 천천히 안내
+  - guide_script 는 적어도 1개 이상의 문자열을 포함해야 합니다.
 
 타입 분류 힌트:
-- "밥", "식사", "점심", "저녁", "아침 먹기", "요리", "간식" → COOKING
+- "밥", "식사", "점심", "저녁", "아침 먹기", "간식", "먹기" → MEAL
+- "요리", "만들기", "조리", "레시피", "끓이기", "볶기" → COOKING
 - "운동", "체조", "스트레칭", "산책", "걷기", "헬스" → HEALTH
-- "잠자기", "취침", "하루 마무리", "정리하기" → NIGHT_WRAPUP
+- "옷", "갈아입기", "옷 입기" → CLOTHING
+- "쉬기", "휴식", "놀이", "TV", "영화", "여가" → LEISURE
+- "세수", "양치", "샤워", "정리", "준비" → ROUTINE
+- "잠자기", "취침", "하루 마무리" → NIGHT_WRAPUP
 - "날씨 안내", "아침 인사", "오늘 일정 소개" → MORNING_BRIEFING
 - 그 외 → GENERAL
 
 주의:
 - time 은 반드시 "HH:MM" 형식만 사용합니다.
-- guide_script 는 적어도 1개 이상의 문자열을 포함해야 합니다.
 - JSON 외의 설명, 코드블럭, 텍스트를 절대 추가하지 마세요.
 """
 
@@ -82,7 +91,7 @@ SYSTEM_PROMPT = """
 def _normalize_item(raw: Dict) -> Dict:
     """GPT가 준 한 슬롯(dict)을 안전하게 정리."""
     time_str = str(raw.get("time", "00:00"))
-    type_str = str(raw.get("type", "GENERAL")).upper()
+    type_str = str(raw.get("type", "GENERAL")).upper().strip()
     task = raw.get("task") or ""
 
     guide = raw.get("guide_script") or []
@@ -93,23 +102,65 @@ def _normalize_item(raw: Dict) -> Dict:
     else:
         guide = []
 
-    # type 값 조금 정리
+    # type 값 정리 (MEAL/LEISURE 등 유지)
     mapping = {
+        # morning
         "MORNING": "MORNING_BRIEFING",
         "MORNING_BRIEFING": "MORNING_BRIEFING",
+
+        # meal / cooking
+        "MEAL": "MEAL",
+        "EAT": "MEAL",
+        "EATING": "MEAL",
+        "FOOD": "MEAL",
+
         "COOK": "COOKING",
         "COOKING": "COOKING",
-        "MEAL": "COOKING",
-        "EAT": "COOKING",
+        "COOK_MEAL": "COOKING",
+
+        # health
         "HEALTH": "HEALTH",
         "EXERCISE": "HEALTH",
         "WORKOUT": "HEALTH",
+
+        # clothing
+        "CLOTH": "CLOTHING",
+        "CLOTHES": "CLOTHING",
+        "CLOTHING": "CLOTHING",
+        "DRESS": "CLOTHING",
+
+        # leisure
+        "LEISURE": "LEISURE",
+        "REST": "LEISURE",
+        "BREAK": "LEISURE",
+        "RELAX": "LEISURE",
+        "FUN": "LEISURE",
+        "PLAY": "LEISURE",
+
+        # routine
+        "ROUTINE": "ROUTINE",
+        "HYGIENE": "ROUTINE",
+        "PREP": "ROUTINE",
+        "PREPARATION": "ROUTINE",
+
+        # night wrapup
         "NIGHT": "NIGHT_WRAPUP",
         "WRAPUP": "NIGHT_WRAPUP",
         "NIGHT_WRAPUP": "NIGHT_WRAPUP",
+
+        # general
         "GENERAL": "GENERAL",
+        "ETC": "GENERAL",
+        "OTHER": "GENERAL",
     }
     type_norm = mapping.get(type_str, "GENERAL")
+
+    # guide_script 최소 1개 보장 (혹시 비어 있으면 task 기반으로 채움)
+    if not guide:
+        if task:
+            guide = [f"{task} 해요."]
+        else:
+            guide = ["이제 다음 활동을 해요."]
 
     return {
         "time": time_str,
