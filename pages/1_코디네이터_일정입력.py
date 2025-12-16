@@ -434,7 +434,7 @@ def coordinator_page():
                 changed = True
 
             # (선택) GPT로 이 항목(time/task/guide_script 등) 한 번에 수정
-            with st.expander("GPT로 이 일정 수정(선택)", expanded=False):
+            with st.expander("일정 수정 요청하기(선택)", expanded=False):
                 gpt_req = st.text_input(
                     "수정 요청",
                     value="",
