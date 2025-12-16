@@ -71,7 +71,7 @@ def _save_schedule_to_file(schedule: List[Dict]) -> str:
 
 def _extract_menu_names_from_task(task: str) -> List[str]:
     """
-    예: "라면 또는 카레 중 하나 먹기" → ["라면", "카레"]
+    예: "라면 또는 카레 중 하나 먹기" → ["라면", "3분카레"]
     """
     task = (task or "").strip()
     if not task:
