@@ -32,8 +32,9 @@ from utils.image_ai import search_and_filter_food_images, download_image_to_asse
 from utils.youtube_ai import (
     search_cooking_videos_for_dd_raw,
     search_exercise_videos_for_dd_raw,
-    search_clothing_videos_for_dd_raw,  # 유지(혹시 다른 곳에서 쓸 수도 있어 import는 남겨둠)
+    search_clothing_videos_for_dd_raw,
 )
+from utils.styles import get_activity_emoji, get_activity_css_class, COLORS
 
 SCHEDULE_STATE_KEY = "hibuddy_schedule"
 
@@ -335,10 +336,18 @@ def render_video_small(url: str, width: int = 360, height: int = 220):
 
 def coordinator_page():
     render_topbar()
-    st.title("코디네이터 · 오늘 일정 설계")
+
+    st.markdown(
+        f"""
+        <div class="hb-greeting" style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);">
+            <h2>📝 코디네이터 - 오늘 일정 설계</h2>
+            <p>오늘 할 일을 입력하면 자동으로 일정표를 만들어 드려요</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     _init_state()
 
-    # ✅ 추천 개수 옵션 (3~4개 제한)
     with st.container():
         st.caption("추천 개수 옵션 (이미지/영상은 최대 3~4개까지만 표시됩니다)")
         rec_n = st.radio(
@@ -349,7 +358,7 @@ def coordinator_page():
             key="hibuddy_rec_n",
         )
 
-    st.header("1. 일정 내용 입력")
+    st.markdown(f'<div class="hb-section-title">1. 일정 내용 입력</div>', unsafe_allow_html=True)
     example_text = (
         "08:00 ·  오늘 일정 간단 안내\n"
         "10:00 ·  옷 입기 연습하기\n"
@@ -374,21 +383,30 @@ def coordinator_page():
     schedule.sort(key=lambda it: parse_hhmm_to_time(it.get("time", "00:00")))
 
     st.markdown("---")
-    st.header("2. 자동으로 만들어진 일정 확인하기")
+    st.markdown(f'<div class="hb-section-title">2. 자동으로 만들어진 일정 확인하기</div>', unsafe_allow_html=True)
 
     if not schedule:
-        st.info("먼저 위에서 일정 내용을 입력한 뒤 '일정 자동 만들기' 버튼을 눌러주세요.")
+        st.markdown('<div class="hb-info">먼저 위에서 일정 내용을 입력한 뒤 "일정 자동 만들기" 버튼을 눌러주세요.</div>', unsafe_allow_html=True)
         return
 
-    # 영어 토큰 노출 제거: 화면은 한글 라벨로만
     for item in schedule:
         time_str = item.get("time", "??:??")
         type_ = item.get("type", "")
         task = item.get("task", "")
-        st.markdown(f"- **{time_str}** · {_label_type(type_)} · {task}")
+        emoji = get_activity_emoji(type_)
+        css_class = get_activity_css_class(type_)
+        st.markdown(
+            f"""
+            <div class="hb-sched-item">
+                <div class="hb-sched-time">{time_str}</div>
+                <span>{emoji} <span class="hb-badge hb-badge-{css_class}">{_label_type(type_)}</span> {task}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
-    st.header("3. 활동 자세히 설정하기")
+    st.markdown(f'<div class="hb-section-title">3. 활동 자세히 설정하기</div>', unsafe_allow_html=True)
 
     all_recipe_names = get_all_recipe_names()
     all_health_modes = get_health_modes()
@@ -736,7 +754,7 @@ def coordinator_page():
                 st.markdown("---")
 
     st.markdown("---")
-    st.header("4. 오늘 일정 저장하기")
+    st.markdown(f'<div class="hb-section-title">4. 오늘 일정 저장하기</div>', unsafe_allow_html=True)
 
     if st.button("일정 저장 (schedule_today.json)", type="primary"):
         try:

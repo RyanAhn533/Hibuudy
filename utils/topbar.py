@@ -1,40 +1,21 @@
-from pathlib import Path
+# utils/topbar.py
+# -*- coding: utf-8 -*-
 import streamlit as st
+from utils.styles import get_global_css
+
 
 def render_topbar() -> None:
+    """글로벌 CSS + 브랜드 탑바 렌더링"""
+    # 글로벌 디자인 시스템 CSS 주입
+    st.markdown(get_global_css(), unsafe_allow_html=True)
+
     st.markdown(
         """
-        <style>
-        .hibuddy-topbar {
-            background-color: #f8fafc;
-            padding: 0.75rem 1rem 0.5rem 1rem;
-            border-bottom: 1px solid #e5e7eb;
-            margin: -1rem -1rem 1rem -1rem;
-            text-align: center;   /* 전체 중앙 정렬 */
-        }
-        .hibuddy-title {
-            font-size: 1.8rem;    /* 더 크게 */
-            font-weight: 700;
-            margin-bottom: 0.3rem;
-        }
-        </style>
+        <div class="hb-topbar">
+            <div class="hb-topbar-emoji">👋</div>
+            <div class="hb-topbar-title">Hi-Buddy</div>
+            <div class="hb-topbar-sub">발달장애인을 위한 하루 도우미</div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
-
-    st.markdown('<div class="hibuddy-topbar">', unsafe_allow_html=True)
-
-    # 로고 표시 (있으면) — 가운데
-    logo_path = Path("assets/images/default_menu.png")
-    if logo_path.exists():
-        st.image(str(logo_path), width=70)
-    else:
-        st.markdown("<div style='font-size:2rem;'>👋</div>", unsafe_allow_html=True)
-
-    # 제목만 가운데 표시
-    st.markdown(
-        '<div class="hibuddy-title">Hi-Buddy</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("</div>", unsafe_allow_html=True)
