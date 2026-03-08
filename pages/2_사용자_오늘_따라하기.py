@@ -14,28 +14,37 @@ from streamlit_autorefresh import st_autorefresh
 from utils.topbar import render_topbar
 from utils.runtime import find_active_item, annotate_schedule_with_status
 from utils.recipes import get_recipe, get_health_routine
-from utils.tts import synthesize_tts  # TTS 유틸
+from utils.tts import synthesize_tts
+from utils.styles import get_activity_css_class, get_activity_emoji, COLORS
 
 # ─────────────────────────────────────────────
 # 타임존 설정 (Asia/Seoul 고정)
 # ─────────────────────────────────────────────
 try:
     from zoneinfo import ZoneInfo
-except ImportError:  # Python 3.8 이하
+except ImportError:
     from backports.zoneinfo import ZoneInfo  # type: ignore
 
 KST = ZoneInfo("Asia/Seoul")
 
 SCHEDULE_PATH = os.path.join("data", "schedule_today.json")
 
-# UI는 느리게 새로고침(영상/상태 표시만 갱신)
-# 정시 알람/음성은 JS가 1초 타이머로 처리하므로 여기는 낮출 필요 없음
 AUTO_REFRESH_SEC = 30
-
-# (선택) N분 전 예고도 JS에서 같이 처리
 PRE_NOTICE_MINUTES = 5
 
 ALARM_SOUND_PATH = os.path.join("assets", "sounds", "alarm.mp3")
+
+# 타입별 한글 헤더
+HEADER_TEXT_MAP = {
+    "MORNING_BRIEFING": "아침 준비",
+    "COOKING": "요리/식사",
+    "MEAL": "요리/식사",
+    "HEALTH": "운동",
+    "REST": "쉬는 시간",
+    "LEISURE": "여가",
+    "CLOTHING": "옷 입기",
+    "NIGHT_WRAPUP": "마무리",
+}
 
 
 # ─────────────────────────────────────────────
@@ -80,7 +89,7 @@ def _make_silence_wav(duration_sec: float = 0.2, sample_rate: int = 8000) -> byt
     fmt = (
         b"fmt "
         + struct.pack("<I", 16)
-        + struct.pack("<H", 1)  # PCM
+        + struct.pack("<H", 1)
         + struct.pack("<H", num_channels)
         + struct.pack("<I", sample_rate)
         + struct.pack("<I", byte_rate)
@@ -116,18 +125,14 @@ def _build_slot_tts_text(slot: Dict) -> str:
     slot_type = (slot.get("type") or "").upper()
     task = (slot.get("task") or "").strip()
 
-    if slot_type == "MORNING_BRIEFING":
-        head = "지금은 아침 준비 시간이에요."
-    elif slot_type == "COOKING":
-        head = "지금은 요리하고 밥을 먹는 시간이에요."
-    elif slot_type == "HEALTH":
-        head = "지금은 운동하고 건강을 챙기는 시간이에요."
-    elif slot_type == "CLOTHING":
-        head = "지금은 옷 입기 연습 시간이에요."
-    elif slot_type == "NIGHT_WRAPUP":
-        head = "지금은 오늘 하루를 마무리하는 시간이에요."
-    else:
-        head = "지금은 활동 시간이에요."
+    head_map = {
+        "MORNING_BRIEFING": "지금은 아침 준비 시간이에요.",
+        "COOKING": "지금은 요리하고 밥을 먹는 시간이에요.",
+        "HEALTH": "지금은 운동하고 건강을 챙기는 시간이에요.",
+        "CLOTHING": "지금은 옷 입기 연습 시간이에요.",
+        "NIGHT_WRAPUP": "지금은 오늘 하루를 마무리하는 시간이에요.",
+    }
+    head = head_map.get(slot_type, "지금은 활동 시간이에요.")
 
     parts = [head]
     if task:
@@ -156,7 +161,6 @@ def _build_full_narration_text(slot: Dict) -> str:
         detail = _join_lines_for_tts(guide_lines, prefix="자세한 안내를 드릴게요.")
 
     extra = ""
-    # COOKING: 선택 메뉴가 있으면 레시피까지 붙여서 “한 번에 쭉”
     if slot_type == "COOKING":
         chosen = st.session_state.get("selected_menu_for_js", "")
         if chosen:
@@ -173,9 +177,6 @@ def _build_full_narration_text(slot: Dict) -> str:
                 if isinstance(steps, list) and steps:
                     parts.append(_join_lines_for_tts([str(x) for x in steps], prefix="이제 조리 방법을 안내할게요."))
                 extra = " ".join(parts).strip()
-        else:
-            # 메뉴 선택 전에도 기본 안내는 가능
-            extra = ""
 
     if slot_type == "HEALTH":
         routine_id = st.session_state.get("health_routine_id", "seated")
@@ -205,37 +206,32 @@ def _render_audio_unlock_ui():
     if st.session_state["audio_unlocked"]:
         return
 
-    st.info("모바일에서는 자동으로 소리가 안 나올 수 있어요. 아래 버튼을 한 번 눌러서 소리를 켜 주세요.")
-    if st.button("소리 켜기", key="btn_unlock_audio"):
+    st.markdown(
+        f"""
+        <div class="hb-card" style="border-left: 5px solid {COLORS['warning']}; background: #FFFBEB;">
+            <strong>🔔 모바일에서 소리 켜기</strong><br>
+            모바일에서는 자동으로 소리가 안 나올 수 있어요.<br>
+            아래 버튼을 한 번 눌러서 소리를 켜 주세요.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("🔊 소리 켜기", key="btn_unlock_audio"):
         st.session_state["audio_unlocked"] = True
         st.audio(_make_silence_wav(), format="audio/wav")
-        st.success("소리가 켜졌어요. 이제 일정 시간이 되면 알람과 안내 음성이 자동으로 나와요.")
+        st.success("소리가 켜졌어요!")
 
 
 # ─────────────────────────────────────────────
-# ✅ JS 스케줄러를 위한 “오디오 맵” 생성
-#   - (중요) 정시 알람을 rerun 없이 재생하려면
-#     스케줄별 TTS를 미리 만들어서 페이지에 넣어야 함
+# JS 스케줄러를 위한 "오디오 맵" 생성
 # ─────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
 def _prepare_audio_payloads(schedule: List[Dict], date_str: str) -> Dict:
-    """
-    반환 형태:
-    {
-      "date": "YYYY-MM-DD",
-      "alarm_b64": "... or ''",
-      "items": {
-        "HH:MM": {"tts_b64": "...", "text": "..."},
-        "HH:MM_PRE": {"tts_b64": "...", "text": "..."}  # (옵션) N분전 예고
-      }
-    }
-    """
     alarm_bytes = _read_bytes(ALARM_SOUND_PATH)
     alarm_b64 = base64.b64encode(alarm_bytes).decode("utf-8") if alarm_bytes else ""
 
     items: Dict[str, Dict[str, str]] = {}
 
-    # 슬롯 시작 알림: "HH:MM" 키
     for slot in schedule:
         hhmm = str(slot.get("time", "")).strip()
         if not hhmm:
@@ -249,9 +245,6 @@ def _prepare_audio_payloads(schedule: List[Dict], date_str: str) -> Dict:
                 "text": full_text,
             }
 
-    # (옵션) PRE_NOTICE: 다음 활동 N분 전 예고
-    # JS는 '현재 시각' 기준으로 N분 뒤의 HH:MM을 만들어서 키 조회하면 됨
-    # 여기서는 미리 "HH:MM_PRE"를 만들어 둠
     if PRE_NOTICE_MINUTES and PRE_NOTICE_MINUTES > 0:
         for slot in schedule:
             hhmm = str(slot.get("time", "")).strip()
@@ -275,16 +268,7 @@ def _prepare_audio_payloads(schedule: List[Dict], date_str: str) -> Dict:
 
 
 def _render_js_alarm_scheduler(payload: Dict):
-    """
-    - 1초마다 HH:MM 체크
-    - payload.items["HH:MM"] 있으면:
-        alarm(있으면) -> tts 순서로 재생
-    - 같은 날 같은 HH:MM은 localStorage로 중복 재생 방지
-    - audio_unlocked가 True일 때만 실행
-    """
-    # Streamlit 세션이 바뀌어도 “정시 중복재생” 막으려면 localStorage를 써야 함
     data_json = json.dumps(payload, ensure_ascii=False)
-
     enabled = "true" if st.session_state.get("audio_unlocked", False) else "false"
 
     html = f"""
@@ -298,8 +282,6 @@ def _render_js_alarm_scheduler(payload: Dict):
       const dateStr = payload.date || "";
 
       function nowKST() {{
-        // 브라우저 로컬이 KST라고 가정(한국 기기). 타임존 강제는 웹에서 어렵다.
-        // 대신 dateStr(스케줄 날짜) 기반으로 "오늘만" 재생되도록 막는다.
         const d = new Date();
         const hh = String(d.getHours()).padStart(2, '0');
         const mm = String(d.getMinutes()).padStart(2, '0');
@@ -307,22 +289,17 @@ def _render_js_alarm_scheduler(payload: Dict):
       }}
 
       function todayKeyBase() {{
-        // 스케줄 날짜가 오늘이 아닐 때는 재생하지 않도록 base 키에 dateStr 포함
         return "hibuddy_played_" + dateStr + "_";
       }}
 
       function wasPlayed(key) {{
-        try {{
-          return localStorage.getItem(todayKeyBase() + key) === "1";
-        }} catch (e) {{
-          return false;
-        }}
+        try {{ return localStorage.getItem(todayKeyBase() + key) === "1"; }}
+        catch (e) {{ return false; }}
       }}
 
       function markPlayed(key) {{
-        try {{
-          localStorage.setItem(todayKeyBase() + key, "1");
-        }} catch (e) {{}}
+        try {{ localStorage.setItem(todayKeyBase() + key, "1"); }}
+        catch (e) {{}}
       }}
 
       function b64ToUrl(b64, mime) {{
@@ -333,7 +310,6 @@ def _render_js_alarm_scheduler(payload: Dict):
       const alarmUrl = alarmB64 ? b64ToUrl(alarmB64, "audio/mpeg") : "";
 
       function playSequence(alarmUrl, ttsUrl) {{
-        // iOS/Safari에서 안전하게: 새 Audio 객체로 순차 재생
         return new Promise((resolve) => {{
           function playTts() {{
             const t = new Audio(ttsUrl);
@@ -342,14 +318,11 @@ def _render_js_alarm_scheduler(payload: Dict):
             t.play().catch(() => resolve(false));
           }}
 
-          if (!alarmUrl) {{
-            playTts();
-            return;
-          }}
+          if (!alarmUrl) {{ playTts(); return; }}
 
           const a = new Audio(alarmUrl);
           a.onended = () => playTts();
-          a.onerror = () => playTts(); // 알람 실패해도 TTS는 시도
+          a.onerror = () => playTts();
           a.play().catch(() => playTts());
         }});
       }}
@@ -357,16 +330,14 @@ def _render_js_alarm_scheduler(payload: Dict):
       async function tick() {{
         const hhmm = nowKST();
 
-        // 1) 슬롯 시작 알림
         if (items[hhmm] && !wasPlayed(hhmm)) {{
           const ttsB64 = items[hhmm].tts_b64 || "";
           if (ttsB64) {{
-            markPlayed(hhmm); // 먼저 찍어서 중복 방지(재생 실패해도 폭주 방지)
+            markPlayed(hhmm);
             await playSequence(alarmUrl, b64ToUrl(ttsB64, "audio/mpeg"));
           }}
         }}
 
-        // 2) N분 전 예고 (옵션)
         const preKey = hhmm + "_PRE";
         if (items[preKey] && !wasPlayed(preKey)) {{
           const ttsB64 = items[preKey].tts_b64 || "";
@@ -377,7 +348,6 @@ def _render_js_alarm_scheduler(payload: Dict):
         }}
       }}
 
-      // 즉시 1회, 이후 1초마다
       tick();
       setInterval(tick, 1000);
     }})();
@@ -387,12 +357,14 @@ def _render_js_alarm_scheduler(payload: Dict):
 
 
 # ─────────────────────────────────────────────
-# “단계 클릭 강제” 줄인 UI
+# 단계 렌더링 (리디자인)
 # ─────────────────────────────────────────────
-def _render_steps_with_listen(lines: List[str], base_key: str, title: str = "자세한 단계"):
+def _render_steps_with_listen(lines: List[str], base_key: str, title: str = "자세한 단계", color: str = ""):
     if not lines:
         st.info("표시할 단계가 없습니다.")
         return
+
+    step_color = color or COLORS["primary"]
 
     st.subheader(title)
 
@@ -404,11 +376,16 @@ def _render_steps_with_listen(lines: List[str], base_key: str, title: str = "자
             s = str(line).strip()
             if not s:
                 continue
-            col1, col2 = st.columns([0.82, 0.18])
-            with col1:
-                st.markdown(f"**{idx}단계**  \n{s}")
-            with col2:
-                _tts_button(f"{idx}단계. {s}", key=f"{base_key}_step_{idx}", label="🔊")
+            st.markdown(
+                f"""
+                <div class="hb-recipe-step">
+                    <div class="hb-recipe-step-num" style="background: {step_color};">{idx}</div>
+                    <div style="flex:1; color: {COLORS['text']};">{s}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            _tts_button(f"{idx}단계. {s}", key=f"{base_key}_step_{idx}", label="🔊")
 
 
 def _get_menu_image_url(menu_name: str, slot: Dict) -> str:
@@ -418,13 +395,8 @@ def _get_menu_image_url(menu_name: str, slot: Dict) -> str:
     q = urlquote(menu_name)
     return f"https://source.unsplash.com/featured/?food,{q}"
 
+
 def _normalize_menus(slot: Dict) -> List[Dict]:
-    """
-    코디네이터 저장 포맷:
-      menus = [{"name":..., "image":..., "video_url":...}, ...]
-    과거/예전 포맷(문자열 리스트)도 같이 지원.
-    반환: [{"name": str, "image": str, "video_url": str}, ...]
-    """
     menus = slot.get("menus") or slot.get("menu_candidates") or []
     out: List[Dict] = []
 
@@ -445,20 +417,43 @@ def _normalize_menus(slot: Dict) -> List[Dict]:
 
     return out
 
-def _render_cooking_view(slot: Dict, date_str: str):
-    st.header("요리하기")
 
+# ─────────────────────────────────────────────
+# 활동 헤더 (색상 카드)
+# ─────────────────────────────────────────────
+def _render_activity_header(slot_type: str, task: str):
+    css_class = get_activity_css_class(slot_type)
+    emoji = get_activity_emoji(slot_type)
+    header = HEADER_TEXT_MAP.get(slot_type.upper(), "활동")
+
+    st.markdown(
+        f"""
+        <div class="hb-activity-header hb-activity-{css_class}">
+            <h2>{emoji} {header}</h2>
+            <p>{task}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ─────────────────────────────────────────────
+# 활동별 뷰
+# ─────────────────────────────────────────────
+def _render_cooking_view(slot: Dict, date_str: str):
     guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
     if guide:
-        _render_steps_with_listen([str(x) for x in guide], base_key=f"cook_{date_str}_{slot.get('time','')}", title="오늘 요리 안내")
+        _render_steps_with_listen(
+            [str(x) for x in guide],
+            base_key=f"cook_{date_str}_{slot.get('time','')}",
+            title="오늘 요리 안내",
+            color=COLORS["cooking"],
+        )
 
     menus = _normalize_menus(slot)
 
-
-    # NOTE: JS 알람용으로 "선택 메뉴"를 세션에 하나 더 저장(최소 변경)
-    # - 기존 네 코드에서 menu selection key가 더 복잡하면 여기만 맞춰주면 됨
     if menus:
-        st.subheader("메뉴 선택")
+        st.markdown(f'<div class="hb-section-title">메뉴 선택</div>', unsafe_allow_html=True)
         cols = st.columns(min(3, len(menus)))
         for i, m in enumerate(menus[:9]):
             name = m["name"]
@@ -468,16 +463,19 @@ def _render_cooking_view(slot: Dict, date_str: str):
                 if st.button(f"'{name}' 선택", key=f"btn_sel_menu_{date_str}_{slot.get('time','')}_{i}"):
                     st.session_state["selected_menu_for_js"] = name
 
-
         chosen = st.session_state.get("selected_menu_for_js", "")
         if chosen:
-            st.success(f"선택된 메뉴: {chosen}")
+            st.markdown(
+                f"""
+                <div class="hb-card hb-card-cooking">
+                    <strong>🍳 선택된 메뉴: {chosen}</strong>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-            # ✅ 코디네이터 저장 포맷 우선 지원:
-            # menus = [{"name":..., "image":..., "video_url":...}, ...]
-            # chosen 메뉴에 해당하는 menu dict의 video_url을 가장 먼저 사용
+            # 영상 표시
             video_url = ""
-
             menus_list = slot.get("menus") or slot.get("menu_candidates") or []
             chosen_obj = None
             if isinstance(menus_list, list):
@@ -489,13 +487,11 @@ def _render_cooking_view(slot: Dict, date_str: str):
             if chosen_obj and chosen_obj.get("video_url"):
                 video_url = str(chosen_obj.get("video_url") or "").strip()
 
-            # ✅ 하위 호환: slot["videos"] / slot["video_urls"] 딕셔너리 매핑도 지원
             if not video_url:
                 videos = slot.get("videos") or slot.get("video_urls") or {}
                 if isinstance(videos, dict):
                     video_url = str(videos.get(chosen, "") or "").strip()
 
-            # ✅ 최후 fallback: slot["video_url"]
             if not video_url:
                 video_url = str(slot.get("video_url", "") or "").strip()
 
@@ -509,38 +505,45 @@ def _render_cooking_view(slot: Dict, date_str: str):
                 steps = recipe.get("steps") or recipe.get("guide_script") or []
 
                 if tools:
-                    st.subheader("준비물")
-                    st.write("• " + "\n• ".join([str(x) for x in tools if str(x).strip()]))
+                    st.markdown(f'<div class="hb-section-title">준비물</div>', unsafe_allow_html=True)
+                    tool_html = " ".join(
+                        [f'<span class="hb-badge hb-badge-cooking">{x}</span>' for x in tools if str(x).strip()]
+                    )
+                    st.markdown(tool_html, unsafe_allow_html=True)
 
                 if ings:
-                    st.subheader("재료")
-                    st.write("• " + "\n• ".join([str(x) for x in ings if str(x).strip()]))
+                    st.markdown(f'<div class="hb-section-title">재료</div>', unsafe_allow_html=True)
+                    ing_html = " ".join(
+                        [f'<span class="hb-badge hb-badge-general">{x}</span>' for x in ings if str(x).strip()]
+                    )
+                    st.markdown(ing_html, unsafe_allow_html=True)
 
                 if isinstance(steps, list) and steps:
                     _render_steps_with_listen(
                         [str(x) for x in steps],
                         base_key=f"recipe_{date_str}_{slot.get('time','')}",
                         title="레시피 단계",
+                        color=COLORS["cooking"],
                     )
             else:
-                st.info("이 메뉴의 상세 레시피가 등록되어 있지 않아요.")
-
+                st.markdown(
+                    '<div class="hb-info">이 메뉴의 상세 레시피가 등록되어 있지 않아요.</div>',
+                    unsafe_allow_html=True,
+                )
 
 
 def _render_health_view(slot: Dict, date_str: str):
-    st.header("운동하기")
-
     video_url = str(slot.get("video_url", "") or "")
     if video_url:
         st.video(video_url)
 
-    st.subheader("운동 방식 선택")
+    st.markdown(f'<div class="hb-section-title">운동 방식 선택</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("앉아서 하는 운동", key="health_choose_seated"):
+        if st.button("🪑 앉아서 하는 운동", key="health_choose_seated"):
             st.session_state["health_routine_id"] = "seated"
     with c2:
-        if st.button("서서 하는 운동", key="health_choose_standing"):
+        if st.button("🧍 서서 하는 운동", key="health_choose_standing"):
             st.session_state["health_routine_id"] = "standing"
 
     routine_id = st.session_state.get("health_routine_id", "seated")
@@ -549,35 +552,86 @@ def _render_health_view(slot: Dict, date_str: str):
         title = routine.get("title") or ("앉아서 하는 운동" if routine_id == "seated" else "서서 하는 운동")
         steps = routine.get("steps") or []
         if isinstance(steps, list) and steps:
-            _render_steps_with_listen([str(x) for x in steps], base_key=f"health_{routine_id}_{date_str}_{slot.get('time','')}", title=title)
+            _render_steps_with_listen(
+                [str(x) for x in steps],
+                base_key=f"health_{routine_id}_{date_str}_{slot.get('time','')}",
+                title=title,
+                color=COLORS["health"],
+            )
     else:
         st.info("운동 루틴을 불러오지 못했습니다.")
 
     guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
     if guide:
         st.divider()
-        _render_steps_with_listen([str(x) for x in guide], base_key=f"health_guide_{date_str}_{slot.get('time','')}", title="추가 안내")
+        _render_steps_with_listen(
+            [str(x) for x in guide],
+            base_key=f"health_guide_{date_str}_{slot.get('time','')}",
+            title="추가 안내",
+            color=COLORS["health"],
+        )
 
 
 def _render_clothing_view(slot: Dict, date_str: str):
-    st.header("옷 입기 연습")
-
     guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
     if guide:
-        _render_steps_with_listen([str(x) for x in guide], base_key=f"cloth_{date_str}_{slot.get('time','')}", title="옷 입기 안내")
+        _render_steps_with_listen(
+            [str(x) for x in guide],
+            base_key=f"cloth_{date_str}_{slot.get('time','')}",
+            title="옷 입기 안내",
+            color=COLORS["clothing"],
+        )
 
     video_url = str(slot.get("video_url", "") or "")
     if video_url:
         st.video(video_url)
     else:
-        st.info("추천 영상이 없어요.")
+        st.markdown('<div class="hb-info">추천 영상이 없어요.</div>', unsafe_allow_html=True)
 
 
-def _render_general_view(slot: Dict, date_str: str, title: str):
-    st.header(title)
+def _render_general_view(slot: Dict, date_str: str, title: str, color: str = ""):
     guide = slot.get("guide_script") if isinstance(slot.get("guide_script"), list) else []
     if guide:
-        _render_steps_with_listen([str(x) for x in guide], base_key=f"gen_{date_str}_{slot.get('time','')}", title="안내")
+        _render_steps_with_listen(
+            [str(x) for x in guide],
+            base_key=f"gen_{date_str}_{slot.get('time','')}",
+            title="안내",
+            color=color or COLORS["primary"],
+        )
+
+
+# ─────────────────────────────────────────────
+# 타임라인 사이드바
+# ─────────────────────────────────────────────
+def _render_timeline(annotated: List[Dict]):
+    st.markdown(f'<div class="hb-section-title">오늘 타임라인</div>', unsafe_allow_html=True)
+
+    for item in annotated:
+        t = item.get("time", "")
+        ty = (item.get("type") or "").upper()
+        tk = item.get("task", "")
+        status = item.get("status", "")
+        emoji = get_activity_emoji(ty)
+
+        if status == "active":
+            css = "hb-timeline-active"
+            dot_css = "hb-timeline-dot-active"
+        elif status == "past":
+            css = "hb-timeline-past"
+            dot_css = "hb-timeline-dot-past"
+        else:
+            css = "hb-timeline-upcoming"
+            dot_css = "hb-timeline-dot-upcoming"
+
+        st.markdown(
+            f"""
+            <div class="hb-timeline-item {css}">
+                <div class="hb-timeline-dot {dot_css}"></div>
+                <span>{emoji} <strong>{t}</strong> {tk}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 # ─────────────────────────────────────────────
@@ -585,18 +639,16 @@ def _render_general_view(slot: Dict, date_str: str, title: str):
 # ─────────────────────────────────────────────
 def user_page():
     st.set_page_config(
-        page_title="HiBuddy · 사용자 오늘 따라하기",
-        page_icon="🧩",
+        page_title="HiBuddy - 사용자 오늘 따라하기",
+        page_icon="👋",
         layout="wide",
         initial_sidebar_state="expanded",
     )
 
     render_topbar()
 
-    # UI만 갱신(정시 알람은 JS가 처리)
     st_autorefresh(interval=AUTO_REFRESH_SEC * 1000, key="hibuddy_autorefresh_ui")
 
-    # 오디오 언락(모바일 자동재생 대응)
     _render_audio_unlock_ui()
 
     schedule, date_str = _load_schedule()
@@ -604,43 +656,52 @@ def user_page():
         st.warning("오늘 일정이 비어있습니다. 코디네이터 페이지에서 일정을 추가해 주세요.")
         return
 
-    # ✅ JS 알람 스케줄러: 페이지 로드 시 “스케줄별 TTS를 미리 만들어” 1초 타이머로 재생
-    # (audio_unlocked=True일 때만 실행됨)
     payload = _prepare_audio_payloads(schedule, date_str)
     _render_js_alarm_scheduler(payload)
 
     now = datetime.now(KST)
-    now_time = now.time()  # ✅ find_active_item에 time 객체로 전달해야 함 (문자열 넣으면 TypeError 났던 케이스 있음)
+    now_time = now.time()
     active, next_item = find_active_item(schedule, now_time)
     annotated = annotate_schedule_with_status(schedule, now_time)
 
-    # ─────────────────────────────────────────────
-    # 레이아웃
-    # ─────────────────────────────────────────────
+    # ── 레이아웃 ──
     main_col, side_col = st.columns([0.72, 0.28])
 
     with main_col:
-        # 인사말은 항상 “지금” 기준(세션/가드 때문에 stale 되지 않게)
+        # 인사말 배너
         h = datetime.now(KST).hour
         if h < 12:
-            greeting = "좋은 아침이에요."
+            greeting = "좋은 아침이에요"
+            greeting_emoji = "🌅"
         elif h < 18:
-            greeting = "좋은 오후예요."
+            greeting = "좋은 오후예요"
+            greeting_emoji = "☀️"
         else:
-            greeting = "좋은 저녁이에요."
-        st.markdown(f"## {greeting} 오늘도 하이버디랑 함께 해볼까요?")
+            greeting = "좋은 저녁이에요"
+            greeting_emoji = "🌙"
 
-        st.markdown(f"### 현재 시간: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        st.markdown(
+            f"""
+            <div class="hb-greeting">
+                <h2>{greeting_emoji} {greeting}</h2>
+                <p>오늘도 하이버디랑 함께 해볼까요? &nbsp; {now.strftime('%Y-%m-%d %H:%M')}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        # 수동 재생(자동이 막히거나 끊긴 경우 대비)
-        with st.expander("모바일에서는 음성 허용을 꼭 눌러줘야해요", expanded=False):
+        # 수동 재생
+        with st.expander("🔊 음성이 안 나오면 여기를 눌러주세요", expanded=False):
             _tts_button("지금부터 안내를 시작할게요.", key="tts_test_1", label="🔊 음성 허용 및 테스트")
-            st.caption("모바일(iOS 등)에서는 ‘소리 켜기’를 한 번 눌러야 자동 재생이 안정적이에요.")
+            st.caption("모바일(iOS 등)에서는 '소리 켜기'를 한 번 눌러야 자동 재생이 안정적이에요.")
 
         if not active:
-            st.info("아직 첫 활동 전이에요.")
+            st.markdown(
+                '<div class="hb-info">아직 첫 활동 전이에요.</div>',
+                unsafe_allow_html=True,
+            )
             if next_item:
-                st.markdown(f"다음 활동은 **{next_item.get('time','')} · {next_item.get('task','')}** 입니다.")
+                st.markdown(f"다음 활동은 **{next_item.get('time','')} - {next_item.get('task','')}** 입니다.")
                 _tts_button(
                     f"다음 활동은 {next_item.get('time','')}에 시작하는 {next_item.get('task','')} 입니다.",
                     key="tts_next_preview",
@@ -651,78 +712,57 @@ def user_page():
         slot_type = (active.get("type") or "").upper()
         task = str(active.get("task") or "").strip()
 
-        header_text = {
-            "MORNING_BRIEFING": "아침 준비",
-            "COOKING": "요리/식사",
-            "HEALTH": "운동",
-            "REST": "쉬는 시간",
-            "LEISURE": "여가",
-            "CLOTHING": "옷 입기",
-            "NIGHT_WRAPUP": "마무리",
-        }.get(slot_type, "활동")
+        # 활동 헤더 (색상 카드)
+        _render_activity_header(slot_type, task)
 
-        st.markdown(f"## {header_text}")
-        if task:
-            st.markdown(f"**오늘 할 일:** {task}")
-
-        today_task_text = f"{header_text} 시간이에요. 오늘 할 일은 {task} 입니다." if task else f"{header_text} 시간이에요."
+        today_task_text = f"{HEADER_TEXT_MAP.get(slot_type, '활동')} 시간이에요. 오늘 할 일은 {task} 입니다." if task else f"{HEADER_TEXT_MAP.get(slot_type, '활동')} 시간이에요."
         _tts_button(today_task_text, key="tts_today_task", label="🔊 현재 활동 요약 듣기")
 
         st.divider()
 
-        if slot_type == "COOKING":
+        # 활동별 뷰
+        if slot_type in ("COOKING", "MEAL"):
             _render_cooking_view(active, date_str)
-
-        elif slot_type == "MEAL":
-            # 코디네이터에서 MEAL이 남아있을 수 있으니 COOKING으로 처리
-            _render_cooking_view(active, date_str)
-
         elif slot_type == "HEALTH":
             _render_health_view(active, date_str)
-
         elif slot_type == "CLOTHING":
             _render_clothing_view(active, date_str)
-
         elif slot_type == "REST":
-            _render_general_view(active, date_str, "쉬는 시간")
-
+            _render_general_view(active, date_str, "쉬는 시간", COLORS["rest"])
         elif slot_type == "LEISURE":
-            _render_general_view(active, date_str, "여가")
-
+            _render_general_view(active, date_str, "여가", COLORS["leisure"])
         elif slot_type == "MORNING_BRIEFING":
-            _render_general_view(active, date_str, "아침 준비")
-
+            _render_general_view(active, date_str, "아침 준비", COLORS["morning"])
         elif slot_type == "NIGHT_WRAPUP":
-            _render_general_view(active, date_str, "하루 마무리")
-
+            _render_general_view(active, date_str, "하루 마무리", COLORS["night"])
         else:
             _render_general_view(active, date_str, "활동")
 
-
     with side_col:
-        st.markdown("### 다음 활동")
+        # 다음 활동
+        st.markdown(f'<div class="hb-section-title">다음 활동</div>', unsafe_allow_html=True)
         if next_item:
-            st.write(f"{next_item.get('time','')} · {next_item.get('task','')}")
+            next_emoji = get_activity_emoji((next_item.get("type") or "").upper())
+            st.markdown(
+                f"""
+                <div class="hb-card hb-card-accent">
+                    <strong>{next_emoji} {next_item.get('time', '')} - {next_item.get('task', '')}</strong>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
         else:
-            st.write("다음 활동이 없습니다.")
+            st.markdown(
+                '<div class="hb-card">다음 활동이 없습니다.</div>',
+                unsafe_allow_html=True,
+            )
 
         st.divider()
-        st.markdown("### 오늘 타임라인")
-        for item in annotated:
-            t = item.get("time", "")
-            ty = item.get("type", "")
-            tk = item.get("task", "")
-            status = item.get("status", "")
 
-            if status == "active":
-                st.success(f"{t} · {tk} ({ty})")
-            elif status == "past":
-                st.caption(f"{t} · {tk} ({ty})")
-            else:
-                st.write(f"{t} · {tk} ({ty})")
+        _render_timeline(annotated)
 
         st.divider()
-        if st.button("화면 수동 새로고침", key="btn_rerun"):
+        if st.button("🔄 화면 새로고침", key="btn_rerun"):
             st.rerun()
 
 
