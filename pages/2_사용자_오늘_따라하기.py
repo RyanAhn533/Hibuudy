@@ -15,6 +15,7 @@ from utils.topbar import render_topbar
 from utils.runtime import find_active_item, annotate_schedule_with_status
 from utils.recipes import get_recipe, get_health_routine
 from utils.tts import synthesize_tts
+from utils.voice_chat import chat_with_buddy
 from utils.styles import get_activity_css_class, get_activity_emoji, COLORS
 
 # ─────────────────────────────────────────────
@@ -601,6 +602,188 @@ def _render_general_view(slot: Dict, date_str: str, title: str, color: str = "")
 
 
 # ─────────────────────────────────────────────
+# 음성 대화 (하이버디와 대화하기)
+# ─────────────────────────────────────────────
+def _render_voice_chat(current_slot: Optional[Dict]):
+    """STT(브라우저) + GPT 대화 + TTS 응답"""
+
+    st.markdown(
+        f"""
+        <div class="hb-activity-header hb-activity-general" style="background: linear-gradient(135deg, #EEF2FF 0%, #DBEAFE 100%); color: #1E40AF;">
+            <h2>💬 하이버디와 대화하기</h2>
+            <p>궁금한 것이 있으면 말해 보세요</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # 대화 기록 초기화
+    if "voice_chat_history" not in st.session_state:
+        st.session_state["voice_chat_history"] = []
+
+    # 이전 대화 표시
+    for msg in st.session_state["voice_chat_history"][-6:]:
+        role = msg["role"]
+        content = msg["content"]
+        if role == "user":
+            st.markdown(
+                f'<div class="hb-card" style="border-left: 5px solid {COLORS["primary"]}; background: {COLORS["primary_bg"]};">'
+                f'<strong>🙋 나:</strong> {content}</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div class="hb-card" style="border-left: 5px solid {COLORS["success"]}; background: {COLORS["success_bg"]};">'
+                f'<strong>👋 하이버디:</strong> {content}</div>',
+                unsafe_allow_html=True,
+            )
+
+    # pending 메시지 처리 (이전 rerun에서 저장된 것)
+    if "voice_chat_pending" not in st.session_state:
+        st.session_state["voice_chat_pending"] = ""
+
+    if st.session_state["voice_chat_pending"]:
+        pending_text = st.session_state["voice_chat_pending"]
+        st.session_state["voice_chat_pending"] = ""  # 즉시 클리어
+
+        with st.spinner("하이버디가 생각하는 중..."):
+            try:
+                answer = chat_with_buddy(
+                    pending_text,
+                    current_slot=current_slot,
+                    chat_history=st.session_state["voice_chat_history"],
+                )
+
+                st.session_state["voice_chat_history"].append(
+                    {"role": "user", "content": pending_text}
+                )
+                st.session_state["voice_chat_history"].append(
+                    {"role": "assistant", "content": answer}
+                )
+
+                # TTS 재생
+                audio_bytes = synthesize_tts(answer)
+                if audio_bytes:
+                    st.audio(audio_bytes, format="audio/mpeg", autoplay=True)
+            except Exception as e:
+                st.error(f"대화 오류: {e}")
+
+    # 입력 방법: 텍스트 입력 + 음성 입력(JS STT)
+    col_input, col_btn = st.columns([0.8, 0.2])
+    with col_input:
+        user_input = st.text_input(
+            "하이버디에게 말하기",
+            value="",
+            key="voice_chat_input",
+            placeholder="여기에 말하거나 적어보세요...",
+            label_visibility="collapsed",
+        )
+    with col_btn:
+        send_clicked = st.button("💬 보내기", key="btn_voice_send")
+
+    # 브라우저 음성 인식(Web Speech API) 버튼
+    _render_stt_js_button()
+
+    if send_clicked and user_input.strip():
+        st.session_state["voice_chat_pending"] = user_input.strip()
+        st.rerun()
+
+
+def _render_stt_js_button():
+    """브라우저 Web Speech API를 이용한 음성 인식 버튼"""
+    stt_html = """
+    <style>
+    .stt-btn {
+        background: linear-gradient(135deg, #4F46E5, #818CF8);
+        color: white;
+        border: none;
+        border-radius: 14px;
+        padding: 12px 24px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.2s;
+        margin: 8px 0;
+    }
+    .stt-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,0.3); }
+    .stt-btn.recording { background: linear-gradient(135deg, #EF4444, #F87171); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+    .stt-result { padding: 8px 12px; background: #F8FAFC; border-radius: 10px; margin-top: 8px; font-size: 1rem; display: none; }
+    </style>
+    <button class="stt-btn" id="sttBtn" onclick="toggleSTT()">🎤 음성으로 말하기</button>
+    <div class="stt-result" id="sttResult"></div>
+    <script>
+    (function(){
+      let recognition = null;
+      let isRecording = false;
+
+      window.toggleSTT = function() {
+        const btn = document.getElementById('sttBtn');
+        const result = document.getElementById('sttResult');
+
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+          result.style.display = 'block';
+          result.textContent = '이 브라우저는 음성 인식을 지원하지 않아요. 크롬(Chrome)을 사용해 주세요.';
+          return;
+        }
+
+        if (isRecording && recognition) {
+          recognition.stop();
+          return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'ko-KR';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        btn.textContent = '🔴 듣고 있어요... (누르면 중지)';
+        btn.classList.add('recording');
+        isRecording = true;
+
+        recognition.onresult = function(event) {
+          const text = event.results[0][0].transcript;
+          result.style.display = 'block';
+          result.textContent = '인식된 말: ' + text;
+
+          // Streamlit text_input에 값 넣기
+          const inputs = window.parent.document.querySelectorAll('input[aria-label="하이버디에게 말하기"]');
+          if (inputs.length > 0) {
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
+            nativeInputValueSetter.call(inputs[0], text);
+            inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+            // 자동으로 보내기 버튼 클릭
+            setTimeout(function(){
+              const btns = window.parent.document.querySelectorAll('button');
+              for (let b of btns) {
+                if (b.textContent.includes('보내기')) { b.click(); break; }
+              }
+            }, 300);
+          }
+        };
+
+        recognition.onerror = function(event) {
+          result.style.display = 'block';
+          result.textContent = '음성 인식 오류: ' + event.error;
+        };
+
+        recognition.onend = function() {
+          btn.textContent = '🎤 음성으로 말하기';
+          btn.classList.remove('recording');
+          isRecording = false;
+        };
+
+        recognition.start();
+      };
+    })();
+    </script>
+    """
+    st.components.v1.html(stt_html, height=100)
+
+
+# ─────────────────────────────────────────────
 # 타임라인 사이드바
 # ─────────────────────────────────────────────
 def _render_timeline(annotated: List[Dict]):
@@ -737,6 +920,10 @@ def user_page():
             _render_general_view(active, date_str, "하루 마무리", COLORS["night"])
         else:
             _render_general_view(active, date_str, "활동")
+
+        # ── 음성 대화 섹션 ──
+        st.divider()
+        _render_voice_chat(active)
 
     with side_col:
         # 다음 활동
