@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" width="120" height="140">
+  <defs>
+    <linearGradient id="againGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B"/>
+      <stop offset="100%" style="stop-color:#D97706"/>
+    </linearGradient>
+    <filter id="shadow5">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect x="5" y="5" width="110" height="110" rx="24" fill="#FEF3C7" stroke="#F59E0B" stroke-width="3" filter="url(#shadow5)"/>
+  <!-- 원형 화살표 -->
+  <path d="M 60 30 A 28 28 0 1 1 35 50" fill="none" stroke="url(#againGrad)" stroke-width="8" stroke-linecap="round"/>
+  <!-- 화살표 머리 -->
+  <polygon points="25,38 35,50 43,36" fill="url(#againGrad)" stroke="#92400E" stroke-width="1.5" stroke-linejoin="round"/>
+  <text x="60" y="132" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="16" font-weight="700" fill="#92400E">다시</text>
+</svg>
