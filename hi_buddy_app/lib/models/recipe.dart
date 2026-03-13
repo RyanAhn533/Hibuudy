@@ -1,0 +1,120 @@
+class Recipe {
+  final String name;
+  final List<String> tools;
+  final List<String> ingredients;
+  final List<String> steps;
+
+  const Recipe({
+    required this.name,
+    required this.tools,
+    required this.ingredients,
+    required this.steps,
+  });
+}
+
+class HealthRoutine {
+  final String id;
+  final String title;
+  final List<String> steps;
+
+  const HealthRoutine({
+    required this.id,
+    required this.title,
+    required this.steps,
+  });
+}
+
+// Pre-loaded recipes (from Python recipes.py)
+final Map<String, Recipe> recipes = {
+  '라면': const Recipe(
+    name: '라면',
+    tools: ['라면냄비', '가스레인지'],
+    ingredients: ['라면 1봉지', '물 550ml', '달걀 1개(선택)'],
+    steps: [
+      '냄비에 물 550ml를 넣어요.',
+      '물이 보글보글 끓으면 면과 스프를 넣어요.',
+      '4분 동안 기다려요.',
+      '달걀을 넣고 싶으면 넣어요.',
+      '불을 꺼요. 조심해서 그릇에 옮겨요.',
+    ],
+  ),
+  '간장계란밥': const Recipe(
+    name: '간장계란밥',
+    tools: ['후라이팬', '가스레인지'],
+    ingredients: ['밥 1공기', '달걀 2개', '간장 1숟갈', '참기름 조금', '김가루(선택)'],
+    steps: [
+      '후라이팬에 기름을 살짝 둘러요.',
+      '약불로 달걀 프라이를 해요.',
+      '밥 위에 달걀을 올려요.',
+      '간장 1숟갈, 참기름 조금 뿌려요.',
+      '김가루를 뿌리면 완성!',
+    ],
+  ),
+  '계란후라이': const Recipe(
+    name: '계란후라이',
+    tools: ['후라이팬', '가스레인지'],
+    ingredients: ['달걀 1~2개', '식용유 조금', '소금 조금'],
+    steps: [
+      '후라이팬에 기름을 조금 둘러요.',
+      '약불로 켜요.',
+      '달걀을 깨서 조심히 넣어요.',
+      '하얀 부분이 익을 때까지 기다려요.',
+      '소금을 조금 뿌리고 접시에 옮겨요.',
+    ],
+  ),
+  '토마토파스타': const Recipe(
+    name: '토마토파스타',
+    tools: ['라면냄비', '후라이팬', '가스레인지'],
+    ingredients: ['파스타면', '토마토소스', '올리브유', '소금'],
+    steps: [
+      '큰 냄비에 물을 끓여요.',
+      '소금을 넣고 파스타면을 삶아요.',
+      '후라이팬에 올리브유를 두르고 토마토소스를 넣어요.',
+      '삶은 면을 소스에 넣고 섞어요.',
+      '그릇에 담으면 완성!',
+    ],
+  ),
+  '김치볶음밥': const Recipe(
+    name: '김치볶음밥',
+    tools: ['후라이팬', '가스레인지'],
+    ingredients: ['밥 1공기', '김치 한 줌', '식용유', '달걀 1개(선택)'],
+    steps: [
+      '김치를 작게 잘라요.',
+      '후라이팬에 기름을 두르고 김치를 볶아요.',
+      '밥을 넣고 같이 볶아요.',
+      '달걀 프라이를 올리면 더 맛있어요.',
+    ],
+  ),
+};
+
+// Health routines
+final Map<String, HealthRoutine> healthRoutines = {
+  'seated': const HealthRoutine(
+    id: 'seated',
+    title: '앉아서 하는 운동',
+    steps: [
+      '의자에 편하게 앉아요.',
+      '어깨를 천천히 돌려요. 앞으로 5번, 뒤로 5번.',
+      '두 팔을 위로 쭉 뻗어요. 5초 동안 유지해요.',
+      '무릎을 번갈아 올려요. 왼쪽 5번, 오른쪽 5번.',
+      '깊게 숨을 들이쉬고, 천천히 내쉬어요. 3번 반복.',
+      '수고했어요! 운동 끝!',
+    ],
+  ),
+  'standing': const HealthRoutine(
+    id: 'standing',
+    title: '서서 하는 운동',
+    steps: [
+      '편한 곳에 서요.',
+      '두 팔을 올렸다 내려요. 10번.',
+      '제자리에서 걸어요. 30초.',
+      '까치발을 들었다 내려요. 10번.',
+      '허리를 천천히 좌우로 돌려요. 각 5번.',
+      '깊게 숨쉬기 3번. 수고했어요!',
+    ],
+  ),
+};
+
+Recipe? getRecipe(String name) => recipes[name];
+HealthRoutine? getHealthRoutine(String id) => healthRoutines[id];
+List<String> getAllRecipeNames() => recipes.keys.toList();
