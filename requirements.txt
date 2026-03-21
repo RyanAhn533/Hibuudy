@@ -1,4 +1,4 @@
-openai==2.9.0
+edge-tts==6.1.12
 python-dotenv==1.2.1
 Requests==2.32.5
 streamlit==1.51.0

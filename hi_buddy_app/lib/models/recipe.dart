@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
+
 class Recipe {
   final String name;
   final List<String> tools;
@@ -10,6 +13,15 @@ class Recipe {
     required this.ingredients,
     required this.steps,
   });
+
+  factory Recipe.fromJson(Map<String, dynamic> json) {
+    return Recipe(
+      name: json['name'] ?? '',
+      tools: List<String>.from(json['tools'] ?? []),
+      ingredients: List<String>.from(json['ingredients'] ?? []),
+      steps: List<String>.from(json['steps'] ?? []),
+    );
+  }
 }
 
 class HealthRoutine {
@@ -22,99 +34,105 @@ class HealthRoutine {
     required this.title,
     required this.steps,
   });
+
+  factory HealthRoutine.fromJson(Map<String, dynamic> json) {
+    return HealthRoutine(
+      id: json['id'] ?? '',
+      title: json['title'] ?? '',
+      steps: List<String>.from(json['steps'] ?? []),
+    );
+  }
 }
 
-// Pre-loaded recipes (from Python recipes.py)
-final Map<String, Recipe> recipes = {
-  '라면': const Recipe(
-    name: '라면',
-    tools: ['라면냄비', '가스레인지'],
-    ingredients: ['라면 1봉지', '물 550ml', '달걀 1개(선택)'],
-    steps: [
-      '냄비에 물 550ml를 넣어요.',
-      '물이 보글보글 끓으면 면과 스프를 넣어요.',
-      '4분 동안 기다려요.',
-      '달걀을 넣고 싶으면 넣어요.',
-      '불을 꺼요. 조심해서 그릇에 옮겨요.',
-    ],
-  ),
-  '간장계란밥': const Recipe(
-    name: '간장계란밥',
-    tools: ['후라이팬', '가스레인지'],
-    ingredients: ['밥 1공기', '달걀 2개', '간장 1숟갈', '참기름 조금', '김가루(선택)'],
-    steps: [
-      '후라이팬에 기름을 살짝 둘러요.',
-      '약불로 달걀 프라이를 해요.',
-      '밥 위에 달걀을 올려요.',
-      '간장 1숟갈, 참기름 조금 뿌려요.',
-      '김가루를 뿌리면 완성!',
-    ],
-  ),
-  '계란후라이': const Recipe(
-    name: '계란후라이',
-    tools: ['후라이팬', '가스레인지'],
-    ingredients: ['달걀 1~2개', '식용유 조금', '소금 조금'],
-    steps: [
-      '후라이팬에 기름을 조금 둘러요.',
-      '약불로 켜요.',
-      '달걀을 깨서 조심히 넣어요.',
-      '하얀 부분이 익을 때까지 기다려요.',
-      '소금을 조금 뿌리고 접시에 옮겨요.',
-    ],
-  ),
-  '토마토파스타': const Recipe(
-    name: '토마토파스타',
-    tools: ['라면냄비', '후라이팬', '가스레인지'],
-    ingredients: ['파스타면', '토마토소스', '올리브유', '소금'],
-    steps: [
-      '큰 냄비에 물을 끓여요.',
-      '소금을 넣고 파스타면을 삶아요.',
-      '후라이팬에 올리브유를 두르고 토마토소스를 넣어요.',
-      '삶은 면을 소스에 넣고 섞어요.',
-      '그릇에 담으면 완성!',
-    ],
-  ),
-  '김치볶음밥': const Recipe(
-    name: '김치볶음밥',
-    tools: ['후라이팬', '가스레인지'],
-    ingredients: ['밥 1공기', '김치 한 줌', '식용유', '달걀 1개(선택)'],
-    steps: [
-      '김치를 작게 잘라요.',
-      '후라이팬에 기름을 두르고 김치를 볶아요.',
-      '밥을 넣고 같이 볶아요.',
-      '달걀 프라이를 올리면 더 맛있어요.',
-    ],
-  ),
-};
+/// JSON 에셋에서 레시피/루틴을 로드하는 서비스.
+/// 앱 업데이트 없이 백엔드에서 JSON만 교체하면 콘텐츠 추가 가능.
+class RecipeData {
+  static Map<String, Recipe>? _recipes;
+  static Map<String, HealthRoutine>? _routines;
+  static bool _loaded = false;
 
-// Health routines
-final Map<String, HealthRoutine> healthRoutines = {
-  'seated': const HealthRoutine(
-    id: 'seated',
-    title: '앉아서 하는 운동',
-    steps: [
-      '의자에 편하게 앉아요.',
-      '어깨를 천천히 돌려요. 앞으로 5번, 뒤로 5번.',
-      '두 팔을 위로 쭉 뻗어요. 5초 동안 유지해요.',
-      '무릎을 번갈아 올려요. 왼쪽 5번, 오른쪽 5번.',
-      '깊게 숨을 들이쉬고, 천천히 내쉬어요. 3번 반복.',
-      '수고했어요! 운동 끝!',
-    ],
-  ),
-  'standing': const HealthRoutine(
-    id: 'standing',
-    title: '서서 하는 운동',
-    steps: [
-      '편한 곳에 서요.',
-      '두 팔을 올렸다 내려요. 10번.',
-      '제자리에서 걸어요. 30초.',
-      '까치발을 들었다 내려요. 10번.',
-      '허리를 천천히 좌우로 돌려요. 각 5번.',
-      '깊게 숨쉬기 3번. 수고했어요!',
-    ],
-  ),
-};
+  /// 에셋에서 데이터 로드 (최초 1회)
+  static Future<void> load() async {
+    if (_loaded) return;
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/data/recipes.json');
+      final data = jsonDecode(jsonStr) as Map<String, dynamic>;
 
-Recipe? getRecipe(String name) => recipes[name];
-HealthRoutine? getHealthRoutine(String id) => healthRoutines[id];
-List<String> getAllRecipeNames() => recipes.keys.toList();
+      final recipesMap = data['recipes'] as Map<String, dynamic>? ?? {};
+      _recipes = recipesMap.map(
+        (k, v) => MapEntry(k, Recipe.fromJson(v as Map<String, dynamic>)),
+      );
+
+      final routinesMap =
+          data['health_routines'] as Map<String, dynamic>? ?? {};
+      _routines = routinesMap.map(
+        (k, v) =>
+            MapEntry(k, HealthRoutine.fromJson(v as Map<String, dynamic>)),
+      );
+
+      _loaded = true;
+    } catch (_) {
+      // 에셋 로드 실패 시 하드코딩 폴백
+      _recipes = _fallbackRecipes;
+      _routines = _fallbackRoutines;
+      _loaded = true;
+    }
+  }
+
+  /// 강제 리로드 (향후 서버에서 다운로드 후 사용)
+  static void invalidate() {
+    _loaded = false;
+    _recipes = null;
+    _routines = null;
+  }
+
+  static Recipe? getRecipe(String name) => _recipes?[name];
+  static HealthRoutine? getHealthRoutine(String id) => _routines?[id];
+  static List<String> getAllRecipeNames() =>
+      _recipes?.keys.toList() ?? [];
+
+  // ── 에셋 로드 실패 시 폴백 ──
+  static final Map<String, Recipe> _fallbackRecipes = {
+    '라면': const Recipe(
+      name: '라면',
+      tools: ['라면냄비', '가스레인지'],
+      ingredients: ['라면 1봉지', '물 550ml', '달걀 1개(선택)'],
+      steps: [
+        '냄비에 물 550ml를 넣어요.',
+        '물이 보글보글 끓으면 면과 스프를 넣어요.',
+        '4분 동안 기다려요.',
+        '달걀을 넣고 싶으면 넣어요.',
+        '불을 꺼요. 조심해서 그릇에 옮겨요.',
+      ],
+    ),
+  };
+
+  static final Map<String, HealthRoutine> _fallbackRoutines = {
+    'seated': const HealthRoutine(
+      id: 'seated',
+      title: '앉아서 하는 운동',
+      steps: [
+        '의자에 편하게 앉아요.',
+        '어깨를 천천히 돌려요. 앞으로 5번, 뒤로 5번.',
+        '두 팔을 위로 쭉 뻗어요. 5초 동안 유지해요.',
+        '수고했어요! 운동 끝!',
+      ],
+    ),
+    'standing': const HealthRoutine(
+      id: 'standing',
+      title: '서서 하는 운동',
+      steps: [
+        '편한 곳에 서요.',
+        '두 팔을 올렸다 내려요. 10번.',
+        '제자리에서 걸어요. 30초.',
+        '깊게 숨쉬기 3번. 수고했어요!',
+      ],
+    ),
+  };
+}
+
+// ── 기존 코드 호환용 글로벌 함수 ──
+Recipe? getRecipe(String name) => RecipeData.getRecipe(name);
+HealthRoutine? getHealthRoutine(String id) => RecipeData.getHealthRoutine(id);
+List<String> getAllRecipeNames() => RecipeData.getAllRecipeNames();

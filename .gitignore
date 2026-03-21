@@ -4,3 +4,10 @@ __pycache__/
 .streamlit/
 # 환경 변수 파일
 .env
+*.env
+# Backend
+backend/tts_cache/
+# Secrets
+*.keystore
+*.jks
+key.properties

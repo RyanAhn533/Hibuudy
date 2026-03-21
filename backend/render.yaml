@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: hibuddy-api
+    runtime: docker
+    plan: free
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GOOGLE_CSE_ID
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: APP_AUTH_TOKEN
+        sync: false

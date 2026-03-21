@@ -28,9 +28,9 @@ import requests
 from .config import (
     YOUTUBE_API_KEY,
     check_youtube_key,
-    get_openai_client,
-    OPENAI_MODEL_SCHEDULE,
+    gemini_generate,
 )
+from .response_evaluator import evaluate_youtube_queries
 
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 
@@ -78,7 +78,7 @@ def _normalize_menu_name(raw: str) -> str:
 
 
 # ─────────────────────────────────────────────
-# 1. GPT 기반 검색 쿼리 생성
+# 1. Gemini 기반 검색 쿼리 생성
 # ─────────────────────────────────────────────
 
 def _generate_youtube_queries_with_gpt(
@@ -87,7 +87,7 @@ def _generate_youtube_queries_with_gpt(
     max_queries: int = 4,
 ) -> List[str]:
     """
-    GPT를 이용해서 발달장애인용 유튜브 영상에 적합한
+    Gemini를 이용해서 발달장애인용 유튜브 영상에 적합한
     한국어 검색 쿼리 여러 개를 생성한다.
 
     - base_query: 기본이 되는 검색어
@@ -96,8 +96,6 @@ def _generate_youtube_queries_with_gpt(
     base_query = (base_query or "").strip()
     if not base_query:
         return []
-
-    client = get_openai_client()
 
     if domain == "cooking":
         domain_desc = "요리"
@@ -134,14 +132,7 @@ def _generate_youtube_queries_with_gpt(
 """
 
     try:
-        resp = client.chat.completions.create(
-            model=OPENAI_MODEL_SCHEDULE,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-            temperature=0.4,
-            max_tokens=256,
-        )
-        raw = resp.choices[0].message.content or "{}"
+        raw = gemini_generate(prompt, base_query)
         data = json.loads(raw)
         queries = data.get("queries", [])
         cleaned: List[str] = []
@@ -156,9 +147,22 @@ def _generate_youtube_queries_with_gpt(
         if base_query not in cleaned:
             cleaned.insert(0, base_query)
 
-        return cleaned[:max_queries]
+        cleaned = cleaned[:max_queries]
+
+        # 쿼리 품질 평가 — 부적절 키워드 포함 시 필터링
+        score, issues = evaluate_youtube_queries(cleaned)
+        if issues:
+            print(f"[YOUTUBE_QUERY_EVAL] score={score}, issues={issues}")
+            # 부적절 키워드 포함 쿼리 제거
+            bad_kws = {"먹방", "asmr", "shorts", "쇼츠", "광고", "리뷰"}
+            cleaned = [
+                q for q in cleaned
+                if not any(kw in q.lower() for kw in bad_kws)
+            ] or [base_query]
+
+        return cleaned
     except Exception as e:
-        print(f"[YOUTUBE_GPT_QUERY] error={e}, fallback to base_query={base_query}")
+        print(f"[YOUTUBE_GEMINI_QUERY] error={e}, fallback to base_query={base_query}")
         return [base_query]
 
 

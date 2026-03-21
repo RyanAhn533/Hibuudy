@@ -11,7 +11,8 @@
 import json
 from typing import Dict, List
 
-from .config import get_openai_client, OPENAI_MODEL_SCHEDULE
+from .config import gemini_generate
+from .response_evaluator import evaluate_schedule, generate_retry_feedback
 
 
 # ─────────────────────────────────────────────
@@ -174,70 +175,122 @@ def _normalize_item(raw: Dict) -> Dict:
 # 3. 외부에서 쓰는 메인 함수
 # ─────────────────────────────────────────────
 
+_FALLBACK = [
+    {
+        "time": "09:00",
+        "type": "GENERAL",
+        "task": "일정 변환 오류. 코디네이터에게 다시 요청하기",
+        "guide_script": [
+            "일정을 불러오는 데 문제가 생겼어요.",
+            "코디네이터에게 다시 한 번 일정을 만들어 달라고 부탁해 주세요.",
+        ],
+    }
+]
+
+# Gemini responseSchema로 출력 구조 강제
+_SCHEDULE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "schedule": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "time": {"type": "STRING"},
+                    "type": {"type": "STRING"},
+                    "task": {"type": "STRING"},
+                    "guide_script": {
+                        "type": "ARRAY",
+                        "items": {"type": "STRING"},
+                    },
+                },
+                "required": ["time", "type", "task", "guide_script"],
+            },
+        }
+    },
+    "required": ["schedule"],
+}
+
+# 점수 기준
+_MIN_SCORE = 60  # 이 점수 미만이면 재생성
+_MAX_RETRIES = 1  # 최대 재시도 횟수 (무료 tier 고려)
+
+
 def generate_schedule_from_text(user_text: str) -> List[Dict]:
     """
-    자연어 일정 설명 → GPT → 스케줄 리스트(List[Dict]) 반환.
+    자연어 일정 설명 → Gemini → 품질 평가 → (저점수 시 재생성) → 스케줄 리스트 반환.
 
-    pages/1_코디네이터_일정입력.py 에서 이 함수를 호출해서
-    바로 schedule 리스트를 받는 구조.
+    평가 + 재생성 루프:
+    1. Gemini로 JSON 생성
+    2. 규칙 기반 품질 평가 (0~100점)
+    3. 60점 미만이면 구체적 피드백 주입 후 1회 재생성
+    4. 최종 결과 반환
     """
     user_text = (user_text or "").strip()
     if not user_text:
         return []
 
-    client = get_openai_client()
-
-    # chat.completions에 JSON 강제 옵션 사용
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL_SCHEDULE,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": (
-                    "다음은 코디네이터가 적은 오늘 하루 일정 설명입니다.\n"
-                    "위에서 설명한 JSON 형식에 맞게 'schedule' 필드를 가진 하나의 객체로 변환해 주세요.\n\n"
-                    f"{user_text}"
-                ),
-            },
-        ],
-        temperature=0.2,
-        response_format={"type": "json_object"},  # 🔥 JSON 강제
+    base_instruction = (
+        "다음은 코디네이터가 적은 오늘 하루 일정 설명입니다.\n"
+        "위에서 설명한 JSON 형식에 맞게 'schedule' 필드를 가진 하나의 객체로 변환해 주세요.\n"
+        "설명이나 주석 없이 JSON만 출력하세요.\n\n"
+        f"{user_text}"
     )
 
-    content = response.choices[0].message.content or ""
+    best_schedule = None
+    best_score = -1.0
 
-    # response_format을 json_object로 줬기 때문에 content는 순수 JSON 문자열이어야 함
-    try:
-        obj = json.loads(content)
-    except json.JSONDecodeError:
-        # 혹시라도 깨지면 아주 단순한 fallback 반환
-        return [
-            {
-                "time": "09:00",
-                "type": "GENERAL",
-                "task": "일정 변환 오류. 코디네이터에게 다시 요청하기",
-                "guide_script": [
-                    "일정을 불러오는 데 문제가 생겼어요.",
-                    "코디네이터에게 다시 한 번 일정을 만들어 달라고 부탁해 주세요.",
-                ],
-            }
-        ]
+    for attempt in range(_MAX_RETRIES + 1):
+        # 재시도 시 피드백 주입
+        if attempt == 0:
+            instruction = base_instruction
+        else:
+            feedback = generate_retry_feedback(best_score, best_issues)
+            instruction = f"{base_instruction}\n\n--- 수정 요청 ---\n{feedback}"
 
-    # obj 가 {"schedule": [...]} 구조라고 가정
-    if isinstance(obj, dict):
-        raw_schedule = obj.get("schedule", [])
-    elif isinstance(obj, list):
-        # 혹시 모델이 그대로 리스트만 준 경우
-        raw_schedule = obj
-    else:
-        raw_schedule = []
+        try:
+            content = gemini_generate(
+                SYSTEM_PROMPT, instruction, response_schema=_SCHEDULE_SCHEMA
+            )
+        except Exception:
+            if best_schedule is not None:
+                return best_schedule
+            return _FALLBACK
 
-    schedule: List[Dict] = []
-    for raw in raw_schedule:
-        if isinstance(raw, dict):
-            schedule.append(_normalize_item(raw))
+        # JSON 파싱
+        try:
+            obj = json.loads(content)
+        except json.JSONDecodeError:
+            if best_schedule is not None:
+                return best_schedule
+            return _FALLBACK
 
-    # time 기준 정렬
-    schedule.sort(key=lambda it: it.get("time", "00:00"))
-    return schedule
+        # 스케줄 추출 + 정규화
+        if isinstance(obj, dict):
+            raw_schedule = obj.get("schedule", [])
+        elif isinstance(obj, list):
+            raw_schedule = obj
+        else:
+            raw_schedule = []
+
+        schedule: List[Dict] = []
+        for raw in raw_schedule:
+            if isinstance(raw, dict):
+                schedule.append(_normalize_item(raw))
+        schedule.sort(key=lambda it: it.get("time", "00:00"))
+
+        # 품질 평가
+        score, issues = evaluate_schedule(schedule, user_text)
+
+        # 베스트 갱신
+        if score > best_score:
+            best_schedule = schedule
+            best_score = score
+            best_issues = issues
+
+        # 합격이면 바로 반환
+        if score >= _MIN_SCORE:
+            return schedule
+
+    # 최대 재시도 후 베스트 반환
+    return best_schedule if best_schedule else _FALLBACK

@@ -44,9 +44,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('일정 생성 오류: $e'), backgroundColor: Colors.red),
-        );
+        _showErrorDialog('일정 생성 실패', e.toString());
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
@@ -61,6 +59,16 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         items: _schedule,
       );
       await ScheduleStorage.save(schedule);
+      // 서버에도 저장 (실패해도 로컬은 이미 저장됨)
+      try {
+        await ApiService.saveScheduleToServer(
+          'default_user', // TODO: 인증 구현 후 실제 user_id로 교체
+          schedule.date,
+          schedule.items.map((i) => i.toJson()).toList(),
+        );
+      } catch (_) {
+        // 서버 저장 실패는 무시 (로컬에는 저장됨)
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -71,9 +79,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('저장 오류: $e'), backgroundColor: Colors.red),
-        );
+        _showErrorDialog('저장 실패', e.toString());
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -342,6 +348,40 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline, color: HiBuddyColors.danger, size: 28),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(fontSize: 16, height: 1.6),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: const Text('알겠어요', style: TextStyle(fontSize: 16)),
+            ),
+          ),
+        ],
       ),
     );
   }

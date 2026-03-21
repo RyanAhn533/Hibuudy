@@ -21,6 +21,7 @@ class _UserScreenState extends State<UserScreen> {
   Timer? _timer;
   String? _selectedMenu;
   String _healthRoutineId = 'seated';
+  bool _isOfflineFallback = false; // 오프라인 폴백으로 불러온 스케줄인지
 
   @override
   void initState() {
@@ -41,7 +42,13 @@ class _UserScreenState extends State<UserScreen> {
   Future<void> _loadSchedule() async {
     final schedule = await ScheduleStorage.load();
     if (mounted) {
-      setState(() => _schedule = schedule);
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      setState(() {
+        _schedule = schedule;
+        // 오늘 날짜가 아닌 스케줄이면 오프라인 폴백 표시
+        _isOfflineFallback =
+            schedule != null && schedule.date != today;
+      });
     }
   }
 
@@ -73,28 +80,75 @@ class _UserScreenState extends State<UserScreen> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return '🌅 좋은 아침이에요';
-    if (hour < 18) return '☀️ 좋은 오후예요';
-    return '🌙 좋은 저녁이에요';
+    if (hour < 12) return '좋은 아침이에요';
+    if (hour < 18) return '좋은 오후예요';
+    return '좋은 저녁이에요';
   }
 
   @override
   Widget build(BuildContext context) {
+    // ── 일정 없음: 접근성 있는 빈 화면 ──
     if (_schedule == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('따라 하기')),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.calendar_today, size: 64, color: HiBuddyColors.textMuted),
-              SizedBox(height: 16),
-              Text(
-                '오늘 일정이 없습니다.\n코디네이터 페이지에서 먼저 저장해 주세요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: HiBuddyColors.textMuted),
-              ),
-            ],
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: HiBuddyColors.primaryBg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.calendar_today,
+                    size: 48,
+                    color: HiBuddyColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  '오늘 일정이 아직 없어요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: HiBuddyColors.text,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '코디네이터 선생님께\n일정을 만들어 달라고 해주세요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: HiBuddyColors.textMuted,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => TtsService.speak(
+                      '오늘 일정이 아직 없어요. 코디네이터 선생님께 일정을 만들어 달라고 해주세요.',
+                    ),
+                    icon: const Icon(Icons.volume_up, size: 28),
+                    label: const Text(
+                      '안내 듣기',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -126,6 +180,43 @@ class _UserScreenState extends State<UserScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── 오프라인 폴백 알림 배너 ──
+                  if (_isOfflineFallback)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3CD),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: HiBuddyColors.warning,
+                          width: 2,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.wifi_off,
+                            color: HiBuddyColors.warning,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              '${_schedule!.date} 일정을 보여드려요.\n새 일정은 코디네이터 선생님이 저장하면 나와요.',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF856404),
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // Greeting banner
                   Container(
                     width: double.infinity,
@@ -372,7 +463,7 @@ class _UserScreenState extends State<UserScreen> {
               ),
             ),
             child: Text(
-              '🍳 선택된 메뉴: $_selectedMenu',
+              '선택된 메뉴: $_selectedMenu',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -456,7 +547,7 @@ class _UserScreenState extends State<UserScreen> {
           children: [
             Expanded(
               child: _choiceButton(
-                '🪑 앉아서 하는 운동',
+                '앉아서 하는 운동',
                 _healthRoutineId == 'seated',
                 () => setState(() => _healthRoutineId = 'seated'),
                 color,
@@ -465,7 +556,7 @@ class _UserScreenState extends State<UserScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: _choiceButton(
-                '🧍 서서 하는 운동',
+                '서서 하는 운동',
                 _healthRoutineId == 'standing',
                 () => setState(() => _healthRoutineId = 'standing'),
                 color,
