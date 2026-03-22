@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git show:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(cd:*)",
+      "Bash(where flutter:*)",
+      "Read(//c/Users/wnsdu/flutter/bin/**)",
+      "Read(//c/Users/wnsdu/Hibuudy/hi_buddy_app/$LOCALAPPDATA/flutter/bin/**)",
+      "Read(//c/Users/wnsdu/**)",
+      "Bash(ls \"C:/Users/wnsdu/Desktop/\"*flutter*)",
+      "Read(//c/src/flutter/bin/**)",
+      "Read(//c/flutter/bin/**)",
+      "Bash(cmd.exe /c \"where flutter\")",
+      "Bash(cmd.exe /c \"where flutter 2>nul\" 2>/dev/null; ls \"C:/Users/wnsdu/development/flutter/bin/flutter\" 2>/dev/null; ls \"/c/Users/wnsdu/AppData/Local/Pub/Cache/\"*/flutter* 2>/dev/null)",
+      "Bash(cmd.exe /c \"where flutter 2>nul\")",
+      "Bash(cmd.exe /c \"dir /s /b C:\\\\Users\\\\wnsdu\\\\flutter.bat 2>nul\" 2>/dev/null; cmd.exe /c \"dir /s /b C:\\\\flutter\\\\bin\\\\flutter.bat 2>nul\" 2>/dev/null; cmd.exe /c \"dir /s /b C:\\\\src\\\\flutter\\\\bin\\\\flutter.bat 2>nul\" 2>/dev/null)",
+      "Read(//c/dev/flutter/bin/**)",
+      "Read(//c/tools/flutter/bin/**)",
+      "Bash(cmd.exe /c \"powershell -Command \\\\\"Get-Command flutter -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\\\\\"\" 2>&1)",
+      "Bash(cmd.exe /c \"echo %FLUTTER_ROOT%\" && cmd.exe /c \"echo %FLUTTER_HOME%\")",
+      "Bash(for d:*)",
+      "Bash(cmd.exe /c \"where fvm 2>nul\" 2>&1; cmd.exe /c \"where flutter 2>nul\" 2>&1)",
+      "Bash(cmd.exe /c \"echo %PATH%\" 2>&1 | tr ';' '\\\\n' | grep -i flutter)",
+      "Bash(cmd.exe /c \"where dart 2>nul\" 2>&1)",
+      "Bash(cmd.exe /c \"powershell -Command \\\\\"Get-ChildItem 'C:\\\\\\\\Users\\\\\\\\wnsdu' -Directory -Filter 'flutter*' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName\\\\\"\" 2>&1)",
+      "Bash(export:*)",
+      "Bash(C:/flutter/bin/flutter --version 2>&1)",
+      "Bash(wmic process:*)"
+    ]
+  }
+}

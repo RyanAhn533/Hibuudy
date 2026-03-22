@@ -2,7 +2,7 @@
     <!-- Network permission for API calls -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="Hi-Buddy"
+        android:label="하루메이트"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="false"

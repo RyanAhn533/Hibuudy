@@ -90,7 +90,7 @@ class _UserScreenState extends State<UserScreen> {
     // ── 일정 없음: 접근성 있는 빈 화면 ──
     if (_schedule == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('따라 하기')),
+        appBar: AppBar(title: const Text('오늘 하루')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
@@ -158,7 +158,7 @@ class _UserScreenState extends State<UserScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('오늘 따라하기'),
+        title: const Text('오늘 하루'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -240,7 +240,7 @@ class _UserScreenState extends State<UserScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '오늘도 하이버디랑 함께 해볼까요?  ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
+                          '오늘도 하루메이트랑 함께 해볼까요?  ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
                           style: const TextStyle(
                             fontSize: 14,
                             color: HiBuddyColors.textMuted,

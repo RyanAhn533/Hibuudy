@@ -1,4 +1,4 @@
-package com.hibuddy.hi_buddy_app
+package com.harumate.app
 
 import io.flutter.embedding.android.FlutterActivity
 

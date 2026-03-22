@@ -38,7 +38,7 @@ class HomeScreen extends StatelessWidget {
                     Text('👋', style: TextStyle(fontSize: 40)),
                     SizedBox(height: 8),
                     Text(
-                      'Hi-Buddy',
+                      '하루메이트',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -133,7 +133,7 @@ class HomeScreen extends StatelessWidget {
                     child: _FeatureCard(
                       icon: '📺',
                       iconBgColor: const Color(0xFFFEF3C7),
-                      title: '따라 하기',
+                      title: '오늘 하루',
                       features: const [
                         '하루 종일 켜두는 안내 화면',
                         '지금 할 일 한 개만 크게',
@@ -211,7 +211,7 @@ class HomeScreen extends StatelessWidget {
   List<Widget> _buildSteps() {
     const steps = [
       '왼쪽 메뉴에서 "일정 만들기"로 들어가서 오늘 일정을 입력하고 저장합니다',
-      '그 다음 "따라 하기"를 열어, 하루 동안 화면을 켜두면 됩니다',
+      '그 다음 "오늘 하루"를 열어, 하루 동안 화면을 켜두면 됩니다',
       '화면에는 지금 해야 할 것만 크게 나오고, 다음 할 일은 작게 표시됩니다',
     ];
 

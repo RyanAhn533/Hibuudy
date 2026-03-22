@@ -1,5 +1,5 @@
-name: hi_buddy_app
-description: "HiBuddy - 발달장애인을 위한 하루 스케줄러"
+name: harumate
+description: "하루메이트 - 발달장애인을 위한 하루 도우미"
 publish_to: 'none'
 version: 1.0.0+1
 

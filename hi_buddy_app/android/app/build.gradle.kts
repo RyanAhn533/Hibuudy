@@ -16,9 +16,9 @@ if (keyPropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.hibuddy.hi_buddy_app"
+    namespace = "com.harumate.app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.hibuddy.hi_buddy_app"
+        applicationId = "com.harumate.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -50,8 +50,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
