@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -46,6 +47,10 @@ class ApiService {
         lastResponse = resp;
       } on SocketException {
         throw const NetworkException('인터넷이 연결되지 않았어요.\n와이파이를 확인해 주세요.');
+      } on TimeoutException {
+        if (attempt == _maxRetries) {
+          throw const NetworkException('서버 응답이 너무 오래 걸려요.\n잠시 후 다시 시도해 주세요.');
+        }
       } catch (e) {
         if (e is NetworkException) rethrow;
         if (attempt == _maxRetries) rethrow;

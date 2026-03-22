@@ -78,8 +78,11 @@ class ScheduleStorage {
   /// 전체 삭제
   static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
-    final keys =
-        prefs.getKeys().where((k) => k.startsWith(_prefix) || k == _latestKey);
+    // Copy to list first to avoid concurrent modification
+    final keys = prefs
+        .getKeys()
+        .where((k) => k.startsWith(_prefix) || k == _latestKey)
+        .toList();
     for (final key in keys) {
       await prefs.remove(key);
     }

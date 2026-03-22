@@ -35,16 +35,26 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   Future<void> _generateSchedule() async {
+    if (_textController.text.trim().isEmpty) {
+      _showErrorDialog('입력 필요', '일정 내용을 입력해 주세요.');
+      return;
+    }
     setState(() => _isGenerating = true);
     try {
       final items = await ApiService.generateSchedule(_textController.text);
-      setState(() {
-        _schedule = items;
-        _expandedIndex = null;
-      });
+      if (mounted) {
+        setState(() {
+          _schedule = items;
+          _expandedIndex = null;
+        });
+      }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog('일정 생성 실패', e.toString());
+        final message = e.toString().replaceFirst('Exception: ', '');
+        _showErrorDialog(
+          '일정 생성 실패',
+          '$message\n\n인터넷 연결을 확인하고 다시 시도해 주세요.',
+        );
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
@@ -216,7 +226,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                     ),
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  onDismissed: (_) => _deleteItem(idx),
+                  confirmDismiss: (_) async {
+                    _deleteItem(idx);
+                    return false; // We already removed it via setState
+                  },
                   child: ActivityCard(
                     type: item.type,
                     task: item.task,

@@ -16,7 +16,9 @@ class StepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Semantics(
+      label: '$stepNumber단계. $text',
+      child: Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -59,10 +61,11 @@ class StepCard extends StatelessWidget {
             icon: const Icon(Icons.volume_up, size: 22),
             color: color,
             onPressed: () => TtsService.speak('$stepNumber단계. $text'),
-            tooltip: '듣기',
+            tooltip: '$stepNumber단계 듣기',
           ),
         ],
       ),
+    ),
     );
   }
 }

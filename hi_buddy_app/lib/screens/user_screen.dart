@@ -22,6 +22,7 @@ class _UserScreenState extends State<UserScreen> {
   String? _selectedMenu;
   String _healthRoutineId = 'seated';
   bool _isOfflineFallback = false; // 오프라인 폴백으로 불러온 스케줄인지
+  bool _isLoading = true; // 초기 로딩 상태
 
   @override
   void initState() {
@@ -40,15 +41,22 @@ class _UserScreenState extends State<UserScreen> {
   }
 
   Future<void> _loadSchedule() async {
-    final schedule = await ScheduleStorage.load();
-    if (mounted) {
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      setState(() {
-        _schedule = schedule;
-        // 오늘 날짜가 아닌 스케줄이면 오프라인 폴백 표시
-        _isOfflineFallback =
-            schedule != null && schedule.date != today;
-      });
+    try {
+      final schedule = await ScheduleStorage.load();
+      if (mounted) {
+        final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        setState(() {
+          _schedule = schedule;
+          _isLoading = false;
+          // 오늘 날짜가 아닌 스케줄이면 오프라인 폴백 표시
+          _isOfflineFallback =
+              schedule != null && schedule.date != today;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -87,6 +95,26 @@ class _UserScreenState extends State<UserScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ── 로딩 중 ──
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('오늘 하루')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                '일정을 불러오고 있어요...',
+                style: TextStyle(fontSize: 18, color: HiBuddyColors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     // ── 일정 없음: 접근성 있는 빈 화면 ──
     if (_schedule == null) {
       return Scaffold(
@@ -100,7 +128,7 @@ class _UserScreenState extends State<UserScreen> {
                 Container(
                   width: 100,
                   height: 100,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: HiBuddyColors.primaryBg,
                     shape: BoxShape.circle,
                   ),
@@ -163,8 +191,8 @@ class _UserScreenState extends State<UserScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              setState(() => _isLoading = true);
               _loadSchedule();
-              setState(() {});
             },
             tooltip: '새로고침',
           ),
@@ -619,25 +647,34 @@ class _UserScreenState extends State<UserScreen> {
     VoidCallback onTap,
     Color color,
   ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withAlpha(30) : Colors.white,
+    return Semantics(
+      label: label,
+      selected: isSelected,
+      button: true,
+      child: Material(
+        color: isSelected ? color.withAlpha(30) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? color : HiBuddyColors.border,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? color : HiBuddyColors.text,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isSelected ? color : HiBuddyColors.border,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? color : HiBuddyColors.text,
+              ),
+            ),
           ),
         ),
       ),

@@ -10,8 +10,11 @@ TTS: Edge TTS (완전 무료, 한국어 품질 우수)
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import re
+import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 
 import edge_tts
@@ -19,11 +22,14 @@ import httpx
 from response_evaluator import evaluate_schedule, generate_retry_feedback
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
-from slowapi import Limiter
+from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -47,11 +53,22 @@ TTS_CACHE_DIR.mkdir(exist_ok=True)
 app = FastAPI(title="Hi-Buddy API", docs_url=None, redoc_url=None)
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-@app.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    raise HTTPException(status_code=429, detail="요청 한도 초과 - 잠시 후 다시 시도하세요.")
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Return detailed validation errors instead of generic 'error parsing body'."""
+    logger.warning("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": str(exc.body)[:200] if exc.body else None},
+    )
+
+
+@app.on_event("startup")
+async def startup():
+    logger.info("Hi-Buddy API started successfully")
 
 
 # ── Auth Dependency ─────────────────────────────────────────────────
@@ -442,22 +459,24 @@ async def get_recipes(request: Request, _=Depends(verify_token)):
 
 # ── 7. Schedule Persistence (SQLite) ──────────────────────────────
 
-import sqlite3
-from contextlib import contextmanager
-
 SCHEDULE_DB = Path(__file__).parent / "schedules.db"
 
+
 def _init_db():
-    with sqlite3.connect(str(SCHEDULE_DB)) as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS schedules (
-                user_id TEXT NOT NULL,
-                date TEXT NOT NULL,
-                data TEXT NOT NULL,
-                updated_at TEXT DEFAULT (datetime('now')),
-                PRIMARY KEY (user_id, date)
-            )
-        """)
+    try:
+        with sqlite3.connect(str(SCHEDULE_DB)) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS schedules (
+                    user_id TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    data TEXT NOT NULL,
+                    updated_at TEXT DEFAULT (datetime('now')),
+                    PRIMARY KEY (user_id, date)
+                )
+            """)
+    except Exception as e:
+        logger.warning("Failed to initialize schedule DB: %s", e)
+
 
 _init_db()
 

@@ -94,7 +94,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      '코디네이터가 만든 일정을 따라 하루를 보내요',
+                      '선생님이 만든 일정을 따라 하루를 보내요',
                       style: TextStyle(
                         fontSize: 15,
                         color: HiBuddyColors.textMuted,
@@ -107,10 +107,10 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // ── Feature Cards ──
-              Row(
-                children: [
-                  Expanded(
-                    child: _FeatureCard(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final cards = [
+                    _FeatureCard(
                       icon: '📝',
                       iconBgColor: HiBuddyColors.primaryBg,
                       title: '일정 만들기',
@@ -119,7 +119,7 @@ class HomeScreen extends StatelessWidget {
                         '요리 사진/영상 첨부 가능',
                         '저장하면 바로 사용 가능',
                       ],
-                      buttonLabel: '코디네이터',
+                      buttonLabel: '일정 만들기 (선생님용)',
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -127,10 +127,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _FeatureCard(
+                    _FeatureCard(
                       icon: '📺',
                       iconBgColor: const Color(0xFFFEF3C7),
                       title: '오늘 하루',
@@ -139,7 +136,7 @@ class HomeScreen extends StatelessWidget {
                         '지금 할 일 한 개만 크게',
                         '단계별 음성 안내 제공',
                       ],
-                      buttonLabel: '사용자 화면',
+                      buttonLabel: '오늘 하루 보기',
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -147,8 +144,25 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ];
+                  // Use Column on narrow screens to prevent overflow
+                  if (constraints.maxWidth < 400) {
+                    return Column(
+                      children: [
+                        cards[0],
+                        const SizedBox(height: 12),
+                        cards[1],
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: cards[0]),
+                      const SizedBox(width: 12),
+                      Expanded(child: cards[1]),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 28),
@@ -210,8 +224,8 @@ class HomeScreen extends StatelessWidget {
 
   List<Widget> _buildSteps() {
     const steps = [
-      '왼쪽 메뉴에서 "일정 만들기"로 들어가서 오늘 일정을 입력하고 저장합니다',
-      '그 다음 "오늘 하루"를 열어, 하루 동안 화면을 켜두면 됩니다',
+      '선생님이 "일정 만들기"로 들어가서 오늘 일정을 입력하고 저장합니다',
+      '그 다음 "오늘 하루 보기"를 열어, 하루 동안 화면을 켜두면 됩니다',
       '화면에는 지금 해야 할 것만 크게 나오고, 다음 할 일은 작게 표시됩니다',
     ];
 
@@ -354,7 +368,10 @@ class _FeatureCard extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: onPressed,
-              child: Text(buttonLabel),
+              child: Text(
+                buttonLabel,
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         ],

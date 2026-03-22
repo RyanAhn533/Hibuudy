@@ -24,7 +24,10 @@ class ActivityCard extends StatelessWidget {
     final emoji = HiBuddyColors.getActivityEmoji(type);
     final label = HiBuddyColors.getActivityLabel(type);
 
-    return Card(
+    return Semantics(
+      label: '$time $label $task',
+      button: onTap != null,
+      child: Card(
       elevation: isActive ? 3 : 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -103,11 +106,12 @@ class ActivityCard extends StatelessWidget {
                 ),
               ),
               if (onTap != null)
-                Icon(Icons.chevron_right, color: HiBuddyColors.textMuted),
+                const Icon(Icons.chevron_right, color: HiBuddyColors.textMuted),
             ],
           ),
         ),
       ),
+    ),
     );
   }
 }
