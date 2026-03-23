@@ -75,9 +75,9 @@ async def startup():
 
 
 def verify_token(request: Request):
-    """Static bearer token 인증."""
+    """Static bearer token 인증. 토큰 미설정 시 인증 건너뜀 (개발/무료 tier 대응)."""
     if not APP_AUTH_TOKEN:
-        raise HTTPException(status_code=500, detail="서버 인증 토큰이 설정되지 않았습니다.")
+        return  # 토큰 미설정이면 인증 없이 통과
     auth = request.headers.get("Authorization", "")
     if auth != f"Bearer {APP_AUTH_TOKEN}":
         raise HTTPException(status_code=401, detail="인증 실패")
