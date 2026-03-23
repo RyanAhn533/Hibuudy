@@ -254,39 +254,17 @@ async def generate_schedule(request: Request, body: ScheduleRequest, _=Depends(v
     if not text:
         raise HTTPException(status_code=400, detail="일정 내용을 입력해 주세요.")
 
-    best_content = None
-    best_score = -1.0
+    # Gemini 무료 tier (15 RPM) 대응: 1회만 호출, 재생성 없음
+    content = await gemini_generate(
+        SCHEDULE_SYSTEM_PROMPT, text, response_schema=SCHEDULE_RESPONSE_SCHEMA
+    )
 
-    for attempt in range(2):  # 최대 2회 (원본 + 재생성 1회)
-        prompt_text = text
-        if attempt > 0 and best_score < 60:
-            feedback = generate_retry_feedback(best_score, best_issues)
-            prompt_text = f"{text}\n\n--- 수정 요청 ---\n{feedback}"
+    try:
+        json.loads(content)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=502, detail="일정 생성: JSON 파싱 실패")
 
-        content = await gemini_generate(
-            SCHEDULE_SYSTEM_PROMPT, prompt_text, response_schema=SCHEDULE_RESPONSE_SCHEMA
-        )
-
-        try:
-            parsed = json.loads(content)
-        except json.JSONDecodeError:
-            if best_content:
-                break
-            raise HTTPException(status_code=502, detail="일정 생성: JSON 파싱 실패")
-
-        # 품질 평가
-        items = parsed.get("schedule", []) if isinstance(parsed, dict) else parsed
-        score, issues = evaluate_schedule(items, text)
-
-        if score > best_score:
-            best_content = content
-            best_score = score
-            best_issues = issues
-
-        if score >= 60:
-            break
-
-    return Response(content=best_content, media_type="application/json")
+    return Response(content=content, media_type="application/json")
 
 
 # ── 2. Schedule Edit (Gemini 2.0 Flash) ───────────────────────────
