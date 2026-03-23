@@ -116,7 +116,7 @@ class HomeScreen extends StatelessWidget {
                       title: '일정 만들기',
                       features: const [
                         '말로 적으면 일정표 자동 생성',
-                        '요리 사진/영상 첨부 가능',
+                        '활동별 안내 문장 자동 작성',
                         '저장하면 바로 사용 가능',
                       ],
                       buttonLabel: '일정 만들기 (선생님용)',

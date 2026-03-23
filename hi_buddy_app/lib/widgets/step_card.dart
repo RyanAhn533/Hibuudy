@@ -57,11 +57,16 @@ class StepCard extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.volume_up, size: 22),
-            color: color,
-            onPressed: () => TtsService.speak('$stepNumber단계. $text'),
-            tooltip: '$stepNumber단계 듣기',
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: IconButton(
+              icon: const Icon(Icons.volume_up, size: 32),
+              color: color,
+              onPressed: () => TtsService.speak('$stepNumber단계. $text'),
+              tooltip: '$stepNumber단계 듣기',
+              padding: EdgeInsets.zero,
+            ),
           ),
         ],
       ),

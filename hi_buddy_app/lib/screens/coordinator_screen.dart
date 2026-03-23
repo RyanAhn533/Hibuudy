@@ -80,10 +80,34 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         // 서버 저장 실패는 무시 (로컬에는 저장됨)
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('저장 완료!'),
-            backgroundColor: HiBuddyColors.success,
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: HiBuddyColors.success, size: 28),
+                SizedBox(width: 8),
+                Text('저장 완료!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              ],
+            ),
+            content: const Text(
+              '일정이 저장되었어요.\n"오늘 하루" 화면에서 확인할 수 있어요.',
+              style: TextStyle(fontSize: 16, height: 1.6),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('여기 계속하기'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pop(context); // 홈으로 돌아가기
+                },
+                child: const Text('오늘 하루 보기'),
+              ),
+            ],
           ),
         );
       }
@@ -126,7 +150,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('코디네이터 - 일정 설계'),
+        title: const Text('일정 만들기'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -153,7 +177,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
               child: const Column(
                 children: [
                   Text(
-                    '📝 코디네이터 - 오늘 일정 설계',
+                    '오늘 일정 만들기',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -280,7 +304,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                '안내 문장 (guide_script):',
+                                '안내 문장:',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: HiBuddyColors.textMuted,
@@ -571,7 +595,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                   child: TextField(
                     controller: _gptRequestCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'GPT로 수정 요청',
+                      labelText: 'AI로 수정 요청',
                       hintText: '예: 시간을 19:30으로 바꿔줘',
                     ),
                   ),
@@ -586,7 +610,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.auto_awesome),
-                  tooltip: 'GPT로 수정',
+                  tooltip: 'AI로 수정',
                 ),
               ],
             ),
