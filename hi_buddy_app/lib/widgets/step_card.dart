@@ -6,54 +6,89 @@ class StepCard extends StatelessWidget {
   final int stepNumber;
   final String text;
   final Color color;
+  final bool isCompleted;
+  final ValueChanged<bool>? onCompletedChanged;
 
   const StepCard({
     super.key,
     required this.stepNumber,
     required this.text,
     this.color = HiBuddyColors.primary,
+    this.isCompleted = false,
+    this.onCompletedChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '$stepNumber단계. $text',
+      label: '$stepNumber단계. $text${isCompleted ? " 완료" : ""}',
       child: Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isCompleted ? const Color(0xFFD1FAE5) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: HiBuddyColors.border),
+        border: Border.all(
+          color: isCompleted ? HiBuddyColors.success : HiBuddyColors.border,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '$stepNumber',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
+          if (onCompletedChanged != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: SizedBox(
+                width: 32,
+                height: 32,
+                child: Checkbox(
+                  value: isCompleted,
+                  onChanged: (v) => onCompletedChanged?.call(v ?? false),
+                  activeColor: HiBuddyColors.success,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
               ),
             ),
-          ),
+          if (isCompleted)
+            Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: HiBuddyColors.success,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.check, color: Colors.white, size: 22),
+            )
+          else
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '$stepNumber',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 height: 1.5,
                 color: HiBuddyColors.text,
+                decoration: isCompleted ? TextDecoration.lineThrough : null,
               ),
             ),
           ),
@@ -75,7 +110,7 @@ class StepCard extends StatelessWidget {
   }
 }
 
-class StepsList extends StatelessWidget {
+class StepsList extends StatefulWidget {
   final String title;
   final List<String> steps;
   final Color color;
@@ -88,8 +123,44 @@ class StepsList extends StatelessWidget {
   });
 
   @override
+  State<StepsList> createState() => _StepsListState();
+}
+
+class _StepsListState extends State<StepsList> {
+  late List<bool> _completed;
+  bool _allDoneBannerShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _completed = List.filled(widget.steps.length, false);
+  }
+
+  @override
+  void didUpdateWidget(covariant StepsList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.steps.length != widget.steps.length) {
+      _completed = List.filled(widget.steps.length, false);
+      _allDoneBannerShown = false;
+    }
+  }
+
+  void _onStepCompleted(int index, bool value) {
+    setState(() {
+      _completed[index] = value;
+    });
+    // Check if all steps completed
+    if (_completed.every((c) => c) && !_allDoneBannerShown) {
+      _allDoneBannerShown = true;
+      TtsService.speak('잘했어요! 다 했어요!');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (steps.isEmpty) return const SizedBox.shrink();
+    if (widget.steps.isEmpty) return const SizedBox.shrink();
+
+    final allDone = _completed.every((c) => c) && _completed.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +168,7 @@ class StepsList extends StatelessWidget {
         Row(
           children: [
             Text(
-              title,
+              widget.title,
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -107,7 +178,7 @@ class StepsList extends StatelessWidget {
             const Spacer(),
             TextButton.icon(
               onPressed: () {
-                final allText = steps
+                final allText = widget.steps
                     .asMap()
                     .entries
                     .map((e) => '${e.key + 1}단계. ${e.value}')
@@ -120,13 +191,47 @@ class StepsList extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ...steps.asMap().entries.map(
+        ...widget.steps.asMap().entries.map(
               (e) => StepCard(
                 stepNumber: e.key + 1,
                 text: e.value,
-                color: color,
+                color: widget.color,
+                isCompleted: _completed[e.key],
+                onCompletedChanged: (v) => _onStepCompleted(e.key, v),
               ),
             ),
+        if (allDone) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: HiBuddyColors.successBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: HiBuddyColors.success, width: 2),
+            ),
+            child: const Column(
+              children: [
+                Text(
+                  '잘했어요! 다 했어요!',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF065F46),
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '모든 단계를 완료했어요!',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF047857),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

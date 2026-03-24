@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../models/schedule_item.dart';
@@ -23,14 +24,29 @@ class _UserScreenState extends State<UserScreen> {
   String _healthRoutineId = 'seated';
   bool _isOfflineFallback = false; // 오프라인 폴백으로 불러온 스케줄인지
   bool _isLoading = true; // 초기 로딩 상태
+  String? _lastActiveTime; // 이전 활성 활동의 시간 (전환 감지용)
 
   @override
   void initState() {
     super.initState();
     _loadSchedule();
     _timer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() {}); // refresh to update active item
+      if (mounted) {
+        _checkActivityTransition();
+        setState(() {}); // refresh to update active item
+      }
     });
+  }
+
+  /// 활동 전환 감지: 활성 활동이 바뀌면 TTS 안내 + 진동
+  void _checkActivityTransition() {
+    final (active, _) = _findActiveAndNext();
+    if (active != null && _lastActiveTime != null && active.time != _lastActiveTime) {
+      // 활동이 바뀜 - 진동 + TTS 안내
+      HapticFeedback.heavyImpact();
+      TtsService.speak('다음 활동 시간이에요');
+    }
+    _lastActiveTime = active?.time;
   }
 
   @override
@@ -52,6 +68,9 @@ class _UserScreenState extends State<UserScreen> {
           _isOfflineFallback =
               schedule != null && schedule.date != today;
         });
+        // 초기 활성 활동 시간 기록 (첫 로드 시 전환 알림 방지)
+        final (active, _) = _findActiveAndNext();
+        _lastActiveTime = active?.time;
       }
     } catch (_) {
       if (mounted) {

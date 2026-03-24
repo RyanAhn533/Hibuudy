@@ -146,6 +146,105 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     });
   }
 
+  /// 내일도 같은 일정 사용 (copy schedule to tomorrow)
+  Future<void> _copyToTomorrow() async {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final tomorrowStr = DateFormat('yyyy-MM-dd').format(tomorrow);
+    final schedule = Schedule(date: tomorrowStr, items: _schedule);
+    await ScheduleStorage.save(schedule);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$tomorrowStr 일정으로 복사되었어요!'),
+          backgroundColor: HiBuddyColors.success,
+        ),
+      );
+    }
+  }
+
+  /// 새 일정 항목 수동 추가
+  void _addNewItem() {
+    final timeCtrl = TextEditingController(text: '09:00');
+    final taskCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: HiBuddyColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '새 일정 추가',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    controller: timeCtrl,
+                    decoration: const InputDecoration(labelText: '시간(HH:MM)'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: taskCtrl,
+                    decoration: const InputDecoration(labelText: '할 일'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (taskCtrl.text.trim().isEmpty) return;
+                  final newItem = ScheduleItem(
+                    time: timeCtrl.text.trim(),
+                    type: 'GENERAL',
+                    task: taskCtrl.text.trim(),
+                    guideScript: [],
+                  );
+                  setState(() {
+                    _schedule.add(newItem);
+                    _schedule.sort(
+                        (a, b) => a.timeMinutes.compareTo(b.timeMinutes));
+                  });
+                  Navigator.pop(ctx);
+                },
+                child: const Text('추가'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -233,7 +332,17 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
               const Divider(),
 
               // ── Section 2: Schedule Preview ──
-              _sectionTitle('2. 자동으로 만들어진 일정'),
+              Row(
+                children: [
+                  Expanded(child: _sectionTitle('2. 자동으로 만들어진 일정')),
+                  IconButton(
+                    onPressed: _addNewItem,
+                    icon: const Icon(Icons.add_circle, size: 32),
+                    color: HiBuddyColors.primary,
+                    tooltip: '일정 항목 추가',
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               ..._schedule.asMap().entries.map((e) {
                 final idx = e.key;
@@ -378,6 +487,18 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: HiBuddyColors.success,
                     padding: const EdgeInsets.symmetric(vertical: 18),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _copyToTomorrow,
+                  icon: const Icon(Icons.copy),
+                  label: const Text('내일도 같은 일정 사용'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
               ),
