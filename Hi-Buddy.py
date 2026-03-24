@@ -8,7 +8,7 @@ USER_PAGE = "pages/2_사용자_오늘_따라하기.py"
 
 def main():
     st.set_page_config(
-        page_title="HiBuddy - 하루 스케줄러",
+        page_title="하루메이트 - 하루 스케줄러",
         page_icon="👋",
         layout="centered",
         initial_sidebar_state="expanded",
@@ -22,7 +22,7 @@ def main():
         <div class="hb-hero">
             <div class="hb-hero-icon">🧩</div>
             <h1>오늘 하루, 같이 해봐요!</h1>
-            <p>코디네이터가 만든 일정을 따라 하루를 보내요</p>
+            <p>선생님이 만든 일정을 따라 하루를 보내요</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -39,14 +39,14 @@ def main():
                 <h3>일정 만들기</h3>
                 <ul>
                     <li>말로 적으면 일정표 자동 생성</li>
-                    <li>요리 사진/영상 첨부 가능</li>
+                    <li>활동별 안내 문장 자동 작성</li>
                     <li>저장하면 바로 사용 가능</li>
                 </ul>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        if st.button("일정 만들기 (코디네이터)", type="primary", key="btn_coord"):
+        if st.button("일정 만들기", type="primary", key="btn_coord"):
             st.switch_page(COORDINATOR_PAGE)
 
     with col2:
@@ -54,7 +54,7 @@ def main():
             """
             <div class="hb-feature">
                 <div class="hb-feature-icon hb-feature-icon-amber">📺</div>
-                <h3>따라 하기</h3>
+                <h3>오늘 하루</h3>
                 <ul>
                     <li>하루 종일 켜두는 안내 화면</li>
                     <li>지금 할 일 한 개만 크게 표시</li>
@@ -64,7 +64,7 @@ def main():
             """,
             unsafe_allow_html=True,
         )
-        if st.button("따라 하기 (사용자 화면)", type="primary", key="btn_user"):
+        if st.button("오늘 하루 보기", type="primary", key="btn_user"):
             st.switch_page(USER_PAGE)
 
     # ── How to Use ──
@@ -81,7 +81,7 @@ def main():
         <div class="hb-step">
             <div class="hb-step-num">2</div>
             <div class="hb-step-text">
-                그 다음 <strong>"따라 하기"</strong>를 열어, 하루 동안 화면을 켜두면 됩니다
+                그 다음 <strong>"오늘 하루"</strong>를 열어, 하루 동안 화면을 켜두면 됩니다
             </div>
         </div>
         <div class="hb-step">

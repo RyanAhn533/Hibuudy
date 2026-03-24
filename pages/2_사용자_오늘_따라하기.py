@@ -52,7 +52,7 @@ HEADER_TEXT_MAP = {
 # ─────────────────────────────────────────────
 def _load_schedule() -> Tuple[List[Dict], str]:
     if not os.path.exists(SCHEDULE_PATH):
-        st.error("오늘 스케줄 파일이 없습니다. 코디네이터 페이지에서 먼저 저장해 주세요.")
+        st.error("오늘 스케줄 파일이 없습니다. 일정 만들기 페이지에서 먼저 저장해 주세요.")
         st.stop()
 
     with open(SCHEDULE_PATH, "r", encoding="utf-8") as f:
@@ -639,7 +639,7 @@ def _render_timeline(annotated: List[Dict]):
 # ─────────────────────────────────────────────
 def user_page():
     st.set_page_config(
-        page_title="HiBuddy - 사용자 오늘 따라하기",
+        page_title="하루메이트 - 오늘 하루",
         page_icon="👋",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -653,7 +653,7 @@ def user_page():
 
     schedule, date_str = _load_schedule()
     if not schedule:
-        st.warning("오늘 일정이 비어있습니다. 코디네이터 페이지에서 일정을 추가해 주세요.")
+        st.warning("오늘 일정이 비어있습니다. 일정 만들기 페이지에서 일정을 추가해 주세요.")
         return
 
     payload = _prepare_audio_payloads(schedule, date_str)
@@ -684,7 +684,7 @@ def user_page():
             f"""
             <div class="hb-greeting">
                 <h2>{greeting_emoji} {greeting}</h2>
-                <p>오늘도 하이버디랑 함께 해볼까요? &nbsp; {now.strftime('%Y-%m-%d %H:%M')}</p>
+                <p>오늘도 하루메이트랑 함께 해볼까요? &nbsp; {now.strftime('%Y-%m-%d %H:%M')}</p>
             </div>
             """,
             unsafe_allow_html=True,

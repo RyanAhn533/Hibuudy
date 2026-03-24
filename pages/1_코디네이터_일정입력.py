@@ -340,7 +340,7 @@ def coordinator_page():
     st.markdown(
         f"""
         <div class="hb-greeting" style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);">
-            <h2>📝 코디네이터 - 오늘 일정 설계</h2>
+            <h2>📝 일정 만들기 - 오늘 일정 설계</h2>
             <p>오늘 할 일을 입력하면 자동으로 일정표를 만들어 드려요</p>
         </div>
         """,
@@ -424,7 +424,7 @@ def coordinator_page():
             f"[{time_str}] {_label_type(type_)} · {task}",
             expanded=(type_ in expand_types),
         ):
-            # ✅ 코디네이터가 시간/할 일을 직접 수정할 수 있도록 입력창 제공
+            # ✅ 선생님이 시간/할 일을 직접 수정할 수 있도록 입력창 제공
             col_a, col_b = st.columns([1, 3])
             with col_a:
                 new_time = st.text_input(
@@ -459,7 +459,7 @@ def coordinator_page():
                     key=f"gpt_edit_req_{idx}",
                     placeholder="예: 시간을 19:30으로 바꾸고 안내문을 더 짧게",
                 )
-                if st.button("GPT로 수정 적용", key=f"btn_gpt_edit_{idx}"):
+                if st.button("AI로 수정 적용", key=f"btn_gpt_edit_{idx}"):
                     try:
                         patch = _gpt_edit_item(st.session_state[SCHEDULE_STATE_KEY][idx], gpt_req)
                         if "time" in patch:
@@ -467,7 +467,7 @@ def coordinator_page():
                                 st.session_state[SCHEDULE_STATE_KEY][idx]["time"] = str(patch["time"])
                                 changed = True
                             else:
-                                st.warning("GPT가 준 시간이 HH:MM 형식이 아닙니다. (적용 안 함)")
+                                st.warning("AI가 준 시간이 HH:MM 형식이 아닙니다. (적용 안 함)")
                         if "task" in patch:
                             st.session_state[SCHEDULE_STATE_KEY][idx]["task"] = str(patch["task"]).strip()
                             changed = True
@@ -479,10 +479,10 @@ def coordinator_page():
                             st.session_state[SCHEDULE_STATE_KEY][idx]["guide_script"] = gs[:5]
                             changed = True
 
-                        st.success("GPT 수정이 적용되었습니다.")
+                        st.success("AI 수정이 적용되었습니다.")
                         st.rerun()
                     except Exception as e:
-                        st.error(f"GPT 일정 수정 오류: {e}")
+                        st.error(f"AI 일정 수정 오류: {e}")
 
             _edit_guide_script(idx)
             st.markdown("---")
