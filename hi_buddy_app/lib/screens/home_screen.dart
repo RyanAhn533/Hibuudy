@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'coordinator_screen.dart';
 import 'user_screen.dart';
+import 'agent_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -144,22 +146,67 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                    _FeatureCard(
+                      icon: '💬',
+                      iconBgColor: HiBuddyColors.healthBg,
+                      title: '도우미',
+                      features: const [
+                        '궁금한 것 뭐든 물어보기',
+                        '요리, 운동, 영상 추천',
+                        '음성으로 답변 들을 수 있어요',
+                      ],
+                      buttonLabel: '도우미에게 물어보기',
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AgentScreen(),
+                        ),
+                      ),
+                    ),
+                    _FeatureCard(
+                      icon: '⚙️',
+                      iconBgColor: HiBuddyColors.clothingBg,
+                      title: '나의 정보',
+                      features: const [
+                        '이름, 장애 수준 설정',
+                        '냉장고 재료, 약 알림 관리',
+                        '긴급 연락처 등록',
+                      ],
+                      buttonLabel: '나의 정보 관리',
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
+                      ),
+                    ),
                   ];
                   // Use Column on narrow screens to prevent overflow
                   if (constraints.maxWidth < 400) {
                     return Column(
-                      children: [
-                        cards[0],
-                        const SizedBox(height: 12),
-                        cards[1],
-                      ],
+                      children: cards
+                          .expand((card) => [card, const SizedBox(height: 12)])
+                          .toList()
+                        ..removeLast(),
                     );
                   }
-                  return Row(
+                  return Column(
                     children: [
-                      Expanded(child: cards[0]),
-                      const SizedBox(width: 12),
-                      Expanded(child: cards[1]),
+                      Row(
+                        children: [
+                          Expanded(child: cards[0]),
+                          const SizedBox(width: 12),
+                          Expanded(child: cards[1]),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: cards[2]),
+                          const SizedBox(width: 12),
+                          Expanded(child: cards[3]),
+                        ],
+                      ),
                     ],
                   );
                 },
