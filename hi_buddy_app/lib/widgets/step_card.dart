@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/tts_service.dart';
+import '../screens/timer_screen.dart';
 
 class StepCard extends StatelessWidget {
   final int stepNumber;
@@ -18,8 +19,39 @@ class StepCard extends StatelessWidget {
     this.onCompletedChanged,
   });
 
+  /// 텍스트에서 시간 키워드를 찾아 분 단위로 반환 (없으면 null)
+  static int? _extractTimerMinutes(String text) {
+    // "N분" 패턴
+    final minuteMatch = RegExp(r'(\d+)\s*분').firstMatch(text);
+    if (minuteMatch != null) {
+      return int.tryParse(minuteMatch.group(1)!);
+    }
+    // "N초" 패턴 — 1분 미만이면 1분으로 올림
+    final secondMatch = RegExp(r'(\d+)\s*초').firstMatch(text);
+    if (secondMatch != null) {
+      final seconds = int.tryParse(secondMatch.group(1)!) ?? 0;
+      if (seconds > 0) {
+        return (seconds / 60).ceil().clamp(1, 999);
+      }
+    }
+    return null;
+  }
+
+  /// 시간 관련 키워드가 포함되어 있는지
+  static bool _hasTimeKeyword(String text) {
+    return RegExp(r'\d+\s*(분|초)').hasMatch(text) ||
+        text.contains('기다려') ||
+        text.contains('기다리') ||
+        text.contains('끓여') ||
+        text.contains('끓이') ||
+        text.contains('익혀') ||
+        text.contains('익히');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final timerMinutes = _hasTimeKeyword(text) ? _extractTimerMinutes(text) : null;
+
     return Semantics(
       label: '$stepNumber단계. $text${isCompleted ? " 완료" : ""}',
       child: Container(
@@ -92,6 +124,28 @@ class StepCard extends StatelessWidget {
               ),
             ),
           ),
+          // 타이머 버튼 (시간 키워드가 있을 때만 표시)
+          if (timerMinutes != null)
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: IconButton(
+                icon: const Icon(Icons.timer, size: 28),
+                color: HiBuddyColors.cooking,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => TimerScreen(
+                        minutes: timerMinutes,
+                        label: '$stepNumber단계 타이머',
+                      ),
+                    ),
+                  );
+                },
+                tooltip: '$timerMinutes분 타이머',
+                padding: EdgeInsets.zero,
+              ),
+            ),
           SizedBox(
             width: 48,
             height: 48,

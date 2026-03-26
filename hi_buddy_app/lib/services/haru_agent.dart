@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'database_service.dart';
 import '../models/recipe.dart';
 import 'schedule_storage.dart';
+import 'weather_service.dart';
 
 /// 하루메이트 에이전트 — 진짜 AI 에이전트.
 /// 사용자의 전체 맥락(프로필, 식재료, 일정, 수행기록, 약, 연락처)을
@@ -210,6 +211,18 @@ ${(ctx['recent_completions'] as List).isEmpty ? '기록 없음' : (ctx['recent_c
       text = text.replaceAll(recipeMatch.group(0)!, '').trim();
     }
 
+    // [타이머: N분] 추출
+    final timerMatch = RegExp(r'\[타이머:\s*(\d+)\s*분\]').firstMatch(text);
+    if (timerMatch != null) {
+      final minutes = int.tryParse(timerMatch.group(1)!) ?? 1;
+      actions.add(AgentAction(
+        label: '$minutes분 타이머 시작',
+        actionType: 'timer',
+        data: {'minutes': minutes},
+      ));
+      text = text.replaceAll(timerMatch.group(0)!, '').trim();
+    }
+
     return AgentResponse(
       text: text,
       actions: actions,
@@ -236,14 +249,36 @@ ${(ctx['recent_completions'] as List).isEmpty ? '기록 없음' : (ctx['recent_c
     if (_matchAny(t, ['약', '복용', '먹어야'])) {
       return await _offlineMedicine();
     }
+    if (_matchAny(t, ['타이머', '분타이머', '초타이머', '시간맞춰', '시간재'])) {
+      return _offlineTimer(input);
+    }
     if (_matchAny(t, ['심심', '놀', '뭐하', '지루'])) {
       return _offlineBored();
     }
-    if (_matchAny(t, ['날씨', '비', '우산', '추워', '더워'])) {
-      return AgentResponse(text: '날씨 정보는 인터넷이 필요해요.');
+    if (_matchAny(t, ['날씨', '비', '우산', '추워', '더워', '기온', '옷'])) {
+      return await _offlineWeather();
     }
 
     return AgentResponse(text: '잘 이해하지 못했어요. 다시 말해주세요.');
+  }
+
+  static Future<AgentResponse> _offlineWeather() async {
+    try {
+      final weather = await WeatherService.getCurrentWeather();
+      final temp = weather['temp'] as double;
+      final desc = weather['description'] as String;
+      final emoji = WeatherService.getWeatherEmoji(weather['condition'] as String);
+      final clothing = WeatherService.getClothingAdvice(temp);
+      final feelsLike = weather['feelsLike'] as double;
+
+      return AgentResponse(
+        text: '$emoji 지금 서울 날씨는 $desc, ${temp.round()}도예요.\n'
+            '체감 온도는 ${feelsLike.round()}도예요.\n\n'
+            '👔 $clothing',
+      );
+    } catch (_) {
+      return AgentResponse(text: '날씨 정보를 가져올 수 없어요. 인터넷 연결을 확인해주세요.');
+    }
   }
 
   static Future<AgentResponse> _offlineHungry() async {
@@ -313,6 +348,37 @@ ${(ctx['recent_completions'] as List).isEmpty ? '기록 없음' : (ctx['recent_c
     }
     final list = meds.map((m) => '${m['name']} (${m['time']})').join(', ');
     return AgentResponse(text: '오늘 먹을 약: $list');
+  }
+
+  static AgentResponse _offlineTimer(String input) {
+    // "4분 타이머", "30초 타이머", "타이머 5분" 등에서 숫자 추출
+    final minuteMatch = RegExp(r'(\d+)\s*분').firstMatch(input);
+    final secondMatch = RegExp(r'(\d+)\s*초').firstMatch(input);
+
+    int minutes = 0;
+    if (minuteMatch != null) {
+      minutes = int.tryParse(minuteMatch.group(1)!) ?? 0;
+    } else if (secondMatch != null) {
+      final seconds = int.tryParse(secondMatch.group(1)!) ?? 0;
+      minutes = (seconds / 60).ceil();
+      if (minutes < 1) minutes = 1;
+    }
+
+    if (minutes <= 0) {
+      // 숫자 없으면 물어보기
+      return AgentResponse(text: '몇 분 타이머를 설정할까요?');
+    }
+
+    return AgentResponse(
+      text: '$minutes분 타이머를 설정할게요.',
+      actions: [
+        AgentAction(
+          label: '$minutes분 타이머 시작',
+          actionType: 'timer',
+          data: {'minutes': minutes},
+        ),
+      ],
+    );
   }
 
   static AgentResponse _offlineBored() {

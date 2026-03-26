@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/database_service.dart';
+import '../services/ui_mode_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -112,16 +113,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    final newMode = _uiModeToDb[_uiMode] ?? 'normal';
     await DatabaseService.updateProfile({
       'name': _nameController.text.trim(),
       'disability_level': _disabilityToDb[_disabilityLevel] ?? 'mild',
-      'ui_mode': _uiModeToDb[_uiMode] ?? 'normal',
+      'ui_mode': newMode,
       'tts_speed': _ttsSpeed,
     });
+    // UI 모드 즉시 반영
+    UiModeService.currentMode = newMode;
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('저장되었습니다', style: TextStyle(fontSize: 16)),
+          content: Text('저장되었습니다. UI 모드는 앱을 다시 열면 완전히 적용됩니다.', style: TextStyle(fontSize: 16)),
           backgroundColor: HiBuddyColors.success,
         ),
       );

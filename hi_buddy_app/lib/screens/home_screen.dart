@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/ui_mode_service.dart';
+import '../widgets/sos_button.dart';
 import 'coordinator_screen.dart';
 import 'user_screen.dart';
 import 'agent_screen.dart';
@@ -10,6 +12,158 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 키오스크 모드: 홈 화면 건너뛰고 바로 오늘 하루 화면으로
+    if (UiModeService.isKiosk) {
+      return const UserScreen();
+    }
+
+    // 간단 모드: 큰 버튼 2개만 표시
+    if (UiModeService.isSimple) {
+      return _buildSimpleHome(context);
+    }
+
+    return _buildNormalHome(context);
+  }
+
+  Widget _buildSimpleHome(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // 상단 인사
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [HiBuddyColors.primary, HiBuddyColors.primaryLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(
+                  children: [
+                    const Text('👋', style: TextStyle(fontSize: 56)),
+                    const SizedBox(height: 12),
+                    Text(
+                      '하루메이트',
+                      style: TextStyle(
+                        fontSize: UiModeService.headerSize + 8,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '무엇을 하고 싶어요?',
+                      style: TextStyle(
+                        fontSize: UiModeService.fontSize,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // 오늘 하루 (큰 버튼)
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const UserScreen()),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(28),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: HiBuddyColors.primary, width: 3),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('📺', style: TextStyle(fontSize: 64)),
+                        const SizedBox(height: 16),
+                        Text(
+                          '오늘 하루 보기',
+                          style: TextStyle(
+                            fontSize: UiModeService.headerSize,
+                            fontWeight: FontWeight.w800,
+                            color: HiBuddyColors.text,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '지금 할 일을 확인해요',
+                          style: TextStyle(
+                            fontSize: UiModeService.fontSize,
+                            color: HiBuddyColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 도우미 (큰 버튼)
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AgentScreen()),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(28),
+                    decoration: BoxDecoration(
+                      color: HiBuddyColors.healthBg,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: HiBuddyColors.health, width: 3),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('💬', style: TextStyle(fontSize: 64)),
+                        const SizedBox(height: 16),
+                        Text(
+                          '도우미에게 물어보기',
+                          style: TextStyle(
+                            fontSize: UiModeService.headerSize,
+                            fontWeight: FontWeight.w800,
+                            color: HiBuddyColors.text,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '궁금한 것을 물어봐요',
+                          style: TextStyle(
+                            fontSize: UiModeService.fontSize,
+                            color: HiBuddyColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: SosButton.floatingButton(context),
+    );
+  }
+
+  Widget _buildNormalHome(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(

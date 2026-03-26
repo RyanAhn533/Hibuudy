@@ -9,6 +9,9 @@ import '../services/schedule_storage.dart';
 import '../services/tts_service.dart';
 import '../widgets/activity_card.dart';
 import '../widgets/step_card.dart';
+import '../widgets/morning_briefing.dart';
+import '../widgets/sos_button.dart';
+import '../services/ui_mode_service.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -20,11 +23,14 @@ class UserScreen extends StatefulWidget {
 class _UserScreenState extends State<UserScreen> {
   Schedule? _schedule;
   Timer? _timer;
+  Timer? _kioskAutoTimer; // 키오스크 모드 자동 진행 타이머
   String? _selectedMenu;
   String _healthRoutineId = 'seated';
   bool _isOfflineFallback = false; // 오프라인 폴백으로 불러온 스케줄인지
   bool _isLoading = true; // 초기 로딩 상태
   String? _lastActiveTime; // 이전 활성 활동의 시간 (전환 감지용)
+  bool _autoTtsPlayed = false; // 현재 활동에 대한 자동 TTS 재생 여부
+  int _kioskStepIndex = 0; // 키오스크 모드 현재 단계 인덱스
 
   @override
   void initState() {
@@ -36,6 +42,15 @@ class _UserScreenState extends State<UserScreen> {
         setState(() {}); // refresh to update active item
       }
     });
+    // 키오스크 모드: 30초마다 자동 단계 진행
+    if (UiModeService.isKiosk) {
+      _kioskAutoTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+        if (mounted) {
+          setState(() => _kioskStepIndex++);
+          _speakCurrentStep();
+        }
+      });
+    }
   }
 
   /// 활동 전환 감지: 활성 활동이 바뀌면 TTS 안내 + 진동
@@ -44,14 +59,44 @@ class _UserScreenState extends State<UserScreen> {
     if (active != null && _lastActiveTime != null && active.time != _lastActiveTime) {
       // 활동이 바뀜 - 진동 + TTS 안내
       HapticFeedback.heavyImpact();
-      TtsService.speak('다음 활동 시간이에요');
+      _autoTtsPlayed = false; // 새 활동이면 자동 TTS 다시 재생
+      _kioskStepIndex = 0; // 키오스크 단계 초기화
+      if (UiModeService.isAccessibilityMode) {
+        // simple/kiosk: 자동으로 활동 안내
+        final header = _headerText(active.type);
+        TtsService.speak('$header 시간이에요. 오늘 할 일은 ${active.task} 입니다.');
+        _autoTtsPlayed = true;
+      } else {
+        TtsService.speak('다음 활동 시간이에요');
+      }
     }
     _lastActiveTime = active?.time;
+  }
+
+  /// 키오스크 모드: 현재 단계 음성 안내
+  void _speakCurrentStep() {
+    final (active, _) = _findActiveAndNext();
+    if (active == null) return;
+    if (active.guideScript.isNotEmpty && _kioskStepIndex < active.guideScript.length) {
+      TtsService.speak('${_kioskStepIndex + 1}단계. ${active.guideScript[_kioskStepIndex]}');
+    }
+  }
+
+  /// simple/kiosk 모드: 화면 로드 시 자동 TTS
+  void _autoSpeakActivity() {
+    if (!UiModeService.isAccessibilityMode || _autoTtsPlayed) return;
+    final (active, _) = _findActiveAndNext();
+    if (active != null) {
+      final header = _headerText(active.type);
+      TtsService.speak('$header 시간이에요. 오늘 할 일은 ${active.task} 입니다.');
+      _autoTtsPlayed = true;
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _kioskAutoTimer?.cancel();
     TtsService.stop();
     super.dispose();
   }
@@ -71,6 +116,8 @@ class _UserScreenState extends State<UserScreen> {
         // 초기 활성 활동 시간 기록 (첫 로드 시 전환 알림 방지)
         final (active, _) = _findActiveAndNext();
         _lastActiveTime = active?.time;
+        // simple/kiosk 모드: 로드 완료 후 자동 TTS
+        _autoSpeakActivity();
       }
     } catch (_) {
       if (mounted) {
@@ -103,13 +150,6 @@ class _UserScreenState extends State<UserScreen> {
     }
 
     return (active, next);
-  }
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return '좋은 아침이에요';
-    if (hour < 18) return '좋은 오후예요';
-    return '좋은 저녁이에요';
   }
 
   @override
@@ -202,13 +242,21 @@ class _UserScreenState extends State<UserScreen> {
     }
 
     final (active, next) = _findActiveAndNext();
+    final isAccessible = UiModeService.isAccessibilityMode;
+    final textSize = UiModeService.fontSize;
+    final headSize = UiModeService.headerSize;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('오늘 하루'),
+        title: Text(
+          '오늘 하루',
+          style: TextStyle(fontSize: isAccessible ? headSize : null),
+        ),
+        // 키오스크 모드에서는 뒤로가기 버튼 제거
+        automaticallyImplyLeading: !UiModeService.isKiosk,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh, size: UiModeService.iconSize),
             onPressed: () {
               setState(() => _isLoading = true);
               _loadSchedule();
@@ -217,6 +265,7 @@ class _UserScreenState extends State<UserScreen> {
           ),
         ],
       ),
+      floatingActionButton: SosButton.floatingButton(context),
       body: Row(
         children: [
           // ── Main Content ──
@@ -264,37 +313,9 @@ class _UserScreenState extends State<UserScreen> {
                       ),
                     ),
 
-                  // Greeting banner
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [HiBuddyColors.primaryBg, Color(0xFFDBEAFE)],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _getGreeting(),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: HiBuddyColors.text,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '오늘도 하루메이트랑 함께 해볼까요?  ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: HiBuddyColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
+                  // 아침 브리핑 (날씨 + 인사 + 일정 요약)
+                  MorningBriefing(
+                    activityCount: _schedule?.items.length ?? 0,
                   ),
 
                   const SizedBox(height: 16),
@@ -302,17 +323,17 @@ class _UserScreenState extends State<UserScreen> {
                   if (active == null) ...[
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(20),
+                      padding: EdgeInsets.all(isAccessible ? 28 : 20),
                       decoration: BoxDecoration(
                         color: HiBuddyColors.primaryBg,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Column(
                         children: [
-                          const Text(
+                          Text(
                             '아직 첫 활동 전이에요.',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: isAccessible ? 24 : 18,
                               color: HiBuddyColors.text,
                             ),
                           ),
@@ -320,18 +341,24 @@ class _UserScreenState extends State<UserScreen> {
                             const SizedBox(height: 8),
                             Text(
                               '다음 활동: ${next.time} - ${next.task}',
-                              style: const TextStyle(
-                                fontSize: 16,
+                              style: TextStyle(
+                                fontSize: isAccessible ? 22 : 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: () => TtsService.speak(
-                                '다음 활동은 ${next.time}에 시작하는 ${next.task} 입니다.',
+                            SizedBox(
+                              height: UiModeService.buttonHeight,
+                              child: ElevatedButton.icon(
+                                onPressed: () => TtsService.speak(
+                                  '다음 활동은 ${next.time}에 시작하는 ${next.task} 입니다.',
+                                ),
+                                icon: Icon(Icons.volume_up, size: UiModeService.iconSize),
+                                label: Text(
+                                  '다음 활동 듣기',
+                                  style: TextStyle(fontSize: textSize),
+                                ),
                               ),
-                              icon: const Icon(Icons.volume_up),
-                              label: const Text('다음 활동 듣기'),
                             ),
                           ],
                         ],
@@ -344,6 +371,7 @@ class _UserScreenState extends State<UserScreen> {
                     // TTS button for current activity
                     SizedBox(
                       width: double.infinity,
+                      height: UiModeService.buttonHeight,
                       child: OutlinedButton.icon(
                         onPressed: () {
                           final header = _headerText(active.type);
@@ -351,8 +379,11 @@ class _UserScreenState extends State<UserScreen> {
                             '$header 시간이에요. 오늘 할 일은 ${active.task} 입니다.',
                           );
                         },
-                        icon: const Icon(Icons.volume_up),
-                        label: const Text('현재 활동 요약 듣기'),
+                        icon: Icon(Icons.volume_up, size: UiModeService.iconSize),
+                        label: Text(
+                          '현재 활동 요약 듣기',
+                          style: TextStyle(fontSize: textSize),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -407,10 +438,11 @@ class _UserScreenState extends State<UserScreen> {
     final color = HiBuddyColors.getActivityColor(item.type);
     final bgColor = HiBuddyColors.getActivityBgColor(item.type);
     final emoji = HiBuddyColors.getActivityEmoji(item.type);
+    final isAccessible = UiModeService.isAccessibilityMode;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isAccessible ? 28 : 20),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
@@ -421,7 +453,7 @@ class _UserScreenState extends State<UserScreen> {
           Text(
             '$emoji ${_headerText(item.type)}',
             style: TextStyle(
-              fontSize: 26,
+              fontSize: isAccessible ? 34 : 26,
               fontWeight: FontWeight.w800,
               color: color,
             ),
@@ -430,7 +462,7 @@ class _UserScreenState extends State<UserScreen> {
           Text(
             item.task,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isAccessible ? 24 : 18,
               color: color.withAlpha(200),
             ),
           ),
@@ -642,14 +674,14 @@ class _UserScreenState extends State<UserScreen> {
     final color = HiBuddyColors.getActivityColor(item.type);
     if (item.guideScript.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(UiModeService.isAccessibilityMode ? 28 : 20),
         decoration: BoxDecoration(
           color: HiBuddyColors.getActivityBgColor(item.type),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Text(
           item.task,
-          style: const TextStyle(fontSize: 18),
+          style: TextStyle(fontSize: UiModeService.fontSize + 2),
         ),
       );
     }
@@ -710,8 +742,8 @@ class _UserScreenState extends State<UserScreen> {
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          fontSize: 18,
+        style: TextStyle(
+          fontSize: UiModeService.isAccessibilityMode ? 24 : 18,
           fontWeight: FontWeight.w700,
           color: HiBuddyColors.text,
         ),

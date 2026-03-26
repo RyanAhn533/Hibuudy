@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/haru_agent.dart';
 import '../services/tts_service.dart';
+import 'youtube_screen.dart';
+import 'timer_screen.dart';
 
 /// 채팅 메시지 모델
 class _ChatMessage {
@@ -116,10 +118,28 @@ class _AgentScreenState extends State<AgentScreen> {
     // 액션 타입에 따라 처리
     switch (action.actionType) {
       case 'youtube':
+        final videoId = action.data['videoId'] as String?;
         final query = action.data['query'] as String? ?? '';
-        if (query.isNotEmpty) {
-          _sendMessage('$query 유튜브');
-        }
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => YouTubeScreen(
+              videoId: videoId,
+              searchQuery: query.isNotEmpty ? query : null,
+              title: action.label,
+            ),
+          ),
+        );
+        break;
+      case 'timer':
+        final minutes = (action.data['minutes'] as num?)?.toInt() ?? 1;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TimerScreen(
+              minutes: minutes,
+              label: action.label,
+            ),
+          ),
+        );
         break;
       case 'call':
         final name = action.data['name'] as String? ?? '';
@@ -250,7 +270,14 @@ class _AgentScreenState extends State<AgentScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    _sendMessage('${message.youtubeQuery} 유튜브');
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => YouTubeScreen(
+                          searchQuery: message.youtubeQuery,
+                          title: '유튜브 보기',
+                        ),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.play_circle_outline, size: 22),
                   label: const Text(

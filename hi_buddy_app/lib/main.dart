@@ -4,11 +4,13 @@ import 'screens/home_screen.dart';
 import 'models/recipe.dart';
 import 'services/api_service.dart';
 import 'services/database_service.dart';
+import 'services/ui_mode_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await RecipeData.load();
   await DatabaseService.db; // DB 초기화
+  await UiModeService.loadMode(); // UI 모드 로드
   // 서버 미리 깨우기 (Render 콜드 스타트 대응, 응답 안 기다림)
   ApiService.isOnline();
   runApp(const HiBuddyApp());
