@@ -12,7 +12,7 @@ class ApiService {
   static const String _baseUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: 'https://hibuudy.onrender.com');
   static const String _authToken =
-      String.fromEnvironment('API_TOKEN', defaultValue: 'hibuddy-2026-a7f3e9b1c4d2');
+      String.fromEnvironment('API_TOKEN', defaultValue: '');
 
   static const Duration _timeout = Duration(seconds: 30);
   static const int _maxRetries = 2;
