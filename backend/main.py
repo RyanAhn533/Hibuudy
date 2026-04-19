@@ -164,7 +164,7 @@ async def gemini_generate(
         f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
         headers={"Content-Type": "application/json"},
         json={
-            "system_instruction": {"parts": [{"text": system_prompt}]},
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"parts": [{"text": user_text}]}],
             "generationConfig": generation_config,
         },
@@ -397,7 +397,7 @@ async def agent_chat(request: Request, body: AgentRequest, _=Depends(verify_toke
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
             headers={"Content-Type": "application/json"},
             json={
-                "system_instruction": {"parts": [{"text": system_prompt}]},
+                "systemInstruction": {"parts": [{"text": system_prompt}]},
                 "contents": [{"parts": [{"text": user_input}]}],
                 "generationConfig": {
                     "temperature": 0.7,
