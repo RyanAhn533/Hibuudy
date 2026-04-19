@@ -42,6 +42,8 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "") or GOOGLE_API_KEY
 APP_AUTH_TOKEN = os.getenv("APP_AUTH_TOKEN", "")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "") or os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 # Edge TTS 한국어 음성 (여성: ko-KR-SunHiNeural, 남성: ko-KR-InJoonNeural)
 EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "ko-KR-SunHiNeural")
@@ -150,21 +152,18 @@ async def gemini_generate(
     system_prompt: str,
     user_text: str,
     response_schema: dict = None,
+    json_mode: bool = True,
+    max_tokens: int = 800,
 ) -> str:
-    """Gemini 2.0 Flash API 호출 → 정제된 JSON 텍스트 반환.
-
-    CoT/hallucination 방지:
-    1. system_instruction 분리
-    2. responseMimeType: "application/json"
-    3. response_schema로 출력 구조 강제 (선택)
-    4. 후처리로 마크다운/CoT 잔재 제거
-    """
+    """Gemini 2.0 Flash 호출. json_mode=False면 자연 한국어 출력."""
     generation_config = {
-        "temperature": 0.15,
-        "responseMimeType": "application/json",
+        "temperature": 0.7 if not json_mode else 0.15,
+        "maxOutputTokens": max_tokens,
     }
-    if response_schema:
-        generation_config["responseSchema"] = response_schema
+    if json_mode:
+        generation_config["responseMimeType"] = "application/json"
+        if response_schema:
+            generation_config["responseSchema"] = response_schema
 
     client = await get_client()
     resp = await client.post(
@@ -183,7 +182,90 @@ async def gemini_generate(
     except (KeyError, IndexError):
         raise HTTPException(status_code=502, detail="Gemini: 응답 파싱 실패")
 
-    return _clean_json_response(raw_text)
+    return _clean_json_response(raw_text) if json_mode else raw_text.strip()
+
+
+# ── Groq Helper (무료 14,400 req/일 · Llama 3.3 70B) ──────────────
+
+
+async def groq_generate(
+    system_prompt: str,
+    user_text: str,
+    json_mode: bool = False,
+    max_tokens: int = 800,
+) -> str:
+    """Groq API 호출 → 응답 텍스트 반환.
+    Gemini 폴백용. OpenAI 호환 인터페이스."""
+    if not GROQ_API_KEY:
+        raise HTTPException(status_code=503, detail="Groq 키 미설정")
+
+    client = await get_client()
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_text},
+        ],
+        "temperature": 0.3,
+        "max_tokens": max_tokens,
+    }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
+
+    resp = await client.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=30.0,
+    )
+    if resp.status_code != 200:
+        body = resp.text[:200] if resp.text else "(empty)"
+        logger.warning("Groq %s: %s", resp.status_code, body)
+        raise HTTPException(status_code=resp.status_code, detail=f"Groq {resp.status_code}: {body}")
+
+    data = resp.json()
+    try:
+        text = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError):
+        raise HTTPException(status_code=502, detail="Groq: 응답 파싱 실패")
+
+    return _clean_json_response(text) if json_mode else text.strip()
+
+
+async def llm_generate(
+    system_prompt: str,
+    user_text: str,
+    json_schema: dict | None = None,
+    json_mode: bool = False,
+    max_tokens: int = 800,
+) -> str:
+    """LLM 캐스케이드: Gemini → Groq → 503.
+    json_schema 제공 시 자동 json_mode=True."""
+    if json_schema is not None:
+        json_mode = True
+
+    # 1순위: Gemini (한국어 품질 1위, 무료 1500/일)
+    if GEMINI_API_KEY:
+        try:
+            return await gemini_generate(
+                system_prompt, user_text, json_schema, json_mode=json_mode, max_tokens=max_tokens
+            )
+        except HTTPException as e:
+            logger.warning("Gemini→Groq fallback: %s", str(e.detail)[:100])
+        except Exception as e:
+            logger.warning("Gemini exception, →Groq: %s", e)
+
+    # 2순위: Groq (무료 14,400/일, Llama 3.3 70B)
+    if GROQ_API_KEY:
+        try:
+            return await groq_generate(system_prompt, user_text, json_mode=json_mode, max_tokens=max_tokens)
+        except Exception as e:
+            logger.warning("Groq also failed: %s", e)
+
+    raise HTTPException(status_code=503, detail="AI 서비스가 잠시 쉬고 있어요.")
 
 
 def _clean_json_response(text: str) -> str:
@@ -263,9 +345,9 @@ async def generate_schedule(request: Request, body: ScheduleRequest, _=Depends(v
     if not text:
         raise HTTPException(status_code=400, detail="일정 내용을 입력해 주세요.")
 
-    # Gemini 무료 tier (15 RPM) 대응: 1회만 호출, 재생성 없음
-    content = await gemini_generate(
-        SCHEDULE_SYSTEM_PROMPT, text, response_schema=SCHEDULE_RESPONSE_SCHEMA
+    # 캐스케이드: Gemini → Groq → 503
+    content = await llm_generate(
+        SCHEDULE_SYSTEM_PROMPT, text, json_schema=SCHEDULE_RESPONSE_SCHEMA
     )
 
     try:
@@ -299,7 +381,7 @@ async def edit_schedule(request: Request, body: EditRequest, _=Depends(verify_to
 
     user_msg = f"현재 항목 JSON:\n{json.dumps(body.current_item, ensure_ascii=False)}\n\n수정 요청: {edit_text}"
 
-    content = await gemini_generate(EDIT_SYSTEM_PROMPT, user_msg)
+    content = await llm_generate(EDIT_SYSTEM_PROMPT, user_msg, json_schema={})
     try:
         json.loads(content)
     except json.JSONDecodeError:
@@ -366,7 +448,7 @@ async def agent_chat(request: Request, body: AgentRequest, _=Depends(verify_toke
         contacts=", ".join(ctx.emergency_contacts[:5]) or "(등록 안 됨)",
     )
 
-    # ── Claude 우선 (품질↑), 없으면 Gemini 폴백 (비용 0) ──
+    # 캐스케이드: Claude (있으면) → Gemini → Groq → 503
     if CLAUDE_API_KEY:
         client = await get_client()
         try:
@@ -386,51 +468,18 @@ async def agent_chat(request: Request, body: AgentRequest, _=Depends(verify_toke
                 timeout=20.0,
             )
             if resp.status_code == 200:
-                data = resp.json()
-                text = data["content"][0]["text"]
+                text = resp.json()["content"][0]["text"]
                 return {"text": text.strip()}
-            # 실패 시 Gemini 폴백
-            logger.warning("Claude %s, fallback to Gemini", resp.status_code)
+            logger.warning("Claude %s → Gemini/Groq fallback", resp.status_code)
         except Exception as e:
-            logger.warning("Claude err %s, fallback to Gemini", e)
+            logger.warning("Claude exception → Gemini/Groq: %s", e)
 
-    # Gemini 2.0 Flash (무료 15 RPM)
-    if not GEMINI_API_KEY:
-        raise HTTPException(status_code=503, detail="도우미 서비스 준비 중이에요.")
-
-    client = await get_client()
-    try:
-        resp = await client.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
-            headers={"Content-Type": "application/json"},
-            json={
-                "systemInstruction": {"parts": [{"text": system_prompt}]},
-                "contents": [{"parts": [{"text": user_input}]}],
-                "generationConfig": {
-                    "temperature": 0.7,
-                    "maxOutputTokens": 400,
-                    # NOTE: JSON 강제 X — 자연스러운 한국어 대화
-                },
-            },
-            timeout=20.0,
-        )
-    except Exception as e:
-        logger.warning("Gemini agent failed: %s", e)
-        raise HTTPException(status_code=502, detail="도우미가 잠깐 쉬고 있어요.")
-
-    if resp.status_code == 429:
-        raise HTTPException(status_code=429, detail="잠시 후 다시 시도해 주세요.")
-    if resp.status_code != 200:
-        logger.warning("Gemini error %s: %s", resp.status_code, resp.text[:200])
-        raise HTTPException(status_code=502, detail="도우미 응답에 문제가 있어요.")
-
-    data = resp.json()
-    try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError):
-        raise HTTPException(status_code=502, detail="도우미 응답 파싱 실패")
-
-    return {"text": text.strip()}
+    # Gemini → Groq 자동 캐스케이드 (json_mode=False, 자연 한국어)
+    text = await llm_generate(
+        system_prompt, user_input,
+        json_schema=None, json_mode=False, max_tokens=400,
+    )
+    return {"text": text}
 
 
 # ── 4. TTS (Edge TTS — 완전 무료) ─────────────────────────────────
