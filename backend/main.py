@@ -124,6 +124,12 @@ def raise_for_upstream(resp: httpx.Response, service: str):
     if resp.status_code == 200:
         return
     code = resp.status_code
+    # 디버깅: 실제 본문 일부를 로그 + detail에 포함 (키 패턴 마스킹)
+    body_preview = resp.text[:300] if resp.text else "(empty)"
+    # API 키가 본문에 포함될 수 있으니 마스킹
+    import re as _re
+    body_preview = _re.sub(r"[A-Za-z0-9_-]{30,}", "***", body_preview)
+    logger.warning("Upstream %s %s: %s", service, code, body_preview)
     messages = {
         401: f"{service}: 인증 실패",
         403: f"{service}: 접근 거부",
@@ -133,7 +139,8 @@ def raise_for_upstream(resp: httpx.Response, service: str):
         raise HTTPException(status_code=code, detail=messages[code])
     if code >= 500:
         raise HTTPException(status_code=502, detail=f"{service}: 외부 서버 오류")
-    raise HTTPException(status_code=code, detail=f"{service}: 요청 실패 ({code})")
+    # 400 등은 디버깅용 본문 노출 (운영 안정화 후 제거)
+    raise HTTPException(status_code=code, detail=f"{service} {code}: {body_preview}")
 
 
 # ── Gemini API Helper ───────────────────────────────────────────────
