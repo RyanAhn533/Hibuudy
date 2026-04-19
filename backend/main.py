@@ -40,6 +40,8 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID", "")
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "") or GOOGLE_API_KEY
 APP_AUTH_TOKEN = os.getenv("APP_AUTH_TOKEN", "")
+CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "") or os.getenv("ANTHROPIC_API_KEY", "")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
 # Edge TTS 한국어 음성 (여성: ko-KR-SunHiNeural, 남성: ko-KR-InJoonNeural)
 EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "ko-KR-SunHiNeural")
@@ -159,7 +161,7 @@ async def gemini_generate(
 
     client = await get_client()
     resp = await client.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}",
         headers={"Content-Type": "application/json"},
         json={
             "system_instruction": {"parts": [{"text": system_prompt}]},
@@ -298,7 +300,133 @@ async def edit_schedule(request: Request, body: EditRequest, _=Depends(verify_to
     return Response(content=content, media_type="application/json")
 
 
-# ── 3. TTS (Edge TTS — 완전 무료) ─────────────────────────────────
+# ── 3. Claude Agent Proxy (발달장애인 생활 에이전트) ─────────────
+
+
+class AgentContext(BaseModel):
+    """앱에서 전송하는 최소 컨텍스트"""
+    profile_name: str = Field(default="사용자", max_length=50)
+    disability_level: str = Field(default="mild", max_length=20)
+    ingredients: list[str] = Field(default_factory=list, max_length=30)
+    today_schedule: list = Field(default_factory=list, max_length=30)
+    recent_completions: list[str] = Field(default_factory=list, max_length=20)
+    emergency_contacts: list[str] = Field(default_factory=list, max_length=10)
+
+
+class AgentRequest(BaseModel):
+    input: str = Field(..., max_length=500)
+    context: AgentContext | None = None
+
+
+AGENT_SYSTEM_TEMPLATE = """너는 발달장애인 {name}님의 하루 도우미다.
+따뜻하게, 짧게, 존댓말로 대답해라.
+
+규칙:
+1. 한 문장은 20~45자 이내.
+2. 전체 답은 3문장 이내.
+3. 어려운 단어 금지. "추가" 대신 "넣기", "삭제" 대신 "지우기".
+4. 격려는 담백하게. 이모지 🎉 금지.
+5. 요리 추천 시 냉장고 재료 기반으로만.
+6. 감정 대화는 공감 먼저, 조언은 묻기 전까지 하지 않는다.
+
+{name}님 정보:
+- 장애 정도: {level}
+- 냉장고: {ingredients}
+- 오늘 일정: {schedule}
+- 최근 수행: {completions}
+- 긴급 연락처: {contacts}
+
+JSON으로 응답하지 말고, 자연스러운 한국어 문장만 출력해라."""
+
+
+@app.post("/api/agent")
+@limiter.limit("20/minute")
+async def agent_chat(request: Request, body: AgentRequest, _=Depends(verify_token)):
+    """맥락 기반 대화 에이전트.
+    v3.1: Gemini 2.0 Flash 기본 (무료 15 RPM), CLAUDE_API_KEY 있으면 Claude 자동 승급.
+    """
+    user_input = sanitize(body.input, max_length=500)
+    if not user_input:
+        raise HTTPException(status_code=400, detail="무엇을 물어볼지 적어주세요.")
+
+    ctx = body.context or AgentContext()
+    system_prompt = AGENT_SYSTEM_TEMPLATE.format(
+        name=ctx.profile_name,
+        level=ctx.disability_level,
+        ingredients=", ".join(ctx.ingredients[:15]) or "(정보 없음)",
+        schedule="; ".join(str(s) for s in ctx.today_schedule[:10]) or "(오늘 일정 없음)",
+        completions=", ".join(ctx.recent_completions[:10]) or "(기록 없음)",
+        contacts=", ".join(ctx.emergency_contacts[:5]) or "(등록 안 됨)",
+    )
+
+    # ── Claude 우선 (품질↑), 없으면 Gemini 폴백 (비용 0) ──
+    if CLAUDE_API_KEY:
+        client = await get_client()
+        try:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": CLAUDE_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": CLAUDE_MODEL,
+                    "max_tokens": 400,
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": user_input}],
+                },
+                timeout=20.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                text = data["content"][0]["text"]
+                return {"text": text.strip()}
+            # 실패 시 Gemini 폴백
+            logger.warning("Claude %s, fallback to Gemini", resp.status_code)
+        except Exception as e:
+            logger.warning("Claude err %s, fallback to Gemini", e)
+
+    # Gemini 2.0 Flash (무료 15 RPM)
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=503, detail="도우미 서비스 준비 중이에요.")
+
+    client = await get_client()
+    try:
+        resp = await client.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}",
+            headers={"Content-Type": "application/json"},
+            json={
+                "system_instruction": {"parts": [{"text": system_prompt}]},
+                "contents": [{"parts": [{"text": user_input}]}],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 400,
+                    # NOTE: JSON 강제 X — 자연스러운 한국어 대화
+                },
+            },
+            timeout=20.0,
+        )
+    except Exception as e:
+        logger.warning("Gemini agent failed: %s", e)
+        raise HTTPException(status_code=502, detail="도우미가 잠깐 쉬고 있어요.")
+
+    if resp.status_code == 429:
+        raise HTTPException(status_code=429, detail="잠시 후 다시 시도해 주세요.")
+    if resp.status_code != 200:
+        logger.warning("Gemini error %s: %s", resp.status_code, resp.text[:200])
+        raise HTTPException(status_code=502, detail="도우미 응답에 문제가 있어요.")
+
+    data = resp.json()
+    try:
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError):
+        raise HTTPException(status_code=502, detail="도우미 응답 파싱 실패")
+
+    return {"text": text.strip()}
+
+
+# ── 4. TTS (Edge TTS — 완전 무료) ─────────────────────────────────
 
 
 class TtsRequest(BaseModel):
