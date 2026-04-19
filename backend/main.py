@@ -161,7 +161,7 @@ async def gemini_generate(
 
     client = await get_client()
     resp = await client.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
         headers={"Content-Type": "application/json"},
         json={
             "system_instruction": {"parts": [{"text": system_prompt}]},
@@ -394,7 +394,7 @@ async def agent_chat(request: Request, body: AgentRequest, _=Depends(verify_toke
     client = await get_client()
     try:
         resp = await client.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
             headers={"Content-Type": "application/json"},
             json={
                 "system_instruction": {"parts": [{"text": system_prompt}]},
