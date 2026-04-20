@@ -300,6 +300,69 @@ async def health():
     return {"status": "ok"}
 
 
+# ── Waitlist (준비 중 세그먼트 이메일 수집) ─────────────────────────
+
+WAITLIST_DB = Path(__file__).parent / "waitlist.db"
+
+
+def _init_waitlist_db():
+    try:
+        with sqlite3.connect(str(WAITLIST_DB)) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS waitlist (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT NOT NULL,
+                    segment TEXT NOT NULL,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    UNIQUE(email, segment)
+                )
+            """)
+    except Exception as e:
+        logger.warning("waitlist db init: %s", e)
+
+
+_init_waitlist_db()
+
+
+class WaitlistRequest(BaseModel):
+    email: str = Field(..., max_length=200)
+    segment: str = Field(..., max_length=50)
+
+
+@app.post("/api/waitlist")
+@limiter.limit("10/minute")
+async def add_waitlist(request: Request, body: WaitlistRequest):
+    """준비 중인 세그먼트(senior/dementia/youth) 이메일 수집."""
+    email = sanitize(body.email, max_length=200)
+    seg = sanitize(body.segment, max_length=50)
+    if "@" not in email or len(email) < 5:
+        raise HTTPException(status_code=400, detail="이메일 형식이 잘못됐어요.")
+    try:
+        with sqlite3.connect(str(WAITLIST_DB)) as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO waitlist (email, segment) VALUES (?, ?)",
+                (email, seg),
+            )
+            conn.commit()
+    except Exception as e:
+        logger.warning("waitlist insert: %s", e)
+        raise HTTPException(status_code=500, detail="등록 실패")
+    return {"status": "ok"}
+
+
+@app.get("/api/waitlist/count")
+async def waitlist_count(_=Depends(verify_token)):
+    """관리자용 집계 (토큰 있을 때만)."""
+    try:
+        with sqlite3.connect(str(WAITLIST_DB)) as conn:
+            rows = conn.execute(
+                "SELECT segment, COUNT(*) FROM waitlist GROUP BY segment"
+            ).fetchall()
+            return {"counts": {r[0]: r[1] for r in rows}}
+    except Exception:
+        return {"counts": {}}
+
+
 # ── 1. Schedule Generation (Gemini 2.0 Flash) ─────────────────────
 
 
