@@ -545,6 +545,66 @@ async def agent_chat(request: Request, body: AgentRequest, _=Depends(verify_toke
     return {"text": text}
 
 
+# ── 3.5 옷 추천 (AI) ────────────────────────────────────────────
+
+
+class ClothingRequest(BaseModel):
+    temp: float
+    description: str = Field(default="", max_length=50)
+    name: str = Field(default="", max_length=30)
+    disability_level: str = Field(default="mild", max_length=20)
+
+
+CLOTHING_PROMPT = """너는 따뜻한 생활 도우미야.
+날씨 정보와 이름을 받고, 입을 옷을 한 문장으로 추천해라.
+
+규칙:
+1. 한 문장. 20~35자.
+2. 존댓말. 감탄사 절제.
+3. 이름이 있으면 '○○님, '으로 시작.
+4. 기술 용어 금지. 쉬운 단어만.
+5. 옷 1~2개만 언급 (나열 금지).
+
+예시:
+- 유진님, 쌀쌀해요. 가디건 챙기세요.
+- 비 와요. 우산 꼭 챙기세요.
+- 따뜻해요. 반팔이 좋겠어요."""
+
+
+@app.post("/api/clothing")
+@limiter.limit("30/minute")
+async def clothing_advice(request: Request, body: ClothingRequest):
+    """온도·날씨·이름 기반 옷 추천 (AI)."""
+    name_prefix = f"{body.name.strip()}님, " if body.name.strip() else ""
+    user_msg = (
+        f"이름: {body.name or '(없음)'}\n"
+        f"기온: {body.temp}도\n"
+        f"날씨: {body.description or '보통'}\n"
+        f"장애 수준: {body.disability_level}"
+    )
+
+    try:
+        text = await llm_generate(
+            CLOTHING_PROMPT, user_msg,
+            json_schema=None, json_mode=False, max_tokens=80,
+        )
+        return {"text": text.strip()}
+    except Exception:
+        # 폴백: 템플릿
+        temp = body.temp
+        if temp <= 5:
+            tip = "코트나 패딩 입으세요."
+        elif temp <= 10:
+            tip = "쌀쌀해요. 가디건 챙기세요."
+        elif temp <= 20:
+            tip = "긴팔이 좋겠어요."
+        elif temp <= 25:
+            tip = "반팔이면 딱이에요."
+        else:
+            tip = "시원한 옷이 좋아요."
+        return {"text": f"{name_prefix}{tip}"}
+
+
 # ── 4. TTS (Edge TTS — 완전 무료) ─────────────────────────────────
 
 
@@ -565,15 +625,30 @@ async def synthesize_tts(request: Request, body: TtsRequest, _=Depends(verify_to
     if cache_path.exists():
         return Response(content=cache_path.read_bytes(), media_type="audio/mpeg")
 
-    # Edge TTS 합성
+    # Edge TTS 합성 (edge-tts 7.x pattern with stream)
     try:
         communicate = edge_tts.Communicate(text, EDGE_TTS_VOICE, rate="-10%")
-        await communicate.save(str(cache_path))
-    except Exception:
-        raise HTTPException(status_code=502, detail="TTS: 음성 합성 실패")
+        with open(str(cache_path), "wb") as f:
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    f.write(chunk["data"])
+    except Exception as e:
+        logger.warning("Edge TTS error: %s", e)
+        # 폴백: 파일 정리
+        try:
+            if cache_path.exists():
+                cache_path.unlink()
+        except Exception:
+            pass
+        raise HTTPException(status_code=502, detail=f"TTS: 음성 합성 실패 ({type(e).__name__})")
 
-    if not cache_path.exists():
-        raise HTTPException(status_code=502, detail="TTS: 파일 생성 실패")
+    if not cache_path.exists() or cache_path.stat().st_size < 100:
+        try:
+            if cache_path.exists():
+                cache_path.unlink()
+        except Exception:
+            pass
+        raise HTTPException(status_code=502, detail="TTS: 파일 생성 실패 (empty)")
 
     return Response(content=cache_path.read_bytes(), media_type="audio/mpeg")
 

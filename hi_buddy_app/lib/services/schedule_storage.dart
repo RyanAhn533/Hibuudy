@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/schedule_item.dart';
+import 'api_service.dart';
+import 'session_service.dart';
 
 /// 날짜별 스케줄 저장소.
 /// - 날짜별로 분리 저장 (최근 7일 보관)
@@ -14,6 +16,7 @@ class ScheduleStorage {
   static String _keyFor(String date) => '$_prefix$date';
 
   /// 스케줄 저장 (날짜별 + 최신 날짜 기록)
+  /// v3.1: 페어 코드 있으면 서버에도 자동 싱크 (코디 ↔ 당사자 공유)
   static Future<void> save(Schedule schedule) async {
     final prefs = await SharedPreferences.getInstance();
     final date = schedule.date;
@@ -21,8 +24,58 @@ class ScheduleStorage {
     await prefs.setString(_keyFor(date), jsonEncode(schedule.toJson()));
     await prefs.setString(_latestKey, date);
 
-    // 오래된 스케줄 정리 (최근 7일만 유지)
+    // 오래된 스케줄 정리
     await _cleanup(prefs);
+
+    // 서버 싱크 (fire-and-forget — 실패해도 로컬은 저장됨)
+    _syncToServer(schedule);
+  }
+
+  static Future<void> _syncToServer(Schedule schedule) async {
+    try {
+      final pairCode = await SessionService.getPairCode();
+      if (pairCode == null || pairCode.isEmpty) return;
+
+      await ApiService.saveScheduleToServer(
+        pairCode,
+        schedule.date,
+        schedule.items.map((i) => i.toJson()).toList(),
+      );
+    } catch (_) {
+      // 서버 오류 무시 — 로컬엔 이미 저장됨
+    }
+  }
+
+  /// 서버에서 최신 스케줄 가져와서 로컬 업데이트 (페어 코드 기반)
+  /// 당사자 앱이 코디가 저장한 일정을 받을 때 사용
+  /// 30초마다 호출하면 실시간 싱크 효과
+  static Future<bool> pullFromServer() async {
+    try {
+      final pairCode = await SessionService.getPairCode();
+      if (pairCode == null || pairCode.isEmpty) return false;
+
+      final data = await ApiService.loadScheduleFromServer(pairCode);
+      if (data == null) return false;
+
+      final date = data['date'] as String?;
+      final rawItems = data['data'] as String?;
+      if (date == null || rawItems == null) return false;
+
+      final itemsJson = jsonDecode(rawItems) as List;
+      final items = itemsJson
+          .map((e) => ScheduleItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      final schedule = Schedule(date: date, items: items);
+
+      // 로컬에 저장 (중복 서버 push 방지하려고 _syncToServer 건너뜀)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyFor(date), jsonEncode(schedule.toJson()));
+      await prefs.setString(_latestKey, date);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// 특정 날짜 스케줄 불러오기

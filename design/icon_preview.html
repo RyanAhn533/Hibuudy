@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>하루메이트 — Icon A/B Bake-off</title>
+<style>
+  :root{
+    --primary:#4F7CFF; --accent:#FFB547;
+    --n50:#FAFAFA; --n100:#F4F5F7; --n200:#E5E7EB;
+    --n400:#9AA0A6; --n700:#3A3D42; --n900:#1A1C1F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+    background:#0F0F10;color:#EAEAEA;padding:40px;min-height:100vh;
+  }
+  .head{max-width:1400px;margin:0 auto 40px}
+  .head h1{font-size:32px;font-weight:800;letter-spacing:-0.5px}
+  .head .sub{color:#888;margin-top:6px;font-size:14px}
+  .head .badge{
+    display:inline-block;background:var(--primary);color:white;
+    padding:4px 10px;border-radius:6px;font-size:11px;font-weight:800;
+    margin-left:8px;
+  }
+
+  .grid{
+    max-width:1400px;margin:0 auto;
+    display:grid;grid-template-columns:repeat(2,1fr);gap:32px;
+  }
+  .variant{
+    background:#1A1A1C;border-radius:20px;padding:28px;
+    border:1px solid #2A2A2D;
+  }
+  .variant-head{display:flex;align-items:baseline;gap:10px;margin-bottom:20px}
+  .variant-name{font-size:20px;font-weight:800}
+  .variant-desc{color:#888;font-size:13px}
+  .variant-stars{
+    margin-left:auto;
+    color:var(--accent);font-size:13px;font-weight:700;
+  }
+
+  .icon-row{
+    display:flex;gap:16px;align-items:end;padding:20px 0;
+    border-top:1px solid #2A2A2D;border-bottom:1px solid #2A2A2D;
+    margin-bottom:16px;overflow-x:auto;
+  }
+  .icon-item{display:flex;flex-direction:column;align-items:center;gap:6px;flex:0 0 auto}
+  .icon-item .lbl{font-size:10px;color:#888}
+  .icon-item img{box-shadow:0 4px 16px rgba(0,0,0,0.4)}
+  .sz-1024{width:120px;height:120px;border-radius:22px}
+  .sz-512{width:80px;height:80px;border-radius:15px}
+  .sz-192{width:48px;height:48px;border-radius:9px}
+  .sz-96{width:32px;height:32px;border-radius:6px}
+  .sz-48{width:24px;height:24px;border-radius:5px}
+
+  /* Home screen simulation */
+  .home-sim{
+    background:linear-gradient(135deg,#1a1a2e 0%,#2d1b3d 100%);
+    border-radius:16px;padding:24px;margin-top:16px;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:20px;
+    position:relative;
+  }
+  .home-sim::before{
+    content:'실제 홈화면 시뮬레이션';
+    position:absolute;top:-10px;left:12px;
+    background:#1A1A1C;color:#888;padding:2px 8px;font-size:10px;border-radius:4px;
+  }
+  .home-sim .app{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .home-sim .app img{width:56px;height:56px;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+  .home-sim .app .ph{width:56px;height:56px;border-radius:14px;background:#333;display:flex;align-items:center;justify-content:center;color:#666;font-size:20px}
+  .home-sim .app .nm{font-size:10px;color:white;text-align:center}
+
+  .pros-cons{
+    display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;
+  }
+  .pros, .cons{padding:12px;border-radius:10px;font-size:12px;line-height:1.6}
+  .pros{background:#14261A;border-left:3px solid #3FB765}
+  .cons{background:#2A1414;border-left:3px solid #E8594A}
+  .pros b, .cons b{display:block;font-size:11px;letter-spacing:1px;margin-bottom:6px}
+  .pros b{color:#3FB765}
+  .cons b{color:#E8594A}
+
+  /* Vote */
+  .vote-panel{
+    max-width:1400px;margin:40px auto;
+    background:#1A1A1C;border-radius:20px;padding:32px;
+    border:1px solid #2A2A2D;
+  }
+  .vote-panel h2{font-size:20px;font-weight:800;margin-bottom:16px}
+  .vote-row{display:flex;gap:10px;flex-wrap:wrap}
+  .vote-btn{
+    flex:1;min-width:180px;padding:16px;
+    background:#252527;border:2px solid transparent;border-radius:12px;
+    cursor:pointer;color:#EAEAEA;font-size:14px;font-weight:700;
+    text-align:center;transition:all 0.2s;
+  }
+  .vote-btn:hover{border-color:var(--primary);background:#2A2D3A}
+  .vote-btn.selected{border-color:var(--accent);background:#3A2E15}
+
+  /* Master detail */
+  .detail{
+    max-width:1400px;margin:40px auto;background:#1A1A1C;
+    border-radius:20px;padding:32px;border:1px solid #2A2A2D;
+  }
+  .detail h2{font-size:18px;margin-bottom:20px}
+  .specs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .spec{background:#252527;padding:14px;border-radius:10px}
+  .spec .k{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px}
+  .spec .v{font-size:14px;color:#EAEAEA;font-weight:700;margin-top:4px;font-family:'SF Mono',monospace}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>🎨 Icon A/B Bake-off <span class="badge">v1.0</span></h1>
+  <div class="sub">김유진 페르소나 기준 · 전략(노인 확장 + B2B) 반영 · 4개 변형 비교</div>
+</div>
+
+<div class="grid">
+
+  <!-- MASTER -->
+  <div class="variant">
+    <div class="variant-head">
+      <div class="variant-name">A · Master</div>
+      <div class="variant-desc">해 8광선, 눈 없음, 깔끔</div>
+      <div class="variant-stars">★★★★☆</div>
+    </div>
+
+    <div class="icon-row">
+      <div class="icon-item"><img src="../assets/brand/icons/master/icon_1024_rounded.png" class="sz-1024"><div class="lbl">1024</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/master/icon_512.png" class="sz-512"><div class="lbl">512</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/master/mipmap-xxxhdpi/ic_launcher_round.png" class="sz-192"><div class="lbl">192</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/master/mipmap-xhdpi/ic_launcher_round.png" class="sz-96"><div class="lbl">96</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/master/mipmap-mdpi/ic_launcher_round.png" class="sz-48"><div class="lbl">48</div></div>
+    </div>
+
+    <div class="home-sim">
+      <div class="app"><div class="ph">📷</div><div class="nm">사진</div></div>
+      <div class="app"><div class="ph">💬</div><div class="nm">메시지</div></div>
+      <div class="app"><img src="../assets/brand/icons/master/icon_512.png"><div class="nm">하루메이트</div></div>
+      <div class="app"><div class="ph">🎵</div><div class="nm">음악</div></div>
+    </div>
+
+    <div class="pros-cons">
+      <div class="pros">
+        <b>✓ 강점</b>
+        즉시 인지 가능한 해 · 48px에서도 선명 · 노인 친화 · 서브 브랜드 확장 베이스 · 문화 무관
+      </div>
+      <div class="cons">
+        <b>✗ 약점</b>
+        "날씨 앱" 혼동 여지 소수 · 개성 약간 부족 (보완책 = eyes)
+      </div>
+    </div>
+  </div>
+
+  <!-- EYES -->
+  <div class="variant">
+    <div class="variant-head">
+      <div class="variant-name">B · Eyes</div>
+      <div class="variant-desc">눈 2개 = 따뜻한 인격 암시</div>
+      <div class="variant-stars">★★★★★</div>
+    </div>
+
+    <div class="icon-row">
+      <div class="icon-item"><img src="../assets/brand/icons/eyes/icon_1024_rounded.png" class="sz-1024"><div class="lbl">1024</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/eyes/icon_512.png" class="sz-512"><div class="lbl">512</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/eyes/mipmap-xxxhdpi/ic_launcher_round.png" class="sz-192"><div class="lbl">192</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/eyes/mipmap-xhdpi/ic_launcher_round.png" class="sz-96"><div class="lbl">96</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/eyes/mipmap-mdpi/ic_launcher_round.png" class="sz-48"><div class="lbl">48</div></div>
+    </div>
+
+    <div class="home-sim">
+      <div class="app"><div class="ph">📷</div><div class="nm">사진</div></div>
+      <div class="app"><div class="ph">💬</div><div class="nm">메시지</div></div>
+      <div class="app"><img src="../assets/brand/icons/eyes/icon_512.png"><div class="nm">하루메이트</div></div>
+      <div class="app"><div class="ph">🎵</div><div class="nm">음악</div></div>
+    </div>
+
+    <div class="pros-cons">
+      <div class="pros">
+        <b>✓ 강점</b>
+        "친구" 인상 강력 · 당사자·노인 모두 긍정 반응 예상 · 차별성 확보 · 해 ≠ 날씨 앱으로 분리됨
+      </div>
+      <div class="cons">
+        <b>✗ 약점</b>
+        48px에서 눈 거의 안 보임 (= 사실상 A와 같아짐) · 유아적 인상 우려 (복지관 심사)
+      </div>
+    </div>
+  </div>
+
+  <!-- DENSE -->
+  <div class="variant">
+    <div class="variant-head">
+      <div class="variant-name">C · Dense</div>
+      <div class="variant-desc">12광선, 더 풍성</div>
+      <div class="variant-stars">★★★☆☆</div>
+    </div>
+
+    <div class="icon-row">
+      <div class="icon-item"><img src="../assets/brand/icons/dense/icon_1024_rounded.png" class="sz-1024"><div class="lbl">1024</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/dense/icon_512.png" class="sz-512"><div class="lbl">512</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/dense/mipmap-xxxhdpi/ic_launcher_round.png" class="sz-192"><div class="lbl">192</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/dense/mipmap-xhdpi/ic_launcher_round.png" class="sz-96"><div class="lbl">96</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/dense/mipmap-mdpi/ic_launcher_round.png" class="sz-48"><div class="lbl">48</div></div>
+    </div>
+
+    <div class="home-sim">
+      <div class="app"><div class="ph">📷</div><div class="nm">사진</div></div>
+      <div class="app"><div class="ph">💬</div><div class="nm">메시지</div></div>
+      <div class="app"><img src="../assets/brand/icons/dense/icon_512.png"><div class="nm">하루메이트</div></div>
+      <div class="app"><div class="ph">🎵</div><div class="nm">음악</div></div>
+    </div>
+
+    <div class="pros-cons">
+      <div class="pros">
+        <b>✓ 강점</b>
+        존재감 강함 · 시간 축 12개 = "하루 12시간대" 은유 설득력 높음
+      </div>
+      <div class="cons">
+        <b>✗ 약점</b>
+        48px에서 광선 뭉쳐 보임 · 바쁨/혼잡 인상 (발달장애 특화 앱에서 안 좋음)
+      </div>
+    </div>
+  </div>
+
+  <!-- SENIOR -->
+  <div class="variant">
+    <div class="variant-head">
+      <div class="variant-name">D · Senior (서브 브랜드 미리보기)</div>
+      <div class="variant-desc">해 + 집 지붕 · 2027 노인 확장용</div>
+      <div class="variant-stars">📂 Reference</div>
+    </div>
+
+    <div class="icon-row">
+      <div class="icon-item"><img src="../assets/brand/icons/senior/icon_1024_rounded.png" class="sz-1024"><div class="lbl">1024</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/senior/icon_512.png" class="sz-512"><div class="lbl">512</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/senior/mipmap-xxxhdpi/ic_launcher_round.png" class="sz-192"><div class="lbl">192</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/senior/mipmap-xhdpi/ic_launcher_round.png" class="sz-96"><div class="lbl">96</div></div>
+      <div class="icon-item"><img src="../assets/brand/icons/senior/mipmap-mdpi/ic_launcher_round.png" class="sz-48"><div class="lbl">48</div></div>
+    </div>
+
+    <div class="home-sim">
+      <div class="app"><div class="ph">📷</div><div class="nm">사진</div></div>
+      <div class="app"><div class="ph">💬</div><div class="nm">메시지</div></div>
+      <div class="app"><img src="../assets/brand/icons/senior/icon_512.png"><div class="nm">하루메이트<br>시니어</div></div>
+      <div class="app"><div class="ph">🎵</div><div class="nm">음악</div></div>
+    </div>
+
+    <div class="pros-cons">
+      <div class="pros">
+        <b>✓ 확장 증명</b>
+        같은 해 심볼로 서브 브랜드 성립 · 집 = 안전·일상 인식 · 2027 런칭 준비 완료
+      </div>
+      <div class="cons">
+        <b>→ 참고용</b>
+        Phase 2 시점에 실제 배포. 지금은 "브랜드 시스템이 작동함"을 증명하는 용도
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="detail">
+  <h2>📋 Feature Graphic (Play Store 대표 배너)</h2>
+  <div style="text-align:center;background:#0a0a0a;padding:20px;border-radius:12px">
+    <img src="../assets/brand/icons/feature_graphic_1024x500.png" style="max-width:100%;border-radius:8px">
+  </div>
+  <div class="specs" style="margin-top:20px">
+    <div class="spec"><div class="k">크기</div><div class="v">1024 × 500</div></div>
+    <div class="spec"><div class="k">배경</div><div class="v">#4F7CFF</div></div>
+    <div class="spec"><div class="k">우측 아이콘</div><div class="v">Master 280px</div></div>
+  </div>
+</div>
+
+<div class="vote-panel">
+  <h2>🗳 1안 선택 (클릭)</h2>
+  <div class="vote-row">
+    <button class="vote-btn" onclick="vote('A')">A · Master (깔끔 · 세월 저항)</button>
+    <button class="vote-btn" onclick="vote('B')">B · Eyes (따뜻 · 차별성)</button>
+    <button class="vote-btn" onclick="vote('C')">C · Dense (풍성 · 존재감)</button>
+  </div>
+  <div id="vote-result" style="margin-top:16px;padding:14px;border-radius:10px;background:#252527;font-size:13px;line-height:1.7"></div>
+</div>
+
+<div class="detail">
+  <h2>🎯 유진의 최종 추천: <span style="color:var(--accent)">A · Master</span></h2>
+  <div style="line-height:1.8;font-size:14px;color:#CCC">
+    <p><b>결론</b>: A 채택. 이유 3가지.</p>
+    <p>1. <b>스케일 저항성</b> — 48px에서도 해가 해로 보인다. B(eyes)는 48에서 눈이 안 보여 A와 사실상 동일 → 불필요한 복잡도.</p>
+    <p>2. <b>복지관 심사</b> — "눈 달린 해"는 유아앱 느낌. B2B 세일즈 덱에서 불리.</p>
+    <p>3. <b>확장 증명 완료</b> — D(Senior) 미리보기에서 "같은 해 + 집" 조합이 작동함 확인. 마스터 A가 깔끔할수록 서브 브랜드 변주 공간이 넓어진다.</p>
+    <p style="margin-top:14px"><b>다음 단계</b>: A 채택 → Android mipmap 교체 → AAB 재빌드 → Notion 업데이트 → 이제 스크린샷 5장 작업.</p>
+  </div>
+</div>
+
+<script>
+  function vote(v) {
+    document.querySelectorAll('.vote-btn').forEach(b => b.classList.remove('selected'));
+    event.target.classList.add('selected');
+    const results = {
+      A: '✓ A (Master) 선택됨. 유진 추천과 일치.',
+      B: '△ B (Eyes) 선택. 유진 의견: 48px 문제 검토 필요. 48px 해상도에서 A와 구별되나 테스트.',
+      C: '△ C (Dense) 선택. 유진 의견: 복잡도 트레이드오프 확인 필요.',
+    };
+    document.getElementById('vote-result').innerHTML = results[v] || '';
+  }
+</script>
+
+</body>
+</html>

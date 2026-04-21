@@ -12,6 +12,9 @@ import '../widgets/step_card.dart';
 import '../widgets/morning_briefing.dart';
 import '../widgets/sos_button.dart';
 import '../services/ui_mode_service.dart';
+import '../services/activity_recommender.dart';
+import '../services/database_service.dart';
+import 'youtube_screen.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -31,15 +34,24 @@ class _UserScreenState extends State<UserScreen> {
   String? _lastActiveTime; // 이전 활성 활동의 시간 (전환 감지용)
   bool _autoTtsPlayed = false; // 현재 활동에 대한 자동 TTS 재생 여부
   int _kioskStepIndex = 0; // 키오스크 모드 현재 단계 인덱스
+  List<Map<String, String>> _videoRecs = []; // v3.1: 활동별 유튜브 추천
+  String? _videoRecsFor; // 어느 활동 기준인지 (중복 호출 방지)
 
   @override
   void initState() {
     super.initState();
     _loadSchedule();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      if (!mounted) return;
+      // v3.1: 서버에서 최신 일정 받아오기 (페어 코드 기반)
+      final updated = await ScheduleStorage.pullFromServer();
+      if (updated && mounted) {
+        final fresh = await ScheduleStorage.load();
+        setState(() => _schedule = fresh);
+      }
       if (mounted) {
         _checkActivityTransition();
-        setState(() {}); // refresh to update active item
+        setState(() {}); // refresh
       }
     });
     // 키오스크 모드: 30초마다 자동 단계 진행
@@ -53,22 +65,45 @@ class _UserScreenState extends State<UserScreen> {
     }
   }
 
+  /// v3.1: 현재 활동 기반 유튜브 추천 가져오기
+  Future<void> _fetchVideoRecs(ScheduleItem active) async {
+    final key = '${active.type}|${active.task}';
+    if (_videoRecsFor == key) return; // 이미 가져옴
+
+    try {
+      final profile = await DatabaseService.getProfile();
+      final level = (profile['disability_level'] as String?) ?? 'mild';
+      final vids = await ActivityRecommender.recommend(
+        activityType: active.type,
+        task: active.task,
+        disabilityLevel: level,
+      );
+      if (mounted) {
+        setState(() {
+          _videoRecs = vids;
+          _videoRecsFor = key;
+        });
+      }
+    } catch (_) {}
+  }
+
   /// 활동 전환 감지: 활성 활동이 바뀌면 TTS 안내 + 진동
   void _checkActivityTransition() {
     final (active, _) = _findActiveAndNext();
     if (active != null && _lastActiveTime != null && active.time != _lastActiveTime) {
       // 활동이 바뀜 - 진동 + TTS 안내
       HapticFeedback.heavyImpact();
-      _autoTtsPlayed = false; // 새 활동이면 자동 TTS 다시 재생
-      _kioskStepIndex = 0; // 키오스크 단계 초기화
+      _autoTtsPlayed = false;
+      _kioskStepIndex = 0;
       if (UiModeService.isAccessibilityMode) {
-        // simple/kiosk: 자동으로 활동 안내
         final header = _headerText(active.type);
         TtsService.speak('$header 시간이에요. 오늘 할 일은 ${active.task} 입니다.');
         _autoTtsPlayed = true;
       } else {
         TtsService.speak('다음 활동 시간이에요');
       }
+      // v3.1: 새 활동 추천 영상 가져오기
+      _fetchVideoRecs(active);
     }
     _lastActiveTime = active?.time;
   }
@@ -103,6 +138,8 @@ class _UserScreenState extends State<UserScreen> {
 
   Future<void> _loadSchedule() async {
     try {
+      // v3.1: 서버 먼저 시도 (페어 코드 있으면 원격 일정 가져옴)
+      await ScheduleStorage.pullFromServer();
       final schedule = await ScheduleStorage.load();
       if (mounted) {
         final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -116,6 +153,8 @@ class _UserScreenState extends State<UserScreen> {
         // 초기 활성 활동 시간 기록 (첫 로드 시 전환 알림 방지)
         final (active, _) = _findActiveAndNext();
         _lastActiveTime = active?.time;
+        // v3.1: 활동별 유튜브 추천 가져오기
+        if (active != null) _fetchVideoRecs(active);
         // simple/kiosk 모드: 로드 완료 후 자동 TTS
         _autoSpeakActivity();
       }
@@ -473,15 +512,125 @@ class _UserScreenState extends State<UserScreen> {
 
   Widget _buildActivityContent(ScheduleItem item) {
     final type = item.type.toUpperCase();
+    Widget main;
     switch (type) {
       case 'COOKING':
       case 'MEAL':
-        return _buildCookingView(item);
+        main = _buildCookingView(item);
+        break;
       case 'HEALTH':
-        return _buildHealthView(item);
+        main = _buildHealthView(item);
+        break;
       default:
-        return _buildGeneralView(item);
+        main = _buildGeneralView(item);
     }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        main,
+        if (_videoRecs.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          _buildVideoRecSection(),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildVideoRecSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: HaruTokens.primarySoft,
+        borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.play_circle, color: HaruTokens.primary, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                '추천 영상',
+                style: TextStyle(
+                  fontSize: UiModeService.fontSize + 2,
+                  fontWeight: FontWeight.w800,
+                  color: HaruTokens.n900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 170,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _videoRecs.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (ctx, i) {
+                final v = _videoRecs[i];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => YouTubeScreen(
+                          videoId: v['videoId'],
+                          title: v['title'] ?? '영상',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 220,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: HaruTokens.n200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                          child: v['thumbnail']!.isNotEmpty
+                              ? Image.network(
+                                  v['thumbnail']!,
+                                  width: 220,
+                                  height: 110,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 220,
+                                    height: 110,
+                                    color: HaruTokens.n100,
+                                    child: const Icon(Icons.play_arrow, size: 40, color: HaruTokens.n400),
+                                  ),
+                                )
+                              : Container(
+                                  width: 220,
+                                  height: 110,
+                                  color: HaruTokens.n100,
+                                ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(
+                            v['title'] ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCookingView(ScheduleItem item) {

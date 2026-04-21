@@ -1,10 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 날씨 서비스 — wttr.in 무료 API 사용 (키 불필요)
 class WeatherService {
   static const String _baseUrl = 'https://wttr.in';
   static const String _defaultCity = 'Seoul';
+  static const String _apiBase = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://hibuudy.onrender.com',
+  );
 
   /// 현재 날씨 가져오기
   /// 반환: {'temp': double, 'description': String, 'condition': String, 'humidity': String, 'feelsLike': double}
@@ -20,7 +25,8 @@ class WeatherService {
       throw Exception('날씨 정보를 가져올 수 없어요 (${response.statusCode})');
     }
 
-    final data = jsonDecode(response.body);
+    // v3.1: UTF-8 명시 디코딩 (wttr.in 한국어 Mojibake 방지)
+    final data = jsonDecode(utf8.decode(response.bodyBytes));
     final current = data['current_condition'][0];
 
     final temp = double.tryParse(current['temp_C'] ?? '0') ?? 0.0;
@@ -43,7 +49,54 @@ class WeatherService {
     };
   }
 
-  /// 온도 기반 옷차림 추천 (한국어)
+  /// v3.1: AI 기반 옷 추천 (이름/장애수준 개인화 · 30분 캐시)
+  /// 네트워크 실패 시 getClothingAdvice()로 폴백
+  static Future<String> getClothingAdviceAI({
+    required double temp,
+    String description = '',
+    String name = '',
+    String disabilityLevel = 'mild',
+  }) async {
+    // 온도 5도 버킷 + 이름으로 캐시 키
+    final bucket = (temp / 5).round() * 5;
+    final cacheKey = 'weather_clothing_${bucket}_${description}_$name';
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString(cacheKey);
+    final cachedAt = prefs.getInt('${cacheKey}_ts') ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (cached != null && now - cachedAt < 30 * 60 * 1000) {
+      return cached;
+    }
+
+    try {
+      final resp = await http
+          .post(
+            Uri.parse('$_apiBase/api/clothing'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'temp': temp,
+              'description': description,
+              'name': name,
+              'disability_level': disabilityLevel,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(resp.bodyBytes));
+        final text = (data['text'] ?? '') as String;
+        if (text.isNotEmpty) {
+          await prefs.setString(cacheKey, text);
+          await prefs.setInt('${cacheKey}_ts', now);
+          return text;
+        }
+      }
+    } catch (_) {}
+
+    return getClothingAdvice(temp);
+  }
+
+  /// 온도 기반 옷차림 추천 (한국어) — 폴백용 템플릿
   static String getClothingAdvice(double temp) {
     if (temp <= -10) {
       return '많이 추워요! 패딩, 목도리, 장갑 꼭 챙기세요.';

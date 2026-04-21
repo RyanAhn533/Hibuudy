@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>하루메이트 v3.0 Design Canvas</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+<style>
+  :root{
+    /* Brand Tokens — Yujin approved */
+    --brand-primary:#4F7CFF;
+    --brand-primary-soft:#E6EEFF;
+    --brand-accent:#FFB547;
+    --brand-accent-soft:#FFF4E0;
+    --brand-success:#3FB765;
+    --brand-danger:#E8594A;
+    --brand-neutral-50:#FAFAFA;
+    --brand-neutral-100:#F4F5F7;
+    --brand-neutral-200:#E5E7EB;
+    --brand-neutral-400:#9AA0A6;
+    --brand-neutral-700:#3A3D42;
+    --brand-neutral-900:#1A1C1F;
+
+    /* Typography */
+    --font: 'Pretendard Variable','Pretendard','Apple SD Gothic Neo',sans-serif;
+
+    /* Radii */
+    --r-sm:12px; --r-md:16px; --r-lg:20px; --r-xl:28px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:var(--font)}
+
+  body{
+    background:#1A1A1A;
+    color:#EAEAEA;
+    padding:40px;
+    min-height:100vh;
+  }
+
+  /* Canvas header */
+  .canvas-head{
+    max-width:1600px;margin:0 auto 40px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .canvas-head h1{font-size:32px;font-weight:800;letter-spacing:-0.5px}
+  .canvas-head .meta{color:#888;font-size:13px}
+  .canvas-head .version{
+    background:var(--brand-primary);color:white;padding:4px 10px;
+    border-radius:6px;font-size:12px;font-weight:700;margin-left:8px;
+  }
+
+  /* Design tokens panel */
+  .tokens{
+    max-width:1600px;margin:0 auto 60px;
+    background:#242424;border:1px solid #333;border-radius:16px;padding:28px;
+  }
+  .tokens h2{font-size:14px;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px}
+  .token-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:20px}
+  .token-item{background:#1A1A1A;padding:16px;border-radius:10px;border:1px solid #333}
+  .token-swatch{width:100%;height:48px;border-radius:8px;margin-bottom:10px}
+  .token-name{font-size:11px;color:#888;font-family:'SF Mono',monospace}
+  .token-val{font-size:13px;color:#EAEAEA;font-weight:600;margin-top:2px}
+
+  /* Section label */
+  .section-label{
+    max-width:1600px;margin:60px auto 24px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .section-label .tag{
+    background:var(--brand-primary);color:white;
+    padding:4px 10px;border-radius:4px;font-size:11px;font-weight:800;
+    letter-spacing:1px;
+  }
+  .section-label h2{font-size:20px;font-weight:700}
+  .section-label .desc{color:#888;font-size:13px;margin-left:auto}
+
+  /* Frame row */
+  .frames-row{
+    max-width:1600px;margin:0 auto;
+    display:flex;flex-wrap:wrap;gap:32px;
+  }
+
+  /* Phone frame */
+  .frame{
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+  }
+  .frame-label{
+    font-size:13px;font-weight:600;color:#EAEAEA;
+  }
+  .frame-label .sub{color:#888;font-weight:400;font-size:11px;margin-left:6px}
+  .frame-notes{
+    max-width:280px;font-size:11px;color:#FFB547;
+    line-height:1.5;text-align:center;
+    font-style:italic;
+  }
+  .phone{
+    width:280px;height:580px;
+    background:white;border-radius:36px;
+    border:8px solid #1A1A1A;
+    box-shadow:0 10px 40px rgba(0,0,0,0.5);
+    overflow:hidden;position:relative;
+    color:var(--brand-neutral-900);
+  }
+  .phone .notch{
+    position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:80px;height:18px;background:#1A1A1A;
+    border-bottom-left-radius:10px;border-bottom-right-radius:10px;z-index:10;
+  }
+  .phone .screen{
+    width:100%;height:100%;overflow-y:auto;
+    padding:32px 16px 16px;
+    background:var(--brand-neutral-50);
+  }
+  .phone .screen::-webkit-scrollbar{width:0}
+
+  /* Mini UI — Common */
+  .mi-topbar{
+    background:linear-gradient(135deg,var(--brand-primary),#6B8EFF);
+    color:white;padding:14px;border-radius:var(--r-md);margin-bottom:14px;
+    text-align:center;
+  }
+  .mi-topbar .emoji{font-size:22px}
+  .mi-topbar .title{font-size:16px;font-weight:800;margin-top:2px}
+  .mi-topbar .sub{font-size:10px;opacity:0.85;margin-top:2px}
+
+  .mi-hero{
+    background:var(--brand-primary-soft);
+    padding:16px;border-radius:var(--r-md);margin-bottom:14px;
+    text-align:center;
+    border:1px solid var(--brand-primary);
+  }
+  .mi-hero .h1{font-size:14px;font-weight:800;color:var(--brand-neutral-900)}
+  .mi-hero .h2{font-size:11px;color:var(--brand-neutral-700);margin-top:3px}
+
+  .mi-cta{
+    display:block;width:100%;
+    background:var(--brand-primary);color:white;
+    padding:14px;border-radius:var(--r-sm);
+    font-size:13px;font-weight:700;text-align:center;
+    margin-bottom:8px;border:none;
+  }
+  .mi-cta.secondary{background:white;color:var(--brand-primary);border:2px solid var(--brand-primary)}
+  .mi-cta.big{padding:24px;font-size:16px;border-radius:var(--r-lg)}
+  .mi-cta.accent{background:var(--brand-accent);color:var(--brand-neutral-900)}
+  .mi-cta.danger{background:var(--brand-danger)}
+
+  .mi-card{
+    background:white;border:1px solid var(--brand-neutral-200);
+    border-radius:var(--r-md);padding:12px;margin-bottom:10px;
+  }
+
+  .mi-section-title{
+    font-size:11px;font-weight:700;color:var(--brand-neutral-400);
+    text-transform:uppercase;letter-spacing:1px;
+    margin:14px 0 8px;padding-left:4px;
+  }
+
+  .mi-input{
+    width:100%;padding:10px;border:1.5px solid var(--brand-neutral-200);
+    border-radius:8px;font-size:12px;background:white;
+    margin-bottom:8px;
+  }
+
+  .mi-label{font-size:11px;color:var(--brand-neutral-700);margin-bottom:4px;font-weight:600}
+
+  .mi-chip{
+    display:inline-block;padding:4px 10px;border-radius:20px;
+    font-size:10px;font-weight:600;
+    background:var(--brand-neutral-100);color:var(--brand-neutral-700);
+    margin-right:4px;
+  }
+  .mi-chip.active{background:var(--brand-primary);color:white}
+
+  .mi-icon{
+    font-family:'Material Symbols Rounded';font-variation-settings:'FILL' 1;
+    font-size:20px;line-height:1;
+  }
+
+  .mi-back{
+    display:flex;align-items:center;gap:6px;
+    font-size:12px;color:var(--brand-neutral-700);
+    margin-bottom:12px;font-weight:600;
+  }
+
+  .mi-step{
+    background:white;border:2px solid var(--brand-primary);
+    border-radius:var(--r-md);padding:16px;text-align:center;
+  }
+  .mi-step .num{
+    width:36px;height:36px;background:var(--brand-primary);color:white;
+    border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:14px;margin-bottom:8px;
+  }
+
+  .mi-progress{
+    width:100%;height:6px;background:var(--brand-neutral-200);
+    border-radius:3px;overflow:hidden;margin:8px 0;
+  }
+  .mi-progress .fill{height:100%;background:var(--brand-success);width:60%}
+
+  .mi-list-item{
+    display:flex;align-items:center;gap:10px;padding:10px 0;
+    border-bottom:1px solid var(--brand-neutral-200);
+  }
+  .mi-list-item:last-child{border-bottom:none}
+
+  .mi-sos-fab{
+    position:absolute;bottom:20px;right:14px;
+    width:56px;height:56px;border-radius:50%;
+    background:var(--brand-danger);color:white;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:12px;
+    box-shadow:0 4px 12px rgba(232,89,74,0.4);
+  }
+
+  /* Flow arrows */
+  .flow-arrow{
+    position:absolute;z-index:100;
+    color:#FFB547;font-size:28px;
+    transform:translateY(260px);
+  }
+
+  /* Notes box */
+  .note{
+    max-width:1600px;margin:0 auto 40px;
+    background:#2A2416;border-left:4px solid var(--brand-accent);
+    padding:20px 24px;border-radius:8px;
+  }
+  .note .tag{color:var(--brand-accent);font-weight:800;font-size:11px;letter-spacing:1px}
+  .note .body{color:#EAEAEA;margin-top:6px;font-size:13px;line-height:1.7}
+
+  /* Component Library */
+  .comp-lib{
+    max-width:1600px;margin:60px auto;
+    background:#242424;border-radius:16px;padding:32px;
+    border:1px solid #333;
+  }
+  .comp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:20px}
+  .comp-box{background:#1A1A1A;padding:20px;border-radius:12px;border:1px solid #333}
+  .comp-box .comp-name{font-size:11px;color:#888;margin-bottom:12px;font-weight:700;letter-spacing:1px}
+  .comp-demo{background:var(--brand-neutral-50);padding:16px;border-radius:8px;color:var(--brand-neutral-900)}
+
+  /* Dark mode variant for kiosk */
+  .phone.kiosk .screen{background:#0B1220;color:white}
+  .phone.kiosk .mi-hero{background:#15213D;border-color:#2A3F6B;color:white}
+  .phone.kiosk .mi-hero .h1,.phone.kiosk .mi-hero .h2{color:white}
+  .phone.kiosk .mi-card{background:#15213D;border-color:#2A3F6B;color:white}
+  .phone.kiosk .mi-section-title{color:#6988C7}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="canvas-head">
+  <div>
+    <h1>하루메이트 Design Canvas <span class="version">v3.0</span></h1>
+    <div class="meta" style="margin-top:6px">발달장애인 + 코디네이터 협업 앱 · Figma-ready 레이아웃 · 김유진 리뷰 반영</div>
+  </div>
+  <div class="meta">생성일: 2026-04-19 · 1인 개발: JY</div>
+</div>
+
+<!-- DESIGN TOKENS -->
+<div class="tokens">
+  <h2>🎨 Design Tokens</h2>
+  <div class="token-grid">
+    <div class="token-item">
+      <div class="token-swatch" style="background:#4F7CFF"></div>
+      <div class="token-name">--brand-primary</div>
+      <div class="token-val">#4F7CFF</div>
+    </div>
+    <div class="token-item">
+      <div class="token-swatch" style="background:#E6EEFF"></div>
+      <div class="token-name">--brand-primary-soft</div>
+      <div class="token-val">#E6EEFF</div>
+    </div>
+    <div class="token-item">
+      <div class="token-swatch" style="background:#FFB547"></div>
+      <div class="token-name">--brand-accent</div>
+      <div class="token-val">#FFB547</div>
+    </div>
+    <div class="token-item">
+      <div class="token-swatch" style="background:#3FB765"></div>
+      <div class="token-name">--brand-success</div>
+      <div class="token-val">#3FB765</div>
+    </div>
+    <div class="token-item">
+      <div class="token-swatch" style="background:#E8594A"></div>
+      <div class="token-name">--brand-danger</div>
+      <div class="token-val">#E8594A</div>
+    </div>
+    <div class="token-item">
+      <div class="token-swatch" style="background:#FAFAFA;border:1px solid #ccc"></div>
+      <div class="token-name">--neutral-50</div>
+      <div class="token-val">#FAFAFA</div>
+    </div>
+    <div class="token-item">
+      <div class="token-swatch" style="background:#1A1C1F"></div>
+      <div class="token-name">--neutral-900</div>
+      <div class="token-val">#1A1C1F</div>
+    </div>
+    <div class="token-item" style="grid-column:span 2">
+      <div style="font-size:12px;color:#999;margin-bottom:4px">Typography</div>
+      <div style="font-size:16px;font-weight:800;color:#EAEAEA">Pretendard Variable</div>
+      <div style="font-size:11px;color:#888;margin-top:4px">H1 28 · H2 22 · Body 16 · Small 13 · Tiny 11</div>
+    </div>
+    <div class="token-item">
+      <div style="font-size:12px;color:#999;margin-bottom:4px">Radii</div>
+      <div style="display:flex;gap:4px;align-items:end">
+        <div style="width:20px;height:20px;background:var(--brand-primary);border-radius:8px"></div>
+        <div style="width:28px;height:28px;background:var(--brand-primary);border-radius:12px"></div>
+        <div style="width:36px;height:36px;background:var(--brand-primary);border-radius:16px"></div>
+        <div style="width:44px;height:44px;background:var(--brand-primary);border-radius:20px"></div>
+      </div>
+      <div style="font-size:11px;color:#888;margin-top:4px">8 · 12 · 16 · 20 · 28</div>
+    </div>
+  </div>
+</div>
+
+<!-- YUJIN NOTE -->
+<div class="note">
+  <div class="tag">🎯 김유진 디자인 디렉션</div>
+  <div class="body">
+    이모지 히어로 제거 → <b>Material Symbols Rounded</b> 단일 세트. 활동 카드는 <b>ARASAAC 픽토그램</b> 예정(현재 더미).
+    역할 분기는 첫 실행 온보딩에서 확정. 당사자 홈은 CTA 2개, 코디 홈은 CTA 4개로 분리.
+    버튼 레이블은 3~6자 동사. 존댓말 유지하되 이모지 남발 금지. 배경은 순백색 피하고 <code style="background:#0005;padding:2px 6px;border-radius:4px">#FAFAFA</code>.
+  </div>
+</div>
+
+<!-- ========== SECTION 1: ONBOARDING ========== -->
+<div class="section-label">
+  <span class="tag">01</span>
+  <h2>온보딩 Flow</h2>
+  <span class="desc">첫 실행 · 역할/UI모드 결정 · 3스텝</span>
+</div>
+
+<div class="frames-row">
+
+  <!-- Onboarding 1: Welcome -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div style="height:60px"></div>
+        <div style="text-align:center">
+          <div style="width:80px;height:80px;background:var(--brand-primary);border-radius:24px;margin:0 auto;display:flex;align-items:center;justify-content:center">
+            <span class="mi-icon" style="color:white;font-size:44px">diversity_3</span>
+          </div>
+          <div style="font-size:28px;font-weight:800;margin-top:20px">하루메이트</div>
+          <div style="font-size:13px;color:var(--brand-neutral-400);margin-top:4px">하루를 같이 만드는 도우미</div>
+        </div>
+        <div style="height:120px"></div>
+        <div class="mi-cta" style="background:var(--brand-primary)">시작할게요</div>
+        <div style="text-align:center;font-size:11px;color:var(--brand-neutral-400);margin-top:10px">사용하면서 개인정보 처리방침에 동의해요</div>
+      </div>
+    </div>
+    <div class="frame-label">01. Welcome <span class="sub">온보딩 진입</span></div>
+  </div>
+
+  <!-- Onboarding 2: Role -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div style="height:30px"></div>
+        <div style="font-size:11px;color:var(--brand-primary);font-weight:700">1 / 3</div>
+        <div style="font-size:22px;font-weight:800;margin-top:8px;line-height:1.4">누구를 위해<br>쓰시나요?</div>
+        <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:6px">선택에 맞게 화면이 준비돼요</div>
+        <div style="height:20px"></div>
+        <div class="mi-card" style="border:2px solid var(--brand-primary);background:var(--brand-primary-soft)">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="mi-icon" style="color:var(--brand-primary);font-size:32px">supervisor_account</span>
+            <div>
+              <div style="font-weight:800;font-size:15px">가족이나 학생을 위해</div>
+              <div style="font-size:11px;color:var(--brand-neutral-700);margin-top:2px">부모 · 선생님 · 복지사</div>
+            </div>
+          </div>
+        </div>
+        <div class="mi-card">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="mi-icon" style="font-size:32px;color:var(--brand-neutral-400)">person</span>
+            <div>
+              <div style="font-weight:800;font-size:15px">나 자신을 위해</div>
+              <div style="font-size:11px;color:var(--brand-neutral-700);margin-top:2px">본인이 직접 사용해요</div>
+            </div>
+          </div>
+        </div>
+        <div style="height:20px"></div>
+        <div class="mi-cta">다음</div>
+      </div>
+    </div>
+    <div class="frame-label">02. 역할 선택 <span class="sub">Role</span></div>
+    <div class="frame-notes">🎯 여기서 앱 경로 완전히 분기. 당사자→Simple홈 / 코디→Full홈</div>
+  </div>
+
+  <!-- Onboarding 3: Profile -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div style="height:30px"></div>
+        <div style="font-size:11px;color:var(--brand-primary);font-weight:700">2 / 3</div>
+        <div style="font-size:22px;font-weight:800;margin-top:8px;line-height:1.4">이름을<br>알려주세요</div>
+        <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:6px">도우미가 이름으로 불러드려요</div>
+        <div style="height:24px"></div>
+        <div class="mi-label">이름</div>
+        <input class="mi-input" value="유진" readonly>
+        <div style="height:14px"></div>
+        <div class="mi-label">글자와 버튼 크기</div>
+        <div style="display:flex;gap:6px">
+          <span class="mi-chip">보통</span>
+          <span class="mi-chip active">크게</span>
+          <span class="mi-chip">아주 크게</span>
+        </div>
+        <div style="height:auto;min-height:80px"></div>
+        <div style="margin-top:80px">
+          <div class="mi-cta">다음</div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">03. 프로필 <span class="sub">이름/UI크기</span></div>
+  </div>
+
+  <!-- Onboarding 4: Pair -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div style="height:30px"></div>
+        <div style="font-size:11px;color:var(--brand-primary);font-weight:700">3 / 3</div>
+        <div style="font-size:22px;font-weight:800;margin-top:8px;line-height:1.4">돕는 사람과<br>연결할까요?</div>
+        <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:6px">코드로 연결하면 일정을 같이 만들어요</div>
+        <div style="height:20px"></div>
+        <div class="mi-card" style="text-align:center;padding:24px">
+          <div style="font-family:'SF Mono',monospace;font-size:32px;letter-spacing:8px;font-weight:800;color:var(--brand-primary)">8421</div>
+          <div style="font-size:11px;color:var(--brand-neutral-400);margin-top:8px">이 숫자를 상대방에게 말해주세요</div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="mi-cta secondary">나중에 할게요</div>
+        <div class="mi-cta">연결됐어요</div>
+      </div>
+    </div>
+    <div class="frame-label">04. 페어링 <span class="sub">NEW</span></div>
+    <div class="frame-notes">💡 4자리 코드로 보호자 ↔ 당사자 폰 연결 (Firebase 기반)</div>
+  </div>
+</div>
+
+
+<!-- ========== SECTION 2: 당사자 홈 ========== -->
+<div class="section-label">
+  <span class="tag">02</span>
+  <h2>당사자 홈 (User Mode)</h2>
+  <span class="desc">CTA 2개 · 큰 버튼 · 자동 TTS</span>
+</div>
+
+<div class="frames-row">
+  <!-- User Home -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-topbar">
+          <div class="title" style="font-size:18px">안녕하세요, 유진님</div>
+          <div class="sub">토요일, 오후 2시 13분</div>
+        </div>
+        <div class="mi-hero">
+          <div class="h1">오늘 할 일이 있어요</div>
+          <div class="h2">지금은 "라면 끓이기" 시간이에요</div>
+        </div>
+        <div style="height:8px"></div>
+        <div class="mi-cta big">
+          <span class="mi-icon" style="vertical-align:middle;margin-right:6px">play_circle</span>
+          오늘 하루 보기
+        </div>
+        <div class="mi-cta big accent">
+          <span class="mi-icon" style="vertical-align:middle;margin-right:6px">forum</span>
+          도우미에게 물어보기
+        </div>
+      </div>
+      <div class="mi-sos-fab">SOS</div>
+    </div>
+    <div class="frame-label">05. 당사자 홈 <span class="sub">Simple</span></div>
+    <div class="frame-notes">✅ CTA 2개만. 현재 시간대 활동 자동 미리보기</div>
+  </div>
+
+  <!-- Current Activity -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-back">
+          <span class="mi-icon">arrow_back</span> 뒤로
+        </div>
+        <div style="background:var(--brand-accent-soft);padding:10px 12px;border-radius:10px;font-size:11px;font-weight:700;color:var(--brand-neutral-900);margin-bottom:10px">
+          14:00 · 지금 시간이에요
+        </div>
+        <div style="font-size:22px;font-weight:800;line-height:1.4">라면 끓이기</div>
+        <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:4px">5단계 · 약 12분</div>
+        <div style="height:16px"></div>
+        <div class="mi-step">
+          <div class="num">1</div>
+          <div style="font-size:15px;font-weight:700;line-height:1.5">냄비에 물 500ml를<br>부어주세요</div>
+          <div style="height:12px"></div>
+          <div class="mi-cta" style="background:var(--brand-success);padding:12px">
+            <span class="mi-icon" style="vertical-align:middle">volume_up</span> 다시 들어보기
+          </div>
+        </div>
+        <div style="height:10px"></div>
+        <div class="mi-progress"><div class="fill" style="width:20%"></div></div>
+        <div style="font-size:11px;color:var(--brand-neutral-400);text-align:center">1 / 5 단계</div>
+        <div style="height:10px"></div>
+        <div class="mi-cta">했어요 · 다음 단계</div>
+      </div>
+      <div class="mi-sos-fab">SOS</div>
+    </div>
+    <div class="frame-label">06. 현재 활동 <span class="sub">Step-by-step</span></div>
+  </div>
+
+  <!-- Agent chat -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-back">
+          <span class="mi-icon">arrow_back</span> 뒤로
+        </div>
+        <div style="font-size:18px;font-weight:800">도우미</div>
+        <div style="height:12px"></div>
+        <div style="background:var(--brand-neutral-100);padding:12px;border-radius:14px;font-size:13px;line-height:1.5;max-width:75%">
+          안녕하세요! 오늘은 뭐가 궁금하세요?
+        </div>
+        <div style="height:10px"></div>
+        <div style="background:var(--brand-primary);color:white;padding:12px;border-radius:14px;font-size:13px;max-width:75%;margin-left:auto">
+          저녁 뭐 먹을까요?
+        </div>
+        <div style="height:10px"></div>
+        <div style="background:var(--brand-neutral-100);padding:12px;border-radius:14px;font-size:13px;line-height:1.5;max-width:85%">
+          냉장고에 계란, 양파, 김치가 있네요.<br>
+          <b>김치볶음밥</b> 어때요?
+        </div>
+        <div style="height:6px"></div>
+        <div style="display:flex;gap:6px;margin-left:auto;max-width:85%">
+          <span class="mi-chip active" style="font-size:11px">레시피 보기</span>
+          <span class="mi-chip active" style="font-size:11px">영상 보기</span>
+        </div>
+        <div style="position:absolute;bottom:16px;left:16px;right:16px">
+          <div style="display:flex;gap:6px;align-items:center;background:white;border:1.5px solid var(--brand-neutral-200);border-radius:24px;padding:8px 12px">
+            <span style="color:var(--brand-neutral-400);font-size:12px">무엇이든 물어보세요</span>
+            <span class="mi-icon" style="color:var(--brand-primary);margin-left:auto">mic</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">07. 도우미 대화 <span class="sub">Claude Agent</span></div>
+  </div>
+
+  <!-- Timer -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-back"><span class="mi-icon">arrow_back</span> 뒤로</div>
+        <div style="text-align:center;margin-top:50px">
+          <div style="font-size:13px;color:var(--brand-neutral-400)">라면 · 4단계</div>
+          <div style="font-size:56px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:10px;color:var(--brand-primary)">3:24</div>
+          <div style="font-size:13px;color:var(--brand-neutral-700);margin-top:6px">면을 기다려요</div>
+        </div>
+        <div style="height:40px"></div>
+        <div style="width:180px;height:180px;margin:0 auto;border:8px solid var(--brand-primary-soft);border-top-color:var(--brand-primary);border-radius:50%;animation:spin 2s linear infinite"></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+        <div style="height:30px"></div>
+        <div class="mi-cta danger">그만두기</div>
+      </div>
+      <div class="mi-sos-fab">SOS</div>
+    </div>
+    <div class="frame-label">08. 타이머 <span class="sub">요리 중 핵심</span></div>
+  </div>
+</div>
+
+
+<!-- ========== SECTION 3: 키오스크 모드 ========== -->
+<div class="section-label">
+  <span class="tag">03</span>
+  <h2>키오스크 모드 (중증 Support)</h2>
+  <span class="desc">터치 불필요 · 자동 진행 · 30초마다 다음 단계</span>
+</div>
+
+<div class="frames-row">
+  <div class="frame">
+    <div class="phone kiosk">
+      <div class="notch"></div>
+      <div class="screen">
+        <div style="text-align:center;margin-top:40px">
+          <div style="font-size:13px;color:var(--brand-accent);font-weight:700;letter-spacing:2px">지금 하는 일</div>
+          <div style="height:12px"></div>
+          <div style="width:120px;height:120px;background:var(--brand-accent);border-radius:24px;margin:0 auto;display:flex;align-items:center;justify-content:center">
+            <span class="mi-icon" style="font-size:72px;color:#0B1220">restaurant</span>
+          </div>
+          <div style="height:20px"></div>
+          <div style="font-size:28px;font-weight:800;line-height:1.3">라면<br>끓이기</div>
+          <div style="height:12px"></div>
+          <div style="font-size:14px;color:#8AA6D3">1 / 5 단계</div>
+        </div>
+        <div style="position:absolute;bottom:30px;left:16px;right:16px;text-align:center">
+          <div style="background:var(--brand-accent);color:#0B1220;padding:14px;border-radius:16px;font-weight:700;font-size:14px">
+            <span class="mi-icon" style="vertical-align:middle">schedule</span>
+            30초 후 다음 단계
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">09. 키오스크 활동 <span class="sub">Dark · Auto-TTS</span></div>
+    <div class="frame-notes">🎯 중증 타겟. 터치 없이 자동 진행. 대비비 AAA</div>
+  </div>
+
+  <div class="frame">
+    <div class="phone kiosk">
+      <div class="notch"></div>
+      <div class="screen">
+        <div style="text-align:center;margin-top:40px">
+          <div style="font-size:13px;color:var(--brand-accent);font-weight:700;letter-spacing:2px">이제 쉬어요</div>
+          <div style="height:12px"></div>
+          <div style="width:120px;height:120px;background:#15213D;border:2px solid var(--brand-accent);border-radius:24px;margin:0 auto;display:flex;align-items:center;justify-content:center">
+            <span class="mi-icon" style="font-size:72px;color:var(--brand-accent)">self_care</span>
+          </div>
+          <div style="height:20px"></div>
+          <div style="font-size:28px;font-weight:800;line-height:1.3">잘했어요</div>
+          <div style="height:8px"></div>
+          <div style="font-size:14px;color:#8AA6D3;max-width:80%;margin:0 auto;line-height:1.6">라면을 잘 끓였어요.<br>맛있게 드세요.</div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">10. 키오스크 완료 <span class="sub">담백한 칭찬</span></div>
+    <div class="frame-notes">🔪 "🎉잘했어요!!🎉" 금지. 담백이 미덕</div>
+  </div>
+
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div style="text-align:center;margin-top:30px">
+          <div style="width:64px;height:64px;background:var(--brand-danger);border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center">
+            <span class="mi-icon" style="font-size:36px;color:white">sos</span>
+          </div>
+          <div style="height:14px"></div>
+          <div style="font-size:20px;font-weight:800">도움이 필요해요</div>
+          <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:4px">누구에게 알릴까요?</div>
+        </div>
+        <div style="height:20px"></div>
+        <div class="mi-card" style="display:flex;align-items:center;gap:12px">
+          <span class="mi-icon" style="color:var(--brand-primary);font-size:32px">family_restroom</span>
+          <div>
+            <div style="font-weight:700;font-size:14px">엄마</div>
+            <div style="font-size:11px;color:var(--brand-neutral-400)">010-1234-5678</div>
+          </div>
+          <span class="mi-icon" style="margin-left:auto;color:var(--brand-success)">call</span>
+        </div>
+        <div class="mi-card" style="display:flex;align-items:center;gap:12px">
+          <span class="mi-icon" style="color:var(--brand-primary);font-size:32px">school</span>
+          <div>
+            <div style="font-weight:700;font-size:14px">김선생님</div>
+            <div style="font-size:11px;color:var(--brand-neutral-400)">복지관 담당</div>
+          </div>
+          <span class="mi-icon" style="margin-left:auto;color:var(--brand-success)">call</span>
+        </div>
+        <div class="mi-card" style="display:flex;align-items:center;gap:12px;background:var(--brand-danger);color:white;border-color:var(--brand-danger)">
+          <span class="mi-icon" style="font-size:32px">emergency</span>
+          <div>
+            <div style="font-weight:700;font-size:14px">119 응급 전화</div>
+            <div style="font-size:11px;opacity:0.8">아주 급할 때만</div>
+          </div>
+          <span class="mi-icon" style="margin-left:auto">call</span>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">11. SOS 시트 <span class="sub">Emergency</span></div>
+  </div>
+</div>
+
+
+<!-- ========== SECTION 4: 코디 홈 ========== -->
+<div class="section-label">
+  <span class="tag">04</span>
+  <h2>코디네이터 모드 (Coordinator)</h2>
+  <span class="desc">선생님/보호자용 · 4개 기능 · 편집 중심</span>
+</div>
+
+<div class="frames-row">
+  <!-- Coordinator Home -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-topbar">
+          <div class="title" style="font-size:16px">김선생님 · 유진 담당</div>
+          <div class="sub">연결됨 · 실시간 동기화</div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--brand-neutral-400);letter-spacing:1px;margin-bottom:8px">오늘</div>
+        <div class="mi-card" style="display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;background:var(--brand-success);border-radius:50%;display:flex;align-items:center;justify-content:center">
+            <span class="mi-icon" style="color:white;font-size:18px">check</span>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700">3 / 6 완료</div>
+            <div class="mi-progress" style="margin-top:4px"><div class="fill" style="width:50%"></div></div>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--brand-neutral-400);letter-spacing:1px;margin:14px 0 8px">빠른 작업</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="mi-card" style="text-align:center;padding:14px 8px">
+            <span class="mi-icon" style="color:var(--brand-primary);font-size:28px">edit_note</span>
+            <div style="font-size:12px;font-weight:700;margin-top:4px">일정 만들기</div>
+          </div>
+          <div class="mi-card" style="text-align:center;padding:14px 8px">
+            <span class="mi-icon" style="color:var(--brand-primary);font-size:28px">play_circle</span>
+            <div style="font-size:12px;font-weight:700;margin-top:4px">미리보기</div>
+          </div>
+          <div class="mi-card" style="text-align:center;padding:14px 8px">
+            <span class="mi-icon" style="color:var(--brand-primary);font-size:28px">monitoring</span>
+            <div style="font-size:12px;font-weight:700;margin-top:4px">수행 기록</div>
+          </div>
+          <div class="mi-card" style="text-align:center;padding:14px 8px">
+            <span class="mi-icon" style="color:var(--brand-primary);font-size:28px">settings</span>
+            <div style="font-size:12px;font-weight:700;margin-top:4px">프로필</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">12. 코디 홈 <span class="sub">Full</span></div>
+  </div>
+
+  <!-- Coordinator Input -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-back"><span class="mi-icon">arrow_back</span> 뒤로</div>
+        <div style="font-size:20px;font-weight:800">일정 만들기</div>
+        <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:4px">말하듯이 편하게 적어주세요</div>
+        <div style="height:14px"></div>
+        <div style="background:white;border:2px solid var(--brand-primary-soft);border-radius:14px;padding:12px;font-size:12px;line-height:1.7;min-height:160px">
+          08:00 · 아침 일정 안내<br>
+          10:00 · 옷 입기 연습<br>
+          12:00 · 라면 또는 카레<br>
+          15:00 · 쉬는 시간<br>
+          18:00 · 운동하기<br>
+          22:00 · 하루 마무리
+        </div>
+        <div style="height:10px"></div>
+        <div class="mi-cta">
+          <span class="mi-icon" style="vertical-align:middle">auto_awesome</span>
+          일정표 만들기
+        </div>
+        <div style="font-size:10px;color:var(--brand-neutral-400);text-align:center;margin-top:6px">AI가 약 5초 안에 만들어요</div>
+      </div>
+    </div>
+    <div class="frame-label">13. 일정 입력 <span class="sub">Coordinator</span></div>
+  </div>
+
+  <!-- Coordinator Preview -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-back"><span class="mi-icon">arrow_back</span> 뒤로</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:18px;font-weight:800">오늘 일정</div>
+          <div class="mi-chip active" style="font-size:10px">AI 생성됨</div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="mi-card" style="border-left:4px solid var(--brand-primary)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:800;font-size:14px">08:00</div>
+            <span class="mi-icon" style="color:var(--brand-neutral-400);font-size:18px">edit</span>
+          </div>
+          <div style="font-size:13px;margin-top:4px">아침 일정 안내</div>
+          <div style="font-size:11px;color:var(--brand-neutral-400);margin-top:2px">MORNING_BRIEFING</div>
+        </div>
+        <div class="mi-card" style="border-left:4px solid var(--brand-accent)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:800;font-size:14px">10:00</div>
+            <span class="mi-icon" style="color:var(--brand-neutral-400);font-size:18px">edit</span>
+          </div>
+          <div style="font-size:13px;margin-top:4px">옷 입기 연습</div>
+          <div style="font-size:11px;color:var(--brand-neutral-400);margin-top:2px">CLOTHING · 4단계 안내</div>
+        </div>
+        <div class="mi-card" style="border-left:4px solid var(--brand-success)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:800;font-size:14px">12:00</div>
+            <span class="mi-icon" style="color:var(--brand-neutral-400);font-size:18px">edit</span>
+          </div>
+          <div style="font-size:13px;margin-top:4px">라면 또는 카레</div>
+          <div style="font-size:11px;color:var(--brand-neutral-400);margin-top:2px">COOKING · 5단계</div>
+        </div>
+        <div style="height:8px"></div>
+        <div class="mi-cta">저장하기</div>
+      </div>
+    </div>
+    <div class="frame-label">14. 일정 미리보기 <span class="sub">AI 결과</span></div>
+  </div>
+
+  <!-- Report -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-back"><span class="mi-icon">arrow_back</span> 뒤로</div>
+        <div style="font-size:20px;font-weight:800">유진님의 한 주</div>
+        <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:4px">4월 13일 ~ 19일</div>
+        <div style="height:14px"></div>
+        <div class="mi-card" style="background:var(--brand-primary-soft);border-color:var(--brand-primary)">
+          <div style="font-size:11px;color:var(--brand-primary);font-weight:700;letter-spacing:1px">이번 주 해낸 것</div>
+          <div style="font-size:13px;color:var(--brand-neutral-900);margin-top:8px;line-height:1.8">
+            ✓ 요리를 <b>18번</b> 했어요<br>
+            ✓ 운동을 <b>8번</b> 했어요<br>
+            ✓ 혼자 옷을 <b>19번</b> 입었어요
+          </div>
+        </div>
+        <div class="mi-card">
+          <div style="font-size:11px;color:var(--brand-neutral-400);font-weight:700;letter-spacing:1px;margin-bottom:10px">활동별 진행</div>
+          <div class="mi-list-item">
+            <span class="mi-icon" style="color:var(--brand-success)">restaurant</span>
+            <span style="font-size:13px;font-weight:600">요리</span>
+            <span style="margin-left:auto;font-size:11px;color:var(--brand-neutral-700)">18 / 21</span>
+          </div>
+          <div class="mi-list-item">
+            <span class="mi-icon" style="color:var(--brand-accent)">fitness_center</span>
+            <span style="font-size:13px;font-weight:600">운동</span>
+            <span style="margin-left:auto;font-size:11px;color:var(--brand-neutral-700)">8 / 13</span>
+          </div>
+          <div class="mi-list-item">
+            <span class="mi-icon" style="color:var(--brand-primary)">checkroom</span>
+            <span style="font-size:13px;font-weight:600">옷 입기</span>
+            <span style="margin-left:auto;font-size:11px;color:var(--brand-neutral-700)">19 / 21</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">15. 수행 리포트 <span class="sub">NEW · B2B 핵심</span></div>
+    <div class="frame-notes">🎯 복지관 세일즈 핵심 기능. 엑셀 내보내기 추가 예정</div>
+  </div>
+</div>
+
+
+<!-- ========== SECTION 5: 프로필 & 설정 ========== -->
+<div class="section-label">
+  <span class="tag">05</span>
+  <h2>프로필 & 설정</h2>
+  <span class="desc">냉장고 · 약 · 연락처 · 모드 변경</span>
+</div>
+
+<div class="frames-row">
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-back"><span class="mi-icon">arrow_back</span> 뒤로</div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0">
+          <div style="width:56px;height:56px;background:var(--brand-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:22px">유</div>
+          <div>
+            <div style="font-weight:800;font-size:18px">유진님</div>
+            <div style="font-size:11px;color:var(--brand-neutral-400)">경증 · 크게 모드</div>
+          </div>
+          <span class="mi-icon" style="margin-left:auto;color:var(--brand-neutral-400)">edit</span>
+        </div>
+        <div class="mi-section-title">나의 것</div>
+        <div class="mi-list-item">
+          <span class="mi-icon" style="color:var(--brand-success)">kitchen</span>
+          <span style="font-size:13px;font-weight:600">냉장고</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--brand-neutral-400)">8개</span>
+          <span class="mi-icon" style="color:var(--brand-neutral-400);font-size:16px">chevron_right</span>
+        </div>
+        <div class="mi-list-item">
+          <span class="mi-icon" style="color:var(--brand-accent)">medication</span>
+          <span style="font-size:13px;font-weight:600">약</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--brand-neutral-400)">3개</span>
+          <span class="mi-icon" style="color:var(--brand-neutral-400);font-size:16px">chevron_right</span>
+        </div>
+        <div class="mi-list-item">
+          <span class="mi-icon" style="color:var(--brand-danger)">contacts</span>
+          <span style="font-size:13px;font-weight:600">연락처</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--brand-neutral-400)">4명</span>
+          <span class="mi-icon" style="color:var(--brand-neutral-400);font-size:16px">chevron_right</span>
+        </div>
+        <div class="mi-section-title">앱 설정</div>
+        <div class="mi-list-item">
+          <span class="mi-icon" style="color:var(--brand-primary)">text_fields</span>
+          <span style="font-size:13px;font-weight:600">글자 크기</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--brand-neutral-700)">크게</span>
+        </div>
+        <div class="mi-list-item">
+          <span class="mi-icon" style="color:var(--brand-primary)">record_voice_over</span>
+          <span style="font-size:13px;font-weight:600">목소리 속도</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--brand-neutral-700)">보통</span>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">16. 프로필 <span class="sub">허브</span></div>
+  </div>
+
+  <!-- Ingredients -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-back"><span class="mi-icon">arrow_back</span> 뒤로</div>
+        <div style="font-size:20px;font-weight:800">냉장고</div>
+        <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:4px">있는 재료로 AI가 메뉴를 추천해요</div>
+        <div style="height:14px"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span class="mi-chip active">🥚 계란 ×</span>
+          <span class="mi-chip active">🧅 양파 ×</span>
+          <span class="mi-chip active">🥬 김치 ×</span>
+          <span class="mi-chip active">🍚 밥 ×</span>
+          <span class="mi-chip active">🥩 소시지 ×</span>
+          <span class="mi-chip active">🥕 당근 ×</span>
+        </div>
+        <div style="height:14px"></div>
+        <div class="mi-label">재료 추가</div>
+        <div style="display:flex;gap:6px">
+          <input class="mi-input" placeholder="예: 감자" style="flex:1;margin:0">
+          <button class="mi-cta" style="width:auto;padding:10px 20px;margin:0">추가</button>
+        </div>
+        <div style="height:14px"></div>
+        <div class="mi-card" style="background:var(--brand-primary-soft);border-color:var(--brand-primary)">
+          <div style="font-size:11px;font-weight:700;color:var(--brand-primary);letter-spacing:1px">💡 AI 추천</div>
+          <div style="font-size:14px;font-weight:700;margin-top:4px">오늘 저녁 · 김치볶음밥</div>
+          <div style="font-size:11px;color:var(--brand-neutral-400);margin-top:2px">5개 재료로 만들 수 있어요</div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-label">17. 냉장고 <span class="sub">LLM 연동</span></div>
+  </div>
+
+  <!-- Empty schedule -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="mi-topbar">
+          <div class="title" style="font-size:18px">안녕하세요, 유진님</div>
+          <div class="sub">일요일, 오전 9시</div>
+        </div>
+        <div style="height:40px"></div>
+        <div style="text-align:center">
+          <span class="mi-icon" style="font-size:64px;color:var(--brand-neutral-400)">sunny</span>
+          <div style="font-size:18px;font-weight:800;margin-top:10px">오늘은 쉬는 날이에요</div>
+          <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:4px;line-height:1.6">
+            선생님이 일정을 만들지 않았어요.<br>쉬면서 좋아하는 걸 해보세요.
+          </div>
+        </div>
+        <div style="height:30px"></div>
+        <div class="mi-cta accent big">
+          <span class="mi-icon" style="vertical-align:middle;margin-right:6px">forum</span>
+          도우미와 대화하기
+        </div>
+      </div>
+      <div class="mi-sos-fab">SOS</div>
+    </div>
+    <div class="frame-label">18. 빈 일정 <span class="sub">Empty state</span></div>
+    <div class="frame-notes">🎯 일정 없을 때도 의미있는 경험 제공</div>
+  </div>
+
+  <!-- Error/Offline -->
+  <div class="frame">
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div style="height:100px"></div>
+        <div style="text-align:center">
+          <span class="mi-icon" style="font-size:64px;color:var(--brand-accent)">cloud_off</span>
+          <div style="font-size:18px;font-weight:800;margin-top:10px">인터넷이 잠깐 쉬어요</div>
+          <div style="font-size:12px;color:var(--brand-neutral-400);margin-top:4px;line-height:1.6">
+            저장된 일정으로 계속 할 수 있어요.<br>와이파이가 돌아오면 자동으로 연결돼요.
+          </div>
+        </div>
+        <div style="height:24px"></div>
+        <div class="mi-cta">계속 사용하기</div>
+        <div class="mi-cta secondary">다시 시도</div>
+      </div>
+    </div>
+    <div class="frame-label">19. 오프라인 <span class="sub">Error state</span></div>
+    <div class="frame-notes">🔪 "오류 코드 500" 같은 기술용어 절대 금지</div>
+  </div>
+</div>
+
+
+<!-- COMPONENT LIBRARY -->
+<div class="comp-lib">
+  <h2 style="font-size:14px;color:#999;text-transform:uppercase;letter-spacing:1px">🧩 Component Library</h2>
+
+  <div class="comp-grid">
+    <div class="comp-box">
+      <div class="comp-name">BUTTON / PRIMARY</div>
+      <div class="comp-demo">
+        <div class="mi-cta">저장하기</div>
+        <div class="mi-cta big" style="margin-top:6px">큰 버튼</div>
+      </div>
+    </div>
+
+    <div class="comp-box">
+      <div class="comp-name">BUTTON / SECONDARY</div>
+      <div class="comp-demo">
+        <div class="mi-cta secondary">나중에</div>
+        <div class="mi-cta danger" style="margin-top:6px">그만두기</div>
+      </div>
+    </div>
+
+    <div class="comp-box">
+      <div class="comp-name">BUTTON / ACCENT</div>
+      <div class="comp-demo">
+        <div class="mi-cta accent">도우미에게 물어보기</div>
+      </div>
+    </div>
+
+    <div class="comp-box">
+      <div class="comp-name">CHIPS</div>
+      <div class="comp-demo">
+        <span class="mi-chip">기본</span>
+        <span class="mi-chip active">선택됨</span>
+      </div>
+    </div>
+
+    <div class="comp-box">
+      <div class="comp-name">INPUT</div>
+      <div class="comp-demo">
+        <div class="mi-label">이름</div>
+        <input class="mi-input" value="유진">
+      </div>
+    </div>
+
+    <div class="comp-box">
+      <div class="comp-name">PROGRESS</div>
+      <div class="comp-demo">
+        <div class="mi-progress"><div class="fill"></div></div>
+        <div style="font-size:11px;color:#888;margin-top:4px">3 / 5 단계 · 60%</div>
+      </div>
+    </div>
+
+    <div class="comp-box">
+      <div class="comp-name">STEP CARD</div>
+      <div class="comp-demo">
+        <div class="mi-step">
+          <div class="num">1</div>
+          <div style="font-size:13px;font-weight:700">냄비에 물을 부어주세요</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-box">
+      <div class="comp-name">LIST ITEM</div>
+      <div class="comp-demo">
+        <div class="mi-list-item">
+          <span class="mi-icon" style="color:#4F7CFF">medication</span>
+          <span style="font-size:13px;font-weight:600">혈압약</span>
+          <span style="margin-left:auto;font-size:11px;color:#888">08:00</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-box">
+      <div class="comp-name">STATUS / TOPBAR</div>
+      <div class="comp-demo">
+        <div class="mi-topbar">
+          <div class="title" style="font-size:14px">유진님</div>
+          <div class="sub">토요일 오후 2시</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL NOTE -->
+<div class="note" style="border-left-color:var(--brand-primary);background:#1A2242">
+  <div class="tag" style="color:var(--brand-primary)">📦 다음 액션</div>
+  <div class="body">
+    1. 이 HTML을 Figma로 import (plugin: html.to.design) → 모든 프레임 자동 변환<br>
+    2. ARASAAC 픽토그램 라이브러리 연결 (pictogram 표준)<br>
+    3. Pretendard + Material Symbols 폰트 에셋 추가<br>
+    4. 컴포넌트 라이브러리를 Figma Variants로 정리<br>
+    5. Flutter 앱에 디자인 토큰 적용 (theme/app_theme.dart 개편)
+  </div>
+</div>
+
+<div style="max-width:1600px;margin:40px auto;text-align:center;color:#555;font-size:11px">
+  하루메이트 Design Canvas v3.0 · Figma-ready Layout<br>
+  Built by JY with 🧠 from 김유진 persona · 19 frames · 9 components · 2026
+</div>
+
+</body>
+</html>

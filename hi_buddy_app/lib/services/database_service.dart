@@ -1,7 +1,12 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+/// ══════════════════════════════════════════════════════════
+/// DatabaseService — 로컬 SQLite 저장소
+/// v1 → v2 마이그레이션 (2026-04-19): paired_session 컬럼 추가
+/// ══════════════════════════════════════════════════════════
 class DatabaseService {
+  static const int _dbVersion = 2;
   static Database? _db;
 
   static Future<Database> get db async {
@@ -14,7 +19,8 @@ class DatabaseService {
     final path = join(await getDatabasesPath(), 'harumate.db');
     return openDatabase(
       path,
-      version: 1,
+      version: _dbVersion,
+      onUpgrade: _onUpgrade,
       onCreate: (db, version) async {
         // 사용자 프로필
         await db.execute('''
@@ -96,6 +102,17 @@ class DatabaseService {
           )
         ''');
 
+        // v2 신규 테이블 (pair_session) — onCreate에서도 생성
+        await db.execute('''
+          CREATE TABLE pair_session (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pair_code TEXT NOT NULL,
+            role TEXT DEFAULT 'self',
+            paired_at TEXT NOT NULL,
+            partner_name TEXT DEFAULT ''
+          )
+        ''');
+
         // 기본 프로필 생성
         await db.insert('user_profile', {
           'name': '사용자',
@@ -108,6 +125,25 @@ class DatabaseService {
         });
       },
     );
+  }
+
+  /// v1 → v2 마이그레이션
+  /// v3 이상 추가 시 아래 switch 에 case 추가
+  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // v1 → v2: pair_session 테이블 신설
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS pair_session (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          pair_code TEXT NOT NULL,
+          role TEXT DEFAULT 'self',
+          paired_at TEXT NOT NULL,
+          partner_name TEXT DEFAULT ''
+        )
+      ''');
+    }
+
+    // 향후: if (oldVersion < 3) { ... }
   }
 
   // ── 프로필 ──
@@ -226,5 +262,27 @@ class DatabaseService {
   static Future<void> removePlace(int id) async {
     final d = await db;
     await d.delete('places', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ── 페어링 세션 (v2 신규) ──
+  static Future<Map<String, dynamic>?> getPairSession() async {
+    final d = await db;
+    final rows = await d.query('pair_session', orderBy: 'id DESC', limit: 1);
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  static Future<void> savePairSession(String code, {String role = 'self', String partnerName = ''}) async {
+    final d = await db;
+    await d.insert('pair_session', {
+      'pair_code': code,
+      'role': role,
+      'partner_name': partnerName,
+      'paired_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  static Future<void> clearPairSession() async {
+    final d = await db;
+    await d.delete('pair_session');
   }
 }

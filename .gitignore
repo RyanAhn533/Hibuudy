@@ -11,3 +11,8 @@ backend/tts_cache/
 *.keystore
 *.jks
 key.properties
+# Keystore passwords backup (NEVER commit)
+*-keys-BACKUP.txt
+*-keys-backup.txt
+*key.properties
+

@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../services/weather_service.dart';
 import '../services/tts_service.dart';
+import '../services/session_service.dart';
+import '../services/database_service.dart';
 
 /// 아침 브리핑 위젯 — 날씨 + 옷차림 + 일정 요약 + 인사
 class MorningBriefing extends StatefulWidget {
@@ -16,6 +18,7 @@ class MorningBriefing extends StatefulWidget {
 
 class _MorningBriefingState extends State<MorningBriefing> {
   Map<String, dynamic>? _weather;
+  String? _clothingAI;
   bool _loading = true;
   bool _hasSpokeOnce = false;
 
@@ -28,9 +31,20 @@ class _MorningBriefingState extends State<MorningBriefing> {
   Future<void> _loadWeather() async {
     try {
       final weather = await WeatherService.getCurrentWeather();
+      // v3.1: AI 옷 추천 (이름 + 장애 수준 개인화)
+      final name = await SessionService.getUserName();
+      final profile = await DatabaseService.getProfile();
+      final level = (profile['disability_level'] as String?) ?? 'mild';
+      final clothing = await WeatherService.getClothingAdviceAI(
+        temp: weather['temp'] as double,
+        description: (weather['description'] as String?) ?? '',
+        name: name == '사용자' ? '' : name,
+        disabilityLevel: level,
+      );
       if (mounted) {
         setState(() {
           _weather = weather;
+          _clothingAI = clothing;
           _loading = false;
         });
         _speakBriefing();
@@ -55,7 +69,7 @@ class _MorningBriefingState extends State<MorningBriefing> {
     if (_weather != null) {
       final temp = _weather!['temp'] as double;
       final desc = _weather!['description'] as String;
-      final clothing = WeatherService.getClothingAdvice(temp);
+      final clothing = _clothingAI ?? WeatherService.getClothingAdvice(temp);
       briefing += ' 지금 날씨는 $desc, ${temp.round()}도예요. $clothing';
     }
 
@@ -184,7 +198,7 @@ class _MorningBriefingState extends State<MorningBriefing> {
     final desc = _weather!['description'] as String;
     final condition = _weather!['condition'] as String;
     final emoji = WeatherService.getWeatherEmoji(condition);
-    final clothing = WeatherService.getClothingAdvice(temp);
+    final clothing = _clothingAI ?? WeatherService.getClothingAdvice(temp);
 
     return Container(
       padding: const EdgeInsets.all(16),

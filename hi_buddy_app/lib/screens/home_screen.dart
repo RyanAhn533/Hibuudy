@@ -1,27 +1,71 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/ui_mode_service.dart';
+import '../services/session_service.dart';
 import '../widgets/sos_button.dart';
 import 'coordinator_screen.dart';
 import 'user_screen.dart';
 import 'agent_screen.dart';
 import 'profile_screen.dart';
+import 'home_user_screen.dart';
+import 'home_coordinator_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+/// ══════════════════════════════════════════════════════════
+/// HomeScreen — 역할 기반 라우터
+/// v3.0: 당사자/코디 분기 추가, 기존 normal/simple/kiosk는 호환 유지
+/// ══════════════════════════════════════════════════════════
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  UserRole? _role;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    final r = await SessionService.getRole();
+    if (!mounted) return;
+    setState(() => _role = r);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 키오스크 모드: 홈 화면 건너뛰고 바로 오늘 하루 화면으로
+    // 키오스크 모드: 홈 건너뛰고 바로 활동 화면
     if (UiModeService.isKiosk) {
       return const UserScreen();
     }
 
-    // 간단 모드: 큰 버튼 2개만 표시
+    // 역할 로딩 중
+    if (_role == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // v3.0 역할 기반 분기
+    if (_role == UserRole.self) {
+      return const HomeUserScreen();
+    }
+
+    // 코디네이터 (기본값) → simple 모드면 간단형, 아니면 v3.0 HomeCoordinator
     if (UiModeService.isSimple) {
       return _buildSimpleHome(context);
     }
 
+    return const HomeCoordinatorScreen();
+  }
+
+  // ⚠️ DEPRECATED (v2.x 호환 유지 · legacy 4-카드 홈)
+  // ignore: unused_element
+  Widget _buildLegacyHome(BuildContext context) {
     return _buildNormalHome(context);
   }
 

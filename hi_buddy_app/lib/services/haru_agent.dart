@@ -5,6 +5,7 @@ import 'database_service.dart';
 import '../models/recipe.dart';
 import 'schedule_storage.dart';
 import 'weather_service.dart';
+import 'chat_memory.dart';
 
 /// 하루메이트 에이전트 — 진짜 AI 에이전트.
 /// 사용자의 전체 맥락(프로필, 식재료, 일정, 수행기록, 약, 연락처)을
@@ -28,54 +29,71 @@ class AgentAction {
 }
 
 class HaruAgent {
-  // Claude API (Anthropic)
-  static const String _apiKey = String.fromEnvironment(
-    'CLAUDE_API_KEY',
+  // 백엔드 프록시 주소 (API 키는 서버에서만 관리 · 디컴파일 대응)
+  static const String _baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://hibuudy.onrender.com',
+  );
+  static const String _authToken = String.fromEnvironment(
+    'API_TOKEN',
     defaultValue: '',
   );
 
-  /// 메인 처리: Claude에 맥락 넘겨서 응답 받기. 실패 시 오프라인 폴백.
+  /// 메인 처리: 백엔드 /api/agent 호출. 실패 시 오프라인 폴백.
   static Future<AgentResponse> handle(String input) async {
-    // Claude API 키가 있으면 진짜 에이전트 모드
-    if (_apiKey.isNotEmpty) {
-      try {
-        return await _handleWithClaude(input);
-      } catch (_) {
-        // API 실패 시 오프라인 폴백
-      }
+    try {
+      return await _handleWithProxy(input);
+    } catch (_) {
+      // API 실패 시 오프라인 폴백
+      return _handleOffline(input);
     }
-
-    // 오프라인 폴백 (키워드 매칭)
-    return _handleOffline(input);
   }
 
-  /// Claude API로 맥락 기반 응답 생성
-  static Future<AgentResponse> _handleWithClaude(String input) async {
+  /// 백엔드 프록시로 Claude 호출 (v3.0: 키 서버에서 관리)
+  /// v3.1: 최근 5분 대화 메모리 자동 전달
+  static Future<AgentResponse> _handleWithProxy(String input) async {
     final context = await _buildContext();
+    final memory = await ChatMemory.getActive();
 
-    final response = await http.post(
-      Uri.parse('https://api.anthropic.com/v1/messages'),
-      headers: {
-        'x-api-key': _apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: jsonEncode({
-        'model': 'claude-haiku-4-5-20251001',
-        'max_tokens': 500,
-        'system': _buildSystemPrompt(context),
-        'messages': [
-          {'role': 'user', 'content': input},
-        ],
-      }),
-    ).timeout(const Duration(seconds: 15));
-
-    if (response.statusCode != 200) {
-      throw Exception('Claude API error: ${response.statusCode}');
+    // 메모리 있으면 input에 prefix로 붙임 (토큰 절약)
+    String enrichedInput = input;
+    if (memory.isNotEmpty) {
+      final summary = memory
+          .map((m) => '${m['role'] == 'user' ? '사용자' : '도우미'}: ${m['content']}')
+          .join('\n');
+      enrichedInput = '이전 대화:\n$summary\n\n현재 질문: $input';
     }
 
-    final data = jsonDecode(response.body);
-    final text = data['content'][0]['text'] as String;
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/agent'),
+      headers: {
+        if (_authToken.isNotEmpty) 'Authorization': 'Bearer $_authToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'input': enrichedInput,
+        'context': {
+          'profile_name': context['user_name'] ?? '사용자',
+          'disability_level': context['disability_level'] ?? 'mild',
+          'ingredients': context['ingredients'] ?? [],
+          'today_schedule': (context['today_schedule'] as List? ?? [])
+              .map((i) => '${i['time']} ${i['task']}')
+              .toList(),
+          'recent_completions': context['recent_completions'] ?? [],
+          'emergency_contacts': context['contacts'] ?? [],
+        },
+      }),
+    ).timeout(const Duration(seconds: 20));
+
+    if (response.statusCode != 200) {
+      throw Exception('Agent proxy error: ${response.statusCode}');
+    }
+
+    final data = jsonDecode(utf8.decode(response.bodyBytes));
+    final text = (data['text'] ?? '') as String;
+
+    // 메모리에 저장 (원본 input + 응답)
+    await ChatMemory.addTurn(input, text);
 
     return _parseClaudeResponse(text, input);
   }
@@ -125,7 +143,9 @@ class HaruAgent {
     };
   }
 
-  /// Claude 시스템 프롬프트 — 에이전트 역할 정의
+  /// Claude 시스템 프롬프트 — v3.0부터 백엔드에서 관리
+  /// (앱에서는 더 이상 사용 안 함. 레거시 참고용으로만 유지)
+  // ignore: unused_element
   static String _buildSystemPrompt(Map<String, dynamic> ctx) {
     return '''너는 "하루메이트"라는 발달장애인/노인 생활 도우미 AI야.
 사용자의 하루를 도와주는 게 네 역할이야.
