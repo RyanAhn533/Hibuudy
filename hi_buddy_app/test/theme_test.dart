@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hi_buddy_app/theme/app_theme.dart';
+import 'package:harumate/theme/app_theme.dart';
 
 void main() {
   group('HiBuddyColors', () {

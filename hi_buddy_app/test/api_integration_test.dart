@@ -9,7 +9,7 @@
 ///        --dart-define=API_TOKEN=your-token-here
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hi_buddy_app/services/api_service.dart';
+import 'package:harumate/services/api_service.dart';
 
 void main() {
   group('OpenAI API (via backend)', () {

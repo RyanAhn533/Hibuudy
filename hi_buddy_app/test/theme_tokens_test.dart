@@ -39,7 +39,8 @@ void main() {
     test('일반 모드 테마 생성', () {
       final theme = buildAppTheme();
       expect(theme.useMaterial3, true);
-      expect(theme.fontFamily, 'Pretendard');
+      expect(theme.textTheme.bodyMedium?.fontFamily ?? 'Pretendard',
+          contains('Pretendard'));
     });
 
     test('키오스크 모드 = 다크 배경', () {

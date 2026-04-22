@@ -1,8 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hi_buddy_app/models/schedule_item.dart';
-import 'package:hi_buddy_app/models/recipe.dart';
+import 'package:harumate/models/schedule_item.dart';
+import 'package:harumate/models/recipe.dart';
 
 void main() {
+  // 에셋 로드 실패 시 하드코딩 폴백을 사용해야 하므로 바인딩 초기화 + load() 선행.
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    await RecipeData.load();
+  });
+
   group('ScheduleItem', () {
     test('fromJson parses correctly', () {
       final json = {
