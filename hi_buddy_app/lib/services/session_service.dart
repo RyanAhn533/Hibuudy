@@ -62,6 +62,31 @@ class SessionService {
   static const _kPairCodeKey = 'harumate_pair_code';
   static const _kPairedAtKey = 'harumate_paired_at';
   static const _kUserNameKey = 'harumate_user_name';
+  static const _kCityKey = 'harumate_city';
+
+  /// 지원 도시 (위치 권한 없이 사용자 선택식)
+  static const supportedCities = <String, String>{
+    'Seoul': '서울',
+    'Busan': '부산',
+    'Daegu': '대구',
+    'Incheon': '인천',
+    'Gwangju': '광주',
+    'Daejeon': '대전',
+    'Ulsan': '울산',
+    'Suwon': '수원',
+    'Sejong': '세종',
+    'Jeju': '제주',
+  };
+
+  static Future<String> getCity() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_kCityKey) ?? 'Seoul';
+  }
+
+  static Future<void> setCity(String englishName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kCityKey, englishName);
+  }
 
   // ── 온보딩 완료 여부 ──
   static Future<bool> isOnboarded() async {

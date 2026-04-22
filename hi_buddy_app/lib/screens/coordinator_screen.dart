@@ -68,17 +68,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
         items: _schedule,
       );
+      // ScheduleStorage.save가 내부에서 pair_code로 서버 자동 sync
+      // (중복 호출 제거 — v1.2.1 bugfix)
       await ScheduleStorage.save(schedule);
-      // 서버에도 저장 (실패해도 로컬은 이미 저장됨)
-      try {
-        await ApiService.saveScheduleToServer(
-          'default_user', // TODO: 인증 구현 후 실제 user_id로 교체
-          schedule.date,
-          schedule.items.map((i) => i.toJson()).toList(),
-        );
-      } catch (_) {
-        // 서버 저장 실패는 무시 (로컬에는 저장됨)
-      }
       if (mounted) {
         showDialog(
           context: context,
@@ -98,14 +90,14 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('여기 계속하기'),
+                child: const Text('여기서 계속 편집'),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  Navigator.pop(context); // 홈으로 돌아가기
+                  Navigator.pop(context); // 코디 홈으로 복귀
                 },
-                child: const Text('오늘 하루 보기'),
+                child: const Text('오늘 하루 열기'),
               ),
             ],
           ),

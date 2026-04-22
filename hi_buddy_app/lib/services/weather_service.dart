@@ -1,20 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'session_service.dart';
 
 /// 날씨 서비스 — wttr.in 무료 API 사용 (키 불필요)
+/// v1.3: 위치 권한 없이 사용자 선택 도시 기반
 class WeatherService {
   static const String _baseUrl = 'https://wttr.in';
-  static const String _defaultCity = 'Seoul';
   static const String _apiBase = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://hibuudy.onrender.com',
   );
 
   /// 현재 날씨 가져오기
-  /// 반환: {'temp': double, 'description': String, 'condition': String, 'humidity': String, 'feelsLike': double}
+  /// v1.3: city 파라미터 없으면 SessionService의 사용자 선택 도시 사용
   static Future<Map<String, dynamic>> getCurrentWeather({String? city}) async {
-    final location = city ?? _defaultCity;
+    final location = city ?? await SessionService.getCity();
     final url = '$_baseUrl/$location?format=j1&lang=ko';
 
     final response = await http

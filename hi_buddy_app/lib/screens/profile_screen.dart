@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/database_service.dart';
 import '../services/ui_mode_service.dart';
+import '../services/export_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -129,6 +130,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           backgroundColor: HiBuddyColors.success,
         ),
       );
+    }
+  }
+
+  /// v1.3: 엑셀 내보내기 (B2B 복지관 제출용)
+  Future<void> _handleExportExcel() async {
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('엑셀 파일 만드는 중...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      await ExportService.exportAndShare();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('내보내기 실패: $e'),
+            backgroundColor: HiBuddyColors.danger,
+          ),
+        );
+      }
     }
   }
 
@@ -714,6 +739,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // v1.3: B2B 엑셀 내보내기 (복지관 제출용)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _handleExportExcel,
+              icon: const Icon(Icons.download, size: 20),
+              label: const Text('엑셀로 내보내기 (복지관 제출용)'),
+            ),
+          ),
+          const SizedBox(height: 12),
           if (_completionLogs.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),

@@ -21,6 +21,11 @@ dependencies:
   sqflite: ^2.3.0
   # Design System v3.0
   material_symbols_icons: ^4.2.1001
+  # v1.3 B2B
+  excel: ^4.0.6
+  flutter_local_notifications: ^18.0.1
+  share_plus: ^10.1.2
+  timezone: ^0.9.4
 
 dev_dependencies:
   flutter_test:

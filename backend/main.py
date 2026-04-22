@@ -73,6 +73,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.on_event("startup")
 async def startup():
     logger.info("Hi-Buddy API started successfully")
+    # 보안 경고
+    if not APP_AUTH_TOKEN:
+        logger.warning(
+            "⚠️ APP_AUTH_TOKEN 미설정! "
+            "모든 인증 우회됨. Render 환경변수에 APP_AUTH_TOKEN 설정 필수."
+        )
 
 
 # ── Auth Dependency ─────────────────────────────────────────────────
@@ -350,6 +356,80 @@ async def add_waitlist(request: Request, body: WaitlistRequest):
     return {"status": "ok"}
 
 
+# ── Error Reporting (경량 Crashlytics 대체) ────────────────────
+
+ERROR_DB = Path(__file__).parent / "errors.db"
+
+
+def _init_error_db():
+    try:
+        with sqlite3.connect(str(ERROR_DB)) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS errors (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ts TEXT,
+                    tag TEXT,
+                    msg TEXT,
+                    stack TEXT,
+                    platform TEXT,
+                    received_at TEXT DEFAULT (datetime('now'))
+                )
+            """)
+    except Exception as e:
+        logger.warning("errors db init: %s", e)
+
+
+_init_error_db()
+
+
+@app.post("/api/errors")
+@limiter.limit("30/minute")
+async def collect_errors(request: Request):
+    """Flutter 클라이언트 크래시 로그 수집 (JSONL 형식)."""
+    body = await request.body()
+    lines = body.decode("utf-8", errors="ignore").strip().split("\n")
+    saved = 0
+    try:
+        with sqlite3.connect(str(ERROR_DB)) as conn:
+            for line in lines:
+                if not line.strip():
+                    continue
+                try:
+                    entry = json.loads(line)
+                    conn.execute(
+                        "INSERT INTO errors (ts, tag, msg, stack, platform) VALUES (?, ?, ?, ?, ?)",
+                        (
+                            entry.get("ts", ""),
+                            entry.get("tag", "unknown"),
+                            entry.get("msg", "")[:500],
+                            entry.get("stack", "")[:2000],
+                            entry.get("platform", ""),
+                        ),
+                    )
+                    saved += 1
+                except Exception:
+                    continue
+            conn.commit()
+    except Exception as e:
+        logger.warning("error collect: %s", e)
+        return Response(status_code=500)
+    return {"saved": saved}
+
+
+@app.get("/api/errors/recent")
+async def recent_errors(_=Depends(verify_token), limit: int = 50):
+    """관리자용: 최근 에러 조회 (토큰 필요)."""
+    try:
+        with sqlite3.connect(str(ERROR_DB)) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM errors ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+            return {"errors": [dict(r) for r in rows]}
+    except Exception:
+        return {"errors": []}
+
+
 @app.get("/api/waitlist/count")
 async def waitlist_count(_=Depends(verify_token)):
     """관리자용 집계 (토큰 있을 때만)."""
@@ -493,7 +573,7 @@ JSON으로 응답하지 말고, 자연스러운 한국어 문장만 출력해라
 
 @app.post("/api/agent")
 @limiter.limit("20/minute")
-async def agent_chat(request: Request, body: AgentRequest, _=Depends(verify_token)):
+async def agent_chat(request: Request, body: AgentRequest, _t=Depends(verify_token)):
     """맥락 기반 대화 에이전트.
     v3.1: Gemini 2.0 Flash 기본 (무료 15 RPM), CLAUDE_API_KEY 있으면 Claude 자동 승급.
     """
@@ -573,7 +653,7 @@ CLOTHING_PROMPT = """너는 따뜻한 생활 도우미야.
 
 @app.post("/api/clothing")
 @limiter.limit("30/minute")
-async def clothing_advice(request: Request, body: ClothingRequest):
+async def clothing_advice(request: Request, body: ClothingRequest, _t=Depends(verify_token)):
     """온도·날씨·이름 기반 옷 추천 (AI)."""
     name_prefix = f"{body.name.strip()}님, " if body.name.strip() else ""
     user_msg = (

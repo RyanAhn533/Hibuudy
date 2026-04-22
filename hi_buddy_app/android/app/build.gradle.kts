@@ -16,13 +16,15 @@ if (keyPropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.harumate.app"
+    namespace = "com.harumate.care"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // v1.3: flutter_local_notifications 요구사항
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -30,7 +32,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.harumate.app"
+        applicationId = "com.harumate.care"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -67,4 +69,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // v1.3: flutter_local_notifications용 desugaring 라이브러리
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
