@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>하루메이트 · 복지관 대시보드 (Preview)</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css" rel="stylesheet">
+<style>
+  :root{
+    --primary:#4F7CFF;--primarySoft:#E6EEFF;--accent:#FFB547;
+    --success:#3FB765;--danger:#E8594A;
+    --n50:#FAFAFA;--n100:#F4F5F7;--n200:#E5E7EB;
+    --n400:#9AA0A6;--n700:#3A3D42;--n900:#1A1C1F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Pretendard Variable','Pretendard','Apple SD Gothic Neo',sans-serif;letter-spacing:-0.2px}
+  body{background:var(--n50);color:var(--n900);min-height:100vh}
+
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+  /* Sidebar */
+  aside{background:white;border-right:1px solid var(--n200);padding:24px 16px}
+  .logo{display:flex;align-items:center;gap:8px;margin-bottom:28px;padding:0 8px}
+  .logo-icon{
+    width:36px;height:36px;border-radius:10px;
+    background:linear-gradient(135deg,#4F7CFF,#6B8EFF);
+    display:flex;align-items:center;justify-content:center;
+    color:white;font-weight:800;font-size:18px;
+  }
+  .logo-text{font-weight:800;font-size:17px}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav a{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;
+    color:var(--n700);text-decoration:none;font-weight:600;font-size:13px;
+  }
+  .nav a.active{background:var(--primarySoft);color:var(--primary)}
+  .nav a:hover:not(.active){background:var(--n100)}
+  .nav-icon{width:18px;height:18px;opacity:0.8}
+
+  /* Main */
+  main{padding:32px 40px;max-width:1200px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}
+  .topbar h1{font-size:24px;font-weight:800;letter-spacing:-0.5px}
+  .topbar .sub{color:var(--n400);font-size:13px;margin-top:2px}
+  .pill{
+    padding:4px 10px;border-radius:14px;font-size:11px;font-weight:700;
+    background:var(--primarySoft);color:var(--primary);
+  }
+  .btn{
+    padding:10px 16px;border-radius:8px;border:none;font-weight:700;
+    background:var(--primary);color:white;cursor:pointer;font-size:13px;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn.ghost{background:white;border:1px solid var(--n200);color:var(--n700)}
+  .btn.success{background:var(--success)}
+
+  /* Cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+  .stat{background:white;padding:20px;border-radius:14px;border:1px solid var(--n200)}
+  .stat .label{font-size:11px;color:var(--n400);font-weight:700;letter-spacing:1px;text-transform:uppercase}
+  .stat .value{font-size:28px;font-weight:800;margin-top:6px;letter-spacing:-1px}
+  .stat .delta{font-size:11px;color:var(--success);font-weight:600;margin-top:4px}
+
+  /* Table */
+  .card{background:white;border-radius:14px;border:1px solid var(--n200);padding:24px;margin-bottom:20px}
+  .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .card-head h2{font-size:15px;font-weight:800}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:left;padding:10px 12px;background:var(--n100);font-weight:700;color:var(--n700);font-size:11px;letter-spacing:0.5px;text-transform:uppercase}
+  thead th:first-child{border-top-left-radius:6px;border-bottom-left-radius:6px}
+  thead th:last-child{border-top-right-radius:6px;border-bottom-right-radius:6px}
+  tbody td{padding:12px;border-bottom:1px solid var(--n100)}
+  tbody tr:last-child td{border-bottom:none}
+  .user-cell{display:flex;align-items:center;gap:10px}
+  .avatar{width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px}
+  .progress-bar{width:80px;height:6px;background:var(--n200);border-radius:3px;overflow:hidden}
+  .progress-bar .fill{height:100%;background:var(--success)}
+  .status{padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700}
+  .status.active{background:#E7F6EC;color:var(--success)}
+  .status.warning{background:#FFF4E0;color:#B07800}
+  .status.away{background:var(--n100);color:var(--n400)}
+
+  /* Preview banner */
+  .banner{
+    background:linear-gradient(135deg,#FFF4E0,#FFE4B8);
+    border:1px solid var(--accent);border-radius:14px;
+    padding:18px 24px;margin-bottom:24px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .banner .icon{font-size:28px}
+  .banner h3{font-size:15px;font-weight:800;margin-bottom:2px}
+  .banner p{font-size:13px;color:var(--n700)}
+
+  @media (max-width:800px){
+    .app{grid-template-columns:1fr}
+    aside{display:none}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    main{padding:20px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="logo">
+      <div class="logo-icon">하</div>
+      <div class="logo-text">하루메이트<br><span style="font-size:10px;color:var(--n400);font-weight:500">복지관 · Preview</span></div>
+    </div>
+    <nav class="nav">
+      <a class="active" href="#">📊 대시보드</a>
+      <a href="#">👥 이용자 관리</a>
+      <a href="#">📅 오늘 일정</a>
+      <a href="#">📈 수행 기록</a>
+      <a href="#">🔔 알림 관리</a>
+      <a href="#">📤 엑셀 내보내기</a>
+      <a href="#">⚙️ 기관 설정</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div>
+        <h1>대시보드 <span class="pill">Preview</span></h1>
+        <div class="sub">서부장애인종합복지관 · 자립생활팀 · 김선생님</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost">📄 보고서 PDF</button>
+        <button class="btn">+ 이용자 추가</button>
+      </div>
+    </div>
+
+    <div class="banner">
+      <div class="icon">🏗️</div>
+      <div>
+        <h3>웹 대시보드는 2026년 3분기 출시 예정</h3>
+        <p>현재 모바일 앱에서 "엑셀 내보내기" 기능으로 동일한 데이터 확인 가능합니다. 시범 기관 모집 중.</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="label">관리 이용자</div>
+        <div class="value">8명</div>
+        <div class="delta">+2 이번 달</div>
+      </div>
+      <div class="stat">
+        <div class="label">이번 주 완료율</div>
+        <div class="value">78%</div>
+        <div class="delta">▲ 13% 지난주 대비</div>
+      </div>
+      <div class="stat">
+        <div class="label">생성된 일정</div>
+        <div class="value">42건</div>
+        <div class="delta">AI 생성 38건</div>
+      </div>
+      <div class="stat">
+        <div class="label">SOS 요청</div>
+        <div class="value">1건</div>
+        <div class="delta" style="color:var(--danger)">지난 주 0건</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>이용자 현황 (오늘)</h2>
+        <button class="btn ghost" style="font-size:11px;padding:6px 10px">전체 보기 →</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>이용자</th>
+            <th>오늘 진행</th>
+            <th>현재 활동</th>
+            <th>상태</th>
+            <th>마지막 접속</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="user-cell">
+                <div class="avatar">유</div>
+                <div><div style="font-weight:700">유진</div><div style="font-size:11px;color:var(--n400)">경증 · 크게 모드</div></div>
+              </div>
+            </td>
+            <td><div class="user-cell"><div class="progress-bar"><div class="fill" style="width:83%"></div></div>5/6</div></td>
+            <td>요리 · 점심</td>
+            <td><span class="status active">활동 중</span></td>
+            <td>2분 전</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="user-cell">
+                <div class="avatar" style="background:var(--accent)">민</div>
+                <div><div style="font-weight:700">민수</div><div style="font-size:11px;color:var(--n400)">중등도 · 간단 모드</div></div>
+              </div>
+            </td>
+            <td><div class="user-cell"><div class="progress-bar"><div class="fill" style="width:50%"></div></div>3/6</div></td>
+            <td>운동 · 스트레칭</td>
+            <td><span class="status active">활동 중</span></td>
+            <td>5분 전</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="user-cell">
+                <div class="avatar" style="background:var(--success)">지</div>
+                <div><div style="font-weight:700">지영</div><div style="font-size:11px;color:var(--n400)">경증 · 일반 모드</div></div>
+              </div>
+            </td>
+            <td><div class="user-cell"><div class="progress-bar"><div class="fill" style="width:100%"></div></div>6/6</div></td>
+            <td>완료 ✓</td>
+            <td><span class="status active">활동 중</span></td>
+            <td>1시간 전</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="user-cell">
+                <div class="avatar" style="background:var(--danger)">준</div>
+                <div><div style="font-weight:700">준호</div><div style="font-size:11px;color:var(--n400)">중증 · 키오스크 모드</div></div>
+              </div>
+            </td>
+            <td><div class="user-cell"><div class="progress-bar"><div class="fill" style="width:33%"></div></div>2/6</div></td>
+            <td>쉬는 시간</td>
+            <td><span class="status warning">도움 필요</span></td>
+            <td>15분 전</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="user-cell">
+                <div class="avatar" style="background:var(--n400)">해</div>
+                <div><div style="font-weight:700">해나</div><div style="font-size:11px;color:var(--n400)">경증 · 크게 모드</div></div>
+              </div>
+            </td>
+            <td><div class="user-cell"><div class="progress-bar"><div class="fill" style="width:0%"></div></div>0/6</div></td>
+            <td>미접속</td>
+            <td><span class="status away">오프라인</span></td>
+            <td>어제 18:24</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>이번 주 활동별 완료율</h2>
+        <div style="font-size:11px;color:var(--n400)">4월 15일 ~ 21일</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div style="padding:14px;background:var(--n100);border-radius:10px">
+          <div style="font-size:11px;color:var(--n400);font-weight:700">🍳 요리</div>
+          <div style="font-size:20px;font-weight:800;margin-top:4px">85%</div>
+          <div class="progress-bar" style="width:100%;margin-top:6px"><div class="fill" style="width:85%"></div></div>
+        </div>
+        <div style="padding:14px;background:var(--n100);border-radius:10px">
+          <div style="font-size:11px;color:var(--n400);font-weight:700">🏃 운동</div>
+          <div style="font-size:20px;font-weight:800;margin-top:4px">62%</div>
+          <div class="progress-bar" style="width:100%;margin-top:6px"><div class="fill" style="width:62%;background:var(--accent)"></div></div>
+        </div>
+        <div style="padding:14px;background:var(--n100);border-radius:10px">
+          <div style="font-size:11px;color:var(--n400);font-weight:700">👕 옷 입기</div>
+          <div style="font-size:20px;font-weight:800;margin-top:4px">90%</div>
+          <div class="progress-bar" style="width:100%;margin-top:6px"><div class="fill" style="width:90%"></div></div>
+        </div>
+        <div style="padding:14px;background:var(--n100);border-radius:10px">
+          <div style="font-size:11px;color:var(--n400);font-weight:700">💊 복약</div>
+          <div style="font-size:20px;font-weight:800;margin-top:4px">95%</div>
+          <div class="progress-bar" style="width:100%;margin-top:6px"><div class="fill" style="width:95%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;color:var(--n400);font-size:11px;padding:20px">
+      하루메이트 B2B 웹 대시보드 · v0.1 Preview · 2026-04-22 생성
+    </div>
+  </main>
+</div>
+</body>
+</html>

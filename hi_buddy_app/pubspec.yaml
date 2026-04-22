@@ -26,6 +26,8 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   share_plus: ^10.1.2
   timezone: ^0.9.4
+  # v1.3 성능
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:
@@ -37,20 +39,17 @@ flutter:
   assets:
     - assets/data/
 
-  # ── Pretendard Variable (한글 최적화 폰트) ──
-  # 폰트 파일 경로: assets/fonts/PretendardVariable.ttf
-  # 다운로드: https://github.com/orioncactus/pretendard/releases
-  # 활성화하려면 파일 받은 후 아래 주석 해제
-  # fonts:
-  #   - family: Pretendard
-  #     fonts:
-  #       - asset: assets/fonts/PretendardVariable.ttf
-  #         weight: 400
-  #       - asset: assets/fonts/PretendardVariable.ttf
-  #         weight: 500
-  #       - asset: assets/fonts/PretendardVariable.ttf
-  #         weight: 600
-  #       - asset: assets/fonts/PretendardVariable.ttf
-  #         weight: 700
-  #       - asset: assets/fonts/PretendardVariable.ttf
-  #         weight: 800
+  # Pretendard Variable (한글 최적화 폰트) · v1.3에서 활성화
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/PretendardVariable.ttf
+          weight: 400
+        - asset: assets/fonts/PretendardVariable.ttf
+          weight: 500
+        - asset: assets/fonts/PretendardVariable.ttf
+          weight: 600
+        - asset: assets/fonts/PretendardVariable.ttf
+          weight: 700
+        - asset: assets/fonts/PretendardVariable.ttf
+          weight: 800

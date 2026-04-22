@@ -79,29 +79,36 @@ class SosButton extends StatelessWidget {
   static Widget? floatingButton(BuildContext context) {
     if (UiModeService.isNormal) return null;
 
-    return SizedBox(
-      width: 80,
-      height: 80,
-      child: FloatingActionButton(
-        heroTag: 'sos_fab',
-        onPressed: () => _callEmergencyStatic(context),
-        backgroundColor: Colors.red,
-        elevation: 8,
-        shape: const CircleBorder(),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.phone, color: Colors.white, size: 28),
-            SizedBox(height: 2),
-            Text(
-              '도와주세요',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-              ),
+    return Semantics(
+      button: true,
+      label: '긴급 전화 SOS 버튼. 누르면 가족이나 119에 바로 전화를 걸어요',
+      child: Tooltip(
+        message: 'SOS · 긴급 전화',
+        child: SizedBox(
+          width: 80,
+          height: 80,
+          child: FloatingActionButton(
+            heroTag: 'sos_fab',
+            onPressed: () => _callEmergencyStatic(context),
+            backgroundColor: Colors.red,
+            elevation: 8,
+            shape: const CircleBorder(),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.phone, color: Colors.white, size: 28),
+                SizedBox(height: 2),
+                Text(
+                  '도와주세요',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
