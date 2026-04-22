@@ -416,6 +416,62 @@ async def collect_errors(request: Request):
     return {"saved": saved}
 
 
+@app.get("/api/metrics")
+@limiter.limit("30/minute")
+async def metrics(_=Depends(verify_token)):
+    """관리자용 통합 메트릭 (토큰 필요)."""
+    result: dict = {
+        "ts": __import__("datetime").datetime.utcnow().isoformat(),
+        "env": {
+            "gemini": bool(GEMINI_API_KEY),
+            "groq": bool(GROQ_API_KEY),
+            "claude": bool(CLAUDE_API_KEY),
+            "auth": bool(APP_AUTH_TOKEN),
+        },
+    }
+    # 에러 수집
+    try:
+        with sqlite3.connect(str(ERROR_DB)) as conn:
+            result["errors_total"] = conn.execute(
+                "SELECT COUNT(*) FROM errors"
+            ).fetchone()[0]
+            result["errors_24h"] = conn.execute(
+                "SELECT COUNT(*) FROM errors WHERE datetime(received_at) > datetime('now', '-1 day')"
+            ).fetchone()[0]
+    except Exception:
+        result["errors_total"] = 0
+        result["errors_24h"] = 0
+
+    # waitlist
+    try:
+        with sqlite3.connect(str(WAITLIST_DB)) as conn:
+            result["waitlist_total"] = conn.execute(
+                "SELECT COUNT(*) FROM waitlist"
+            ).fetchone()[0]
+            rows = conn.execute(
+                "SELECT segment, COUNT(*) FROM waitlist GROUP BY segment"
+            ).fetchall()
+            result["waitlist_by_segment"] = {r[0]: r[1] for r in rows}
+    except Exception:
+        result["waitlist_total"] = 0
+        result["waitlist_by_segment"] = {}
+
+    # schedule DB
+    try:
+        with sqlite3.connect(str(SCHEDULE_DB)) as conn:
+            result["schedules_stored"] = conn.execute(
+                "SELECT COUNT(*) FROM schedules"
+            ).fetchone()[0]
+            result["unique_users"] = conn.execute(
+                "SELECT COUNT(DISTINCT user_id) FROM schedules"
+            ).fetchone()[0]
+    except Exception:
+        result["schedules_stored"] = 0
+        result["unique_users"] = 0
+
+    return result
+
+
 @app.get("/api/errors/recent")
 async def recent_errors(_=Depends(verify_token), limit: int = 50):
     """관리자용: 최근 에러 조회 (토큰 필요)."""
