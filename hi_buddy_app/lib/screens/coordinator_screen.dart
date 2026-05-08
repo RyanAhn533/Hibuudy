@@ -315,7 +315,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                         ),
                       )
                     : const Icon(Icons.auto_awesome),
-                label: Text(_isGenerating ? '일정 만드는 중... (최대 30초)' : '일정 자동 만들기'),
+                label: Text(_isGenerating ? '일정 만드는 중... (최대 30초)' : '쉬운 일정 만들기'),
               ),
             ),
 

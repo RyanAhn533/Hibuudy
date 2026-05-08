@@ -276,7 +276,7 @@ class _HomeCoordinatorScreenState extends State<HomeCoordinatorScreen> {
                   ),
                   _QuickAction(
                     icon: Symbols.settings,
-                    label: '프로필',
+                    label: '내 정보',
                     subtitle: '이름 · 연락처',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _load()),
                   ),

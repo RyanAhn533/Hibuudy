@@ -456,3 +456,71 @@ ThemeData buildAppTheme({bool kioskMode = false}) {
     visualDensity: VisualDensity.standard,
   );
 }
+
+/// ══════════════════════════════════════════════════════════
+/// HaruText — Typography utility (HaruTokens 재사용)
+/// 인라인 TextStyle 대신 사용. 디자인 시스템 일관성 강제.
+/// ══════════════════════════════════════════════════════════
+class HaruText {
+  HaruText._();
+
+  static const display = TextStyle(
+    fontSize: HaruTokens.displaySize,
+    fontWeight: FontWeight.w800,
+    color: HaruTokens.n900,
+    letterSpacing: -1.0,
+    height: 1.1,
+    fontFamily: HaruTokens.fontFamily,
+    fontFamilyFallback: HaruTokens.fontFamilyFallback,
+  );
+  static const h1 = TextStyle(
+    fontSize: HaruTokens.h1Size,
+    fontWeight: FontWeight.w800,
+    color: HaruTokens.n900,
+    letterSpacing: -0.5,
+    height: 1.25,
+    fontFamily: HaruTokens.fontFamily,
+    fontFamilyFallback: HaruTokens.fontFamilyFallback,
+  );
+  static const h2 = TextStyle(
+    fontSize: HaruTokens.h2Size,
+    fontWeight: FontWeight.w700,
+    color: HaruTokens.n900,
+    letterSpacing: -0.3,
+    height: 1.3,
+    fontFamily: HaruTokens.fontFamily,
+    fontFamilyFallback: HaruTokens.fontFamilyFallback,
+  );
+  static const h3 = TextStyle(
+    fontSize: HaruTokens.h3Size,
+    fontWeight: FontWeight.w700,
+    color: HaruTokens.n900,
+    height: 1.35,
+    fontFamily: HaruTokens.fontFamily,
+    fontFamilyFallback: HaruTokens.fontFamilyFallback,
+  );
+  static const body = TextStyle(
+    fontSize: HaruTokens.bodySize,
+    fontWeight: FontWeight.w500,
+    color: HaruTokens.n900,
+    height: 1.5,
+    fontFamily: HaruTokens.fontFamily,
+    fontFamilyFallback: HaruTokens.fontFamilyFallback,
+  );
+  static const small = TextStyle(
+    fontSize: HaruTokens.smallSize,
+    fontWeight: FontWeight.w500,
+    color: HaruTokens.n700,
+    height: 1.4,
+    fontFamily: HaruTokens.fontFamily,
+    fontFamilyFallback: HaruTokens.fontFamilyFallback,
+  );
+  static const tiny = TextStyle(
+    fontSize: HaruTokens.tinySize,
+    fontWeight: FontWeight.w500,
+    color: HaruTokens.n400,
+    height: 1.4,
+    fontFamily: HaruTokens.fontFamily,
+    fontFamilyFallback: HaruTokens.fontFamilyFallback,
+  );
+}

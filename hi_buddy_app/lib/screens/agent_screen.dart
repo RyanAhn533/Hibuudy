@@ -155,7 +155,7 @@ class _AgentScreenState extends State<AgentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('도우미'),
+        title: const Text('하루 도우미'),
       ),
       body: Column(
         children: [
@@ -194,7 +194,7 @@ class _AgentScreenState extends State<AgentScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
-              isUser ? '나' : '도우미',
+              isUser ? '나' : '하루 도우미',
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
