@@ -644,6 +644,7 @@ class _UserScreenState extends State<UserScreen> {
             title: '오늘 요리 안내',
             steps: item.guideScript,
             color: color,
+            singleFocusMode: UiModeService.isKiosk,
           ),
 
         if (item.menus.isNotEmpty) ...[
@@ -759,6 +760,7 @@ class _UserScreenState extends State<UserScreen> {
           title: '레시피 단계',
           steps: recipe.steps,
           color: HiBuddyColors.cooking,
+          singleFocusMode: UiModeService.isKiosk,
         ),
       ],
     );
@@ -803,6 +805,7 @@ class _UserScreenState extends State<UserScreen> {
               title: routine.title,
               steps: routine.steps,
               color: color,
+              singleFocusMode: UiModeService.isKiosk,
             );
           },
         ),
@@ -813,6 +816,7 @@ class _UserScreenState extends State<UserScreen> {
             title: '추가 안내',
             steps: item.guideScript,
             color: color,
+            singleFocusMode: UiModeService.isKiosk,
           ),
         ],
       ],
@@ -838,6 +842,7 @@ class _UserScreenState extends State<UserScreen> {
       title: '안내',
       steps: item.guideScript,
       color: color,
+      singleFocusMode: UiModeService.isKiosk,
     );
   }
 
