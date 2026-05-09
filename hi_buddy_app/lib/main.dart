@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -15,6 +16,8 @@ void main() async {
   ErrorReporter.install();
 
   WidgetsFlutterBinding.ensureInitialized();
+  // intl 한국어 locale 초기화 (DateFormat('...', 'ko') 사용 전 필수)
+  await initializeDateFormatting('ko_KR', null);
   await RecipeData.load();
   await DatabaseService.db; // DB 초기화
   await UiModeService.loadMode(); // UI 모드 로드
