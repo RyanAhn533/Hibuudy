@@ -659,5 +659,78 @@ class HaruTokensV2 {
   /// 카운트다운 / 진행 인디케이터 갱신 주기.
   static const motionTick = Duration(seconds: 1);
   /// curves는 표준 사용 (Curves.easeOut). 커스텀 곡선 X.
+
+  // ─── Activity Type Mapping (9 type → 4 group) ────────────
+  /// 활동 타입 9개를 4 컬러 그룹으로 매핑 (P1 합의: 인지 부담 ↓).
+  /// type 값은 backend / DB / schedule_item.dart 에서 사용하는 대문자 string.
+  static Color activityMainFor(String type) {
+    switch (type.toUpperCase()) {
+      case 'COOKING':
+      case 'MEAL':
+      case 'SNACK':
+        return actMealMain;
+      case 'HEALTH':
+      case 'EXERCISE':
+      case 'WALK':
+      case 'CLOTHING':
+        return actBodyMain;
+      case 'LEISURE':
+      case 'REST':
+      case 'SLEEP':
+      case 'MORNING_BRIEFING':
+      case 'NIGHT_WRAPUP':
+        return actRestMain;
+      case 'GENERAL':
+      case 'ROUTINE':
+      case 'TRANSITION':
+      default:
+        return actGenMain;
+    }
+  }
+
+  static Color activitySoftFor(String type) {
+    switch (type.toUpperCase()) {
+      case 'COOKING':
+      case 'MEAL':
+      case 'SNACK':
+        return actMealSoft;
+      case 'HEALTH':
+      case 'EXERCISE':
+      case 'WALK':
+      case 'CLOTHING':
+        return actBodySoft;
+      case 'LEISURE':
+      case 'REST':
+      case 'SLEEP':
+      case 'MORNING_BRIEFING':
+      case 'NIGHT_WRAPUP':
+        return actRestSoft;
+      default:
+        return actGenSoft;
+    }
+  }
+
+  /// 활동 그룹 라벨 (디버그/접근성용).
+  static String activityGroupLabel(String type) {
+    switch (type.toUpperCase()) {
+      case 'COOKING':
+      case 'MEAL':
+      case 'SNACK':
+        return '식사';
+      case 'HEALTH':
+      case 'EXERCISE':
+      case 'WALK':
+      case 'CLOTHING':
+        return '신체';
+      case 'LEISURE':
+      case 'REST':
+      case 'SLEEP':
+      case 'MORNING_BRIEFING':
+      case 'NIGHT_WRAPUP':
+        return '휴식';
+      default:
+        return '일과';
+    }
+  }
 }
 
