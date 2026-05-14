@@ -55,10 +55,10 @@ class StepCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: HaruTokens.space1),
         padding: const EdgeInsets.all(HaruTokens.space4),
         decoration: BoxDecoration(
-          color: isCompleted ? HaruTokens.successSoft : HaruTokens.white,
+          color: isCompleted ? HaruTokensV2.successSoft : HaruTokensV2.surfaceCard,
           borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
           border: Border.all(
-            color: isCompleted ? HiBuddyColors.success : HiBuddyColors.border,
+            color: isCompleted ? HaruTokensV2.success : HaruTokensV2.borderSoft,
           ),
         ),
         child: Row(
@@ -73,7 +73,7 @@ class StepCard extends StatelessWidget {
                   child: Checkbox(
                     value: isCompleted,
                     onChanged: (v) => onCompletedChanged?.call(v ?? false),
-                    activeColor: HiBuddyColors.success,
+                    activeColor: HaruTokensV2.success,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
                     ),
@@ -85,7 +85,7 @@ class StepCard extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: const BoxDecoration(
-                  color: HiBuddyColors.success,
+                  color: HaruTokensV2.success,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -103,7 +103,7 @@ class StepCard extends StatelessWidget {
                 child: Text(
                   '$stepNumber',
                   style: HaruText.body.copyWith(
-                    color: HaruTokens.white,
+                    color: HaruTokensV2.surfaceCard,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -113,7 +113,7 @@ class StepCard extends StatelessWidget {
               child: Text(
                 text,
                 style: HaruText.body.copyWith(
-                  color: HiBuddyColors.text,
+                  color: HaruTokensV2.inkPrimary,
                   decoration: isCompleted ? TextDecoration.lineThrough : null,
                 ),
               ),
@@ -124,7 +124,7 @@ class StepCard extends StatelessWidget {
                 height: HaruTokens.minTouchTarget,
                 child: IconButton(
                   icon: const Icon(Icons.timer, size: 28),
-                  color: HiBuddyColors.cooking,
+                  color: HaruTokensV2.actMealMain,
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -282,16 +282,16 @@ class _StepsListState extends State<StepsList> {
             width: double.infinity,
             padding: const EdgeInsets.all(HaruTokens.space5),
             decoration: BoxDecoration(
-              color: HiBuddyColors.successBg,
+              color: HaruTokensV2.successSoft,
               borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
-              border: Border.all(color: HiBuddyColors.success, width: 2),
+              border: Border.all(color: HaruTokensV2.success, width: 2),
             ),
             child: Column(
               children: [
                 Text(
                   '잘했어요! 다 했어요!',
                   style: HaruText.h2.copyWith(
-                    color: const Color(0xFF065F46),
+                    color: HaruTokensV2.success,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -299,7 +299,7 @@ class _StepsListState extends State<StepsList> {
                 Text(
                   '모든 단계를 완료했어요!',
                   style: HaruText.body.copyWith(
-                    color: const Color(0xFF047857),
+                    color: HaruTokensV2.inkBody,
                   ),
                 ),
               ],
@@ -373,7 +373,7 @@ class _SingleFocusStep extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(HaruTokens.space6),
         decoration: BoxDecoration(
-          color: HaruTokens.white,
+          color: HaruTokensV2.surfaceCard,
           borderRadius: BorderRadius.circular(HaruTokens.radiusXl),
           border: Border.all(color: color, width: 2),
         ),
@@ -391,7 +391,7 @@ class _SingleFocusStep extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 '${stepIndex + 1}',
-                style: HaruText.h1.copyWith(color: HaruTokens.white),
+                style: HaruText.h1.copyWith(color: HaruTokensV2.surfaceCard),
               ),
             ),
             const SizedBox(height: HaruTokens.space4),
@@ -410,8 +410,8 @@ class _SingleFocusStep extends StatelessWidget {
                 icon: const Icon(Icons.check_circle, size: 32),
                 label: Text('다 했어요', style: HaruText.h2),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: HiBuddyColors.success,
-                  foregroundColor: HaruTokens.white,
+                  backgroundColor: HaruTokensV2.success,
+                  foregroundColor: HaruTokensV2.surfaceCard,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(HaruTokens.radiusLg),
                   ),
