@@ -205,7 +205,7 @@ class _UserScreenState extends State<UserScreen> {
               SizedBox(height: 16),
               Text(
                 '일정을 불러오고 있어요...',
-                style: TextStyle(fontSize: 18, color: HiBuddyColors.textMuted),
+                style: TextStyle(fontSize: 18, color: HaruTokensV2.inkMuted),
               ),
             ],
           ),
@@ -227,13 +227,13 @@ class _UserScreenState extends State<UserScreen> {
                   width: 100,
                   height: 100,
                   decoration: const BoxDecoration(
-                    color: HiBuddyColors.primaryBg,
+                    color: HaruTokensV2.brandWarmSoft,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.calendar_today,
                     size: 48,
-                    color: HiBuddyColors.primary,
+                    color: HaruTokensV2.brandWarm,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -243,7 +243,7 @@ class _UserScreenState extends State<UserScreen> {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
-                    color: HiBuddyColors.text,
+                    color: HaruTokensV2.inkPrimary,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -252,7 +252,7 @@ class _UserScreenState extends State<UserScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18,
-                    color: HiBuddyColors.textMuted,
+                    color: HaruTokensV2.inkMuted,
                     height: 1.6,
                   ),
                 ),
@@ -325,7 +325,7 @@ class _UserScreenState extends State<UserScreen> {
                         color: const Color(0xFFFFF3CD),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: HiBuddyColors.warning,
+                          color: HaruTokensV2.warn,
                           width: 2,
                         ),
                       ),
@@ -333,7 +333,7 @@ class _UserScreenState extends State<UserScreen> {
                         children: [
                           const Icon(
                             Icons.wifi_off,
-                            color: HiBuddyColors.warning,
+                            color: HaruTokensV2.warn,
                             size: 28,
                           ),
                           const SizedBox(width: 12),
@@ -364,7 +364,7 @@ class _UserScreenState extends State<UserScreen> {
                       width: double.infinity,
                       padding: EdgeInsets.all(isAccessible ? 28 : 20),
                       decoration: BoxDecoration(
-                        color: HiBuddyColors.primaryBg,
+                        color: HaruTokensV2.brandWarmSoft,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Column(
@@ -373,7 +373,7 @@ class _UserScreenState extends State<UserScreen> {
                             '아직 첫 활동 전이에요.',
                             style: TextStyle(
                               fontSize: isAccessible ? 24 : 18,
-                              color: HiBuddyColors.text,
+                              color: HaruTokensV2.inkPrimary,
                             ),
                           ),
                           if (next != null) ...[
@@ -634,7 +634,7 @@ class _UserScreenState extends State<UserScreen> {
   }
 
   Widget _buildCookingView(ScheduleItem item) {
-    final color = HiBuddyColors.cooking;
+    final color = HaruTokensV2.actMealMain;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -667,7 +667,7 @@ class _UserScreenState extends State<UserScreen> {
                 ),
                 selected: isSelected,
                 selectedColor: color,
-                backgroundColor: HiBuddyColors.cookingBg,
+                backgroundColor: HaruTokensV2.actMealSoft,
                 onSelected: (_) {
                   setState(() => _selectedMenu = m.name);
                 },
@@ -685,7 +685,7 @@ class _UserScreenState extends State<UserScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: HiBuddyColors.cookingBg,
+              color: HaruTokensV2.actMealSoft,
               borderRadius: BorderRadius.circular(14),
               border: Border(
                 left: BorderSide(color: color, width: 5),
@@ -712,7 +712,7 @@ class _UserScreenState extends State<UserScreen> {
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: HiBuddyColors.primaryBg,
+          color: HaruTokensV2.brandWarmSoft,
           borderRadius: BorderRadius.circular(14),
         ),
         child: const Text(
@@ -734,7 +734,7 @@ class _UserScreenState extends State<UserScreen> {
             children: recipe.tools.map((t) {
               return Chip(
                 label: Text(t),
-                backgroundColor: HiBuddyColors.cookingBg,
+                backgroundColor: HaruTokensV2.actMealSoft,
                 labelStyle: const TextStyle(color: Color(0xFF9A3412)),
               );
             }).toList(),
@@ -750,7 +750,7 @@ class _UserScreenState extends State<UserScreen> {
             children: recipe.ingredients.map((i) {
               return Chip(
                 label: Text(i),
-                backgroundColor: HiBuddyColors.generalBg,
+                backgroundColor: HaruTokensV2.actGenSoft,
               );
             }).toList(),
           ),
@@ -759,7 +759,7 @@ class _UserScreenState extends State<UserScreen> {
         StepsList(
           title: '레시피 단계',
           steps: recipe.steps,
-          color: HiBuddyColors.cooking,
+          color: HaruTokensV2.actMealMain,
           singleFocusMode: UiModeService.isKiosk,
         ),
       ],
@@ -767,7 +767,7 @@ class _UserScreenState extends State<UserScreen> {
   }
 
   Widget _buildHealthView(ScheduleItem item) {
-    final color = HiBuddyColors.health;
+    final color = HaruTokensV2.actBodyMain;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -867,7 +867,7 @@ class _UserScreenState extends State<UserScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isSelected ? color : HiBuddyColors.border,
+                color: isSelected ? color : HaruTokensV2.borderSoft,
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -877,7 +877,7 @@ class _UserScreenState extends State<UserScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? color : HiBuddyColors.text,
+                color: isSelected ? color : HaruTokensV2.inkPrimary,
               ),
             ),
           ),
@@ -891,7 +891,7 @@ class _UserScreenState extends State<UserScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       decoration: const BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: HiBuddyColors.primary, width: 3),
+          bottom: BorderSide(color: HaruTokensV2.brandWarm, width: 3),
         ),
       ),
       child: Text(
@@ -899,7 +899,7 @@ class _UserScreenState extends State<UserScreen> {
         style: TextStyle(
           fontSize: UiModeService.isAccessibilityMode ? 24 : 18,
           fontWeight: FontWeight.w700,
-          color: HiBuddyColors.text,
+          color: HaruTokensV2.inkPrimary,
         ),
       ),
     );
@@ -913,7 +913,7 @@ class _UserScreenState extends State<UserScreen> {
         style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: HiBuddyColors.text,
+          color: HaruTokensV2.inkPrimary,
         ),
       ),
     );
@@ -922,20 +922,20 @@ class _UserScreenState extends State<UserScreen> {
   Widget _timelineItem(ScheduleItem item, bool isActive, bool isPast) {
     final emoji = HiBuddyColors.getActivityEmoji(item.type);
     final dotColor = isActive
-        ? HiBuddyColors.success
+        ? HaruTokensV2.success
         : isPast
-            ? HiBuddyColors.textMuted
-            : HiBuddyColors.border;
+            ? HaruTokensV2.inkMuted
+            : HaruTokensV2.borderSoft;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: isActive ? HiBuddyColors.successBg : Colors.white,
+        color: isActive ? HaruTokensV2.successSoft : Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: isActive
-            ? Border.all(color: HiBuddyColors.success, width: 2)
-            : Border.all(color: HiBuddyColors.border),
+            ? Border.all(color: HaruTokensV2.success, width: 2)
+            : Border.all(color: HaruTokensV2.borderSoft),
       ),
       child: Row(
         children: [
@@ -957,8 +957,8 @@ class _UserScreenState extends State<UserScreen> {
                 fontSize: 13,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
                 color: isPast
-                    ? HiBuddyColors.textMuted
-                    : HiBuddyColors.text,
+                    ? HaruTokensV2.inkMuted
+                    : HaruTokensV2.inkPrimary,
                 decoration: isPast ? TextDecoration.lineThrough : null,
               ),
               overflow: TextOverflow.ellipsis,
