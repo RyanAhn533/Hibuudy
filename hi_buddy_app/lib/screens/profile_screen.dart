@@ -127,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('저장되었습니다. UI 모드는 앱을 다시 열면 완전히 적용됩니다.', style: TextStyle(fontSize: 16)),
-          backgroundColor: HiBuddyColors.success,
+          backgroundColor: HaruTokensV2.success,
         ),
       );
     }
@@ -150,7 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('내보내기 실패: $e'),
-            backgroundColor: HiBuddyColors.danger,
+            backgroundColor: HaruTokensV2.danger,
           ),
         );
       }
@@ -230,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(height: 16),
               Text(
                 '정보를 불러오고 있어요...',
-                style: TextStyle(fontSize: 18, color: HiBuddyColors.textMuted),
+                style: TextStyle(fontSize: 18, color: HaruTokensV2.inkMuted),
               ),
             ],
           ),
@@ -275,7 +275,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: HiBuddyColors.text,
+              color: HaruTokensV2.inkPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -296,7 +296,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: HiBuddyColors.text,
+              color: HaruTokensV2.inkPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -307,7 +307,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: const InputDecoration(
                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
-              style: const TextStyle(fontSize: 18, color: HiBuddyColors.text),
+              style: const TextStyle(fontSize: 18, color: HaruTokensV2.inkPrimary),
               items: const [
                 DropdownMenuItem(value: '경증', child: Text('경증')),
                 DropdownMenuItem(value: '중등도', child: Text('중등도')),
@@ -327,7 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: HiBuddyColors.text,
+              color: HaruTokensV2.inkPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -338,7 +338,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: const InputDecoration(
                 contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
-              style: const TextStyle(fontSize: 18, color: HiBuddyColors.text),
+              style: const TextStyle(fontSize: 18, color: HaruTokensV2.inkPrimary),
               items: const [
                 DropdownMenuItem(value: '일반', child: Text('일반')),
                 DropdownMenuItem(value: '간단', child: Text('간단')),
@@ -358,13 +358,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: HiBuddyColors.text,
+              color: HaruTokensV2.inkPrimary,
             ),
           ),
           const SizedBox(height: 4),
           Row(
             children: [
-              const Text('느리게', style: TextStyle(fontSize: 14, color: HiBuddyColors.textMuted)),
+              const Text('느리게', style: TextStyle(fontSize: 14, color: HaruTokensV2.inkMuted)),
               Expanded(
                 child: Slider(
                   value: _ttsSpeed,
@@ -372,16 +372,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   max: 1.0,
                   divisions: 8,
                   label: _ttsSpeed.toStringAsFixed(2),
-                  activeColor: HiBuddyColors.primary,
+                  activeColor: HaruTokensV2.brandWarm,
                   onChanged: (v) => setState(() => _ttsSpeed = v),
                 ),
               ),
-              const Text('빠르게', style: TextStyle(fontSize: 14, color: HiBuddyColors.textMuted)),
+              const Text('빠르게', style: TextStyle(fontSize: 14, color: HaruTokensV2.inkMuted)),
             ],
           ),
           Text(
             '현재: ${_ttsSpeed.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 14, color: HiBuddyColors.textMuted),
+            style: const TextStyle(fontSize: 14, color: HaruTokensV2.inkMuted),
           ),
 
           const SizedBox(height: 16),
@@ -467,7 +467,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 '등록된 식재료가 없어요',
-                style: TextStyle(fontSize: 16, color: HiBuddyColors.textMuted),
+                style: TextStyle(fontSize: 16, color: HaruTokensV2.inkMuted),
               ),
             )
           else
@@ -478,7 +478,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: HiBuddyColors.border),
+                  border: Border.all(color: HaruTokensV2.borderSoft),
                 ),
                 child: Row(
                   children: [
@@ -492,7 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       item['category'] as String? ?? '기타',
                       style: const TextStyle(
                         fontSize: 13,
-                        color: HiBuddyColors.textMuted,
+                        color: HaruTokensV2.inkMuted,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -501,7 +501,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 48,
                       child: IconButton(
                         onPressed: () => _removeIngredient(item['id'] as int),
-                        icon: const Icon(Icons.delete_outline, color: HiBuddyColors.danger),
+                        icon: const Icon(Icons.delete_outline, color: HaruTokensV2.danger),
                         tooltip: '삭제',
                       ),
                     ),
@@ -566,7 +566,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 '등록된 연락처가 없어요',
-                style: TextStyle(fontSize: 16, color: HiBuddyColors.textMuted),
+                style: TextStyle(fontSize: 16, color: HaruTokensV2.inkMuted),
               ),
             )
           else
@@ -577,11 +577,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: HiBuddyColors.border),
+                  border: Border.all(color: HaruTokensV2.borderSoft),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.person, color: HiBuddyColors.primary, size: 24),
+                    const Icon(Icons.person, color: HaruTokensV2.brandWarm, size: 24),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -598,7 +598,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             contact['phone'] as String,
                             style: const TextStyle(
                               fontSize: 15,
-                              color: HiBuddyColors.textMuted,
+                              color: HaruTokensV2.inkMuted,
                             ),
                           ),
                         ],
@@ -609,7 +609,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 48,
                       child: IconButton(
                         onPressed: () => _removeContact(contact['id'] as int),
-                        icon: const Icon(Icons.delete_outline, color: HiBuddyColors.danger),
+                        icon: const Icon(Icons.delete_outline, color: HaruTokensV2.danger),
                         tooltip: '삭제',
                       ),
                     ),
@@ -675,7 +675,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 '등록된 약이 없어요',
-                style: TextStyle(fontSize: 16, color: HiBuddyColors.textMuted),
+                style: TextStyle(fontSize: 16, color: HaruTokensV2.inkMuted),
               ),
             )
           else
@@ -686,7 +686,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: HiBuddyColors.border),
+                  border: Border.all(color: HaruTokensV2.borderSoft),
                 ),
                 child: Row(
                   children: [
@@ -707,7 +707,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             med['time'] as String,
                             style: const TextStyle(
                               fontSize: 15,
-                              color: HiBuddyColors.textMuted,
+                              color: HaruTokensV2.inkMuted,
                             ),
                           ),
                         ],
@@ -718,7 +718,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 48,
                       child: IconButton(
                         onPressed: () => _removeMedicine(med['id'] as int),
-                        icon: const Icon(Icons.delete_outline, color: HiBuddyColors.danger),
+                        icon: const Icon(Icons.delete_outline, color: HaruTokensV2.danger),
                         tooltip: '삭제',
                       ),
                     ),
@@ -754,7 +754,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 '수행 기록이 없어요',
-                style: TextStyle(fontSize: 16, color: HiBuddyColors.textMuted),
+                style: TextStyle(fontSize: 16, color: HaruTokensV2.inkMuted),
               ),
             )
           else
@@ -764,17 +764,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 margin: const EdgeInsets.symmetric(vertical: 3),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: completed ? HiBuddyColors.successBg : Colors.white,
+                  color: completed ? HaruTokensV2.successSoft : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: completed ? HiBuddyColors.success : HiBuddyColors.border,
+                    color: completed ? HaruTokensV2.success : HaruTokensV2.borderSoft,
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       completed ? Icons.check_circle : Icons.cancel_outlined,
-                      color: completed ? HiBuddyColors.success : HiBuddyColors.danger,
+                      color: completed ? HaruTokensV2.success : HaruTokensV2.danger,
                       size: 24,
                     ),
                     const SizedBox(width: 10),
@@ -793,7 +793,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             log['date'] as String? ?? '',
                             style: const TextStyle(
                               fontSize: 14,
-                              color: HiBuddyColors.textMuted,
+                              color: HaruTokensV2.inkMuted,
                             ),
                           ),
                         ],
@@ -818,9 +818,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: HiBuddyColors.cardBg,
+        color: HaruTokensV2.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: HiBuddyColors.border),
+        border: Border.all(color: HaruTokensV2.borderSoft),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(8),
@@ -835,20 +835,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // 섹션 헤더
           Row(
             children: [
-              Icon(icon, color: HiBuddyColors.primary, size: 24),
+              Icon(icon, color: HaruTokensV2.brandWarm, size: 24),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: HiBuddyColors.text,
+                  color: HaruTokensV2.inkPrimary,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 4),
-          const Divider(color: HiBuddyColors.border),
+          const Divider(color: HaruTokensV2.borderSoft),
           const SizedBox(height: 8),
           child,
         ],

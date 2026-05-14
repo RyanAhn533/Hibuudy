@@ -82,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [HiBuddyColors.primary, HiBuddyColors.primaryLight],
+                    colors: [HaruTokensV2.brandWarm, HaruTokensV2.brandWarmDeep],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -127,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFFEF3C7),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: HiBuddyColors.primary, width: 3),
+                      border: Border.all(color: HaruTokensV2.brandWarm, width: 3),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -139,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: TextStyle(
                             fontSize: UiModeService.headerSize,
                             fontWeight: FontWeight.w800,
-                            color: HiBuddyColors.text,
+                            color: HaruTokensV2.inkPrimary,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -147,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           '지금 할 일을 확인해요',
                           style: TextStyle(
                             fontSize: UiModeService.fontSize,
-                            color: HiBuddyColors.textMuted,
+                            color: HaruTokensV2.inkMuted,
                           ),
                         ),
                       ],
@@ -183,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: TextStyle(
                             fontSize: UiModeService.headerSize,
                             fontWeight: FontWeight.w800,
-                            color: HiBuddyColors.text,
+                            color: HaruTokensV2.inkPrimary,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -191,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           '궁금한 것을 물어봐요',
                           style: TextStyle(
                             fontSize: UiModeService.fontSize,
-                            color: HiBuddyColors.textMuted,
+                            color: HaruTokensV2.inkMuted,
                           ),
                         ),
                       ],
@@ -220,14 +220,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [HiBuddyColors.primary, HiBuddyColors.primaryLight],
+                    colors: [HaruTokensV2.brandWarm, HaruTokensV2.brandWarmDeep],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: HiBuddyColors.primary.withAlpha(40),
+                      color: HaruTokensV2.brandWarm.withAlpha(40),
                       blurRadius: 20,
                       offset: const Offset(0, 4),
                     ),
@@ -267,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [
-                      HiBuddyColors.primaryBg,
+                      HaruTokensV2.brandWarmSoft,
                       Color(0xFFDBEAFE),
                       Color(0xFFFEF3C7),
                     ],
@@ -276,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: HiBuddyColors.primary.withAlpha(25),
+                    color: HaruTokensV2.brandWarm.withAlpha(25),
                   ),
                 ),
                 child: const Column(
@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
-                        color: HiBuddyColors.text,
+                        color: HaruTokensV2.inkPrimary,
                         letterSpacing: -1,
                       ),
                     ),
@@ -297,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       '선생님이 만든 일정을 따라 하루를 보내요',
                       style: TextStyle(
                         fontSize: 15,
-                        color: HiBuddyColors.textMuted,
+                        color: HaruTokensV2.inkMuted,
                       ),
                     ),
                   ],
@@ -312,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   final cards = [
                     _FeatureCard(
                       icon: '📝',
-                      iconBgColor: HiBuddyColors.primaryBg,
+                      iconBgColor: HaruTokensV2.brandWarmSoft,
                       title: '일정 만들기',
                       features: const [
                         '말로 적으면 일정표 자동 생성',
@@ -420,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: const BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: HiBuddyColors.primary,
+                        color: HaruTokensV2.brandWarm,
                         width: 3,
                       ),
                     ),
@@ -430,7 +430,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: HiBuddyColors.text,
+                      color: HaruTokensV2.inkPrimary,
                     ),
                   ),
                 ),
@@ -445,17 +445,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: HiBuddyColors.primaryBg,
+                  color: HaruTokensV2.brandWarmSoft,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: HiBuddyColors.primary.withAlpha(50),
+                    color: HaruTokensV2.brandWarm.withAlpha(50),
                   ),
                 ),
                 child: const Text(
                   'ℹ️ 어렵게 조작할 필요 없습니다. 화면에 나오는 안내를 그대로 따라 하면 됩니다.',
                   style: TextStyle(
                     fontSize: 15,
-                    color: HiBuddyColors.text,
+                    color: HaruTokensV2.inkPrimary,
                     height: 1.5,
                   ),
                 ),
@@ -481,7 +481,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: HiBuddyColors.border),
+          border: Border.all(color: HaruTokensV2.borderSoft),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withAlpha(10),
@@ -497,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 32,
               height: 32,
               decoration: const BoxDecoration(
-                color: HiBuddyColors.primary,
+                color: HaruTokensV2.brandWarm,
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
@@ -516,7 +516,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(
                   fontSize: 15,
                   height: 1.6,
-                  color: HiBuddyColors.text,
+                  color: HaruTokensV2.inkPrimary,
                 ),
               ),
             ),
@@ -551,7 +551,7 @@ class _FeatureCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: HiBuddyColors.border),
+        border: Border.all(color: HaruTokensV2.borderSoft),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(10),
@@ -577,7 +577,7 @@ class _FeatureCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: HiBuddyColors.text,
+              color: HaruTokensV2.inkPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -590,7 +590,7 @@ class _FeatureCard extends StatelessWidget {
                   const Text(
                     '✓ ',
                     style: TextStyle(
-                      color: HiBuddyColors.success,
+                      color: HaruTokensV2.success,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -599,7 +599,7 @@ class _FeatureCard extends StatelessWidget {
                       f,
                       style: const TextStyle(
                         fontSize: 13,
-                        color: HiBuddyColors.textMuted,
+                        color: HaruTokensV2.inkMuted,
                         height: 1.4,
                       ),
                     ),

@@ -198,7 +198,7 @@ class _AgentScreenState extends State<AgentScreen> {
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: HiBuddyColors.textMuted,
+                color: HaruTokensV2.inkMuted,
               ),
             ),
           ),
@@ -210,7 +210,7 @@ class _AgentScreenState extends State<AgentScreen> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: isUser ? HiBuddyColors.primary : Colors.white,
+              color: isUser ? HaruTokensV2.brandWarm : Colors.white,
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(18),
                 topRight: const Radius.circular(18),
@@ -219,7 +219,7 @@ class _AgentScreenState extends State<AgentScreen> {
               ),
               border: isUser
                   ? null
-                  : Border.all(color: HiBuddyColors.border),
+                  : Border.all(color: HaruTokensV2.borderSoft),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withAlpha(10),
@@ -233,7 +233,7 @@ class _AgentScreenState extends State<AgentScreen> {
               style: TextStyle(
                 fontSize: 17,
                 height: 1.5,
-                color: isUser ? Colors.white : HiBuddyColors.text,
+                color: isUser ? Colors.white : HaruTokensV2.inkPrimary,
               ),
             ),
           ),
@@ -250,11 +250,11 @@ class _AgentScreenState extends State<AgentScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.volume_up, size: 18, color: HiBuddyColors.textMuted),
+                      Icon(Icons.volume_up, size: 18, color: HaruTokensV2.inkMuted),
                       SizedBox(width: 4),
                       Text(
                         '다시 듣기',
-                        style: TextStyle(fontSize: 13, color: HiBuddyColors.textMuted),
+                        style: TextStyle(fontSize: 13, color: HaruTokensV2.inkMuted),
                       ),
                     ],
                   ),
@@ -309,13 +309,13 @@ class _AgentScreenState extends State<AgentScreen> {
                     child: ElevatedButton(
                       onPressed: () => _handleAction(action),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: HiBuddyColors.primaryBg,
-                        foregroundColor: HiBuddyColors.primary,
+                        backgroundColor: HaruTokensV2.brandWarmSoft,
+                        foregroundColor: HaruTokensV2.brandWarm,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
-                          side: const BorderSide(color: HiBuddyColors.primaryLight),
+                          side: const BorderSide(color: HaruTokensV2.brandWarmDeep),
                         ),
                       ),
                       child: Text(
@@ -348,7 +348,7 @@ class _AgentScreenState extends State<AgentScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: HiBuddyColors.textMuted,
+                color: HaruTokensV2.inkMuted,
               ),
             ),
           ),
@@ -362,7 +362,7 @@ class _AgentScreenState extends State<AgentScreen> {
                 bottomLeft: Radius.circular(4),
                 bottomRight: Radius.circular(18),
               ),
-              border: Border.all(color: HiBuddyColors.border),
+              border: Border.all(color: HaruTokensV2.borderSoft),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
@@ -372,7 +372,7 @@ class _AgentScreenState extends State<AgentScreen> {
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: HiBuddyColors.primary,
+                    color: HaruTokensV2.brandWarm,
                   ),
                 ),
                 SizedBox(width: 12),
@@ -380,7 +380,7 @@ class _AgentScreenState extends State<AgentScreen> {
                   '생각하고 있어요...',
                   style: TextStyle(
                     fontSize: 16,
-                    color: HiBuddyColors.textMuted,
+                    color: HaruTokensV2.inkMuted,
                   ),
                 ),
               ],
@@ -402,7 +402,7 @@ class _AgentScreenState extends State<AgentScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: const Border(
-          top: BorderSide(color: HiBuddyColors.border),
+          top: BorderSide(color: HaruTokensV2.borderSoft),
         ),
         boxShadow: [
           BoxShadow(
@@ -424,23 +424,23 @@ class _AgentScreenState extends State<AgentScreen> {
                 hintText: '여기에 입력하세요...',
                 hintStyle: const TextStyle(
                   fontSize: 16,
-                  color: HiBuddyColors.textMuted,
+                  color: HaruTokensV2.inkMuted,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: HiBuddyColors.border),
+                  borderSide: const BorderSide(color: HaruTokensV2.borderSoft),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: HiBuddyColors.border),
+                  borderSide: const BorderSide(color: HaruTokensV2.borderSoft),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
-                  borderSide: const BorderSide(color: HiBuddyColors.primary, width: 2),
+                  borderSide: const BorderSide(color: HaruTokensV2.brandWarm, width: 2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 filled: true,
-                fillColor: HiBuddyColors.bg,
+                fillColor: HaruTokensV2.surfaceBase,
               ),
               textInputAction: TextInputAction.send,
               onSubmitted: _sendMessage,
@@ -465,7 +465,7 @@ class _AgentScreenState extends State<AgentScreen> {
                 }
               },
               icon: const Icon(Icons.volume_up),
-              color: HiBuddyColors.primary,
+              color: HaruTokensV2.brandWarm,
               tooltip: '마지막 답변 듣기',
             ),
           ),
@@ -479,7 +479,7 @@ class _AgentScreenState extends State<AgentScreen> {
               icon: const Icon(Icons.send_rounded),
               color: Colors.white,
               style: IconButton.styleFrom(
-                backgroundColor: HiBuddyColors.primary,
+                backgroundColor: HaruTokensV2.brandWarm,
                 shape: const CircleBorder(),
               ),
               tooltip: '보내기',

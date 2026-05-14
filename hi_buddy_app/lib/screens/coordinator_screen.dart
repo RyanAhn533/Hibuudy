@@ -78,7 +78,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Row(
               children: [
-                Icon(Icons.check_circle, color: HiBuddyColors.success, size: 28),
+                Icon(Icons.check_circle, color: HaruTokensV2.success, size: 28),
                 SizedBox(width: 8),
                 Text('저장 완료!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
               ],
@@ -148,7 +148,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$tomorrowStr 일정으로 복사되었어요!'),
-          backgroundColor: HiBuddyColors.success,
+          backgroundColor: HaruTokensV2.success,
         ),
       );
     }
@@ -180,7 +180,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: HiBuddyColors.border,
+                  color: HaruTokensV2.borderSoft,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -259,8 +259,8 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    HiBuddyColors.primaryBg,
-                    HiBuddyColors.primaryBg.withAlpha(200),
+                    HaruTokensV2.brandWarmSoft,
+                    HaruTokensV2.brandWarmSoft.withAlpha(200),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
@@ -272,7 +272,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: HiBuddyColors.text,
+                      color: HaruTokensV2.inkPrimary,
                     ),
                   ),
                   SizedBox(height: 4),
@@ -280,7 +280,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                     '오늘 할 일을 입력하면 자동으로 일정표를 만들어 드려요',
                     style: TextStyle(
                       fontSize: 14,
-                      color: HiBuddyColors.textMuted,
+                      color: HaruTokensV2.inkMuted,
                     ),
                   ),
                 ],
@@ -297,7 +297,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
               maxLines: 8,
               decoration: const InputDecoration(
                 hintText: '예: 08:00 · 오늘 일정 간단 안내',
-                hintStyle: TextStyle(color: HiBuddyColors.textMuted),
+                hintStyle: TextStyle(color: HaruTokensV2.inkMuted),
               ),
             ),
             const SizedBox(height: 12),
@@ -330,7 +330,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                   IconButton(
                     onPressed: _addNewItem,
                     icon: const Icon(Icons.add_circle, size: 32),
-                    color: HiBuddyColors.primary,
+                    color: HaruTokensV2.brandWarm,
                     tooltip: '일정 항목 추가',
                   ),
                 ],
@@ -408,7 +408,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                                 '안내 문장:',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  color: HiBuddyColors.textMuted,
+                                  color: HaruTokensV2.inkMuted,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -477,7 +477,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                       : const Icon(Icons.save),
                   label: Text(_isSaving ? '저장 중...' : '일정 저장하기'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: HiBuddyColors.success,
+                    backgroundColor: HaruTokensV2.success,
                     padding: const EdgeInsets.symmetric(vertical: 18),
                   ),
                 ),
@@ -541,7 +541,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       decoration: const BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: HiBuddyColors.primary, width: 3),
+          bottom: BorderSide(color: HaruTokensV2.brandWarm, width: 3),
         ),
       ),
       child: Text(
@@ -549,7 +549,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w700,
-          color: HiBuddyColors.text,
+          color: HaruTokensV2.inkPrimary,
         ),
       ),
     );
@@ -661,7 +661,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: HiBuddyColors.border,
+                  color: HaruTokensV2.borderSoft,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

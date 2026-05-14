@@ -108,10 +108,10 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
       player: YoutubePlayer(
         controller: _controller!,
         showVideoProgressIndicator: true,
-        progressIndicatorColor: HiBuddyColors.primary,
+        progressIndicatorColor: HaruTokensV2.brandWarm,
         progressColors: const ProgressBarColors(
-          playedColor: HiBuddyColors.primary,
-          handleColor: HiBuddyColors.primaryLight,
+          playedColor: HaruTokensV2.brandWarm,
+          handleColor: HaruTokensV2.brandWarmDeep,
         ),
       ),
       builder: (context, player) {
@@ -146,7 +146,7 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
-                      color: HiBuddyColors.text,
+                      color: HaruTokensV2.inkPrimary,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -233,12 +233,12 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
           child: ElevatedButton(
             onPressed: onTap,
             style: ElevatedButton.styleFrom(
-              backgroundColor: HiBuddyColors.primaryBg,
-              foregroundColor: HiBuddyColors.primary,
+              backgroundColor: HaruTokensV2.brandWarmSoft,
+              foregroundColor: HaruTokensV2.brandWarm,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: HiBuddyColors.primaryLight),
+                side: const BorderSide(color: HaruTokensV2.brandWarmDeep),
               ),
               padding: EdgeInsets.zero,
             ),
@@ -251,7 +251,7 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: HiBuddyColors.text,
+            color: HaruTokensV2.inkPrimary,
           ),
         ),
       ],

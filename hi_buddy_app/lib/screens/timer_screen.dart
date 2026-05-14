@@ -112,7 +112,7 @@ class _TimerScreenState extends State<TimerScreen> {
                 Navigator.of(ctx).pop();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: HiBuddyColors.success,
+                backgroundColor: HaruTokensV2.success,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -192,7 +192,7 @@ class _TimerScreenState extends State<TimerScreen> {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
-                    color: HiBuddyColors.textMuted,
+                    color: HaruTokensV2.inkMuted,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -215,7 +215,7 @@ class _TimerScreenState extends State<TimerScreen> {
                           child: CircularProgressIndicator(
                             value: 1.0,
                             strokeWidth: 12,
-                            color: HiBuddyColors.border,
+                            color: HaruTokensV2.borderSoft,
                             backgroundColor: Colors.transparent,
                           ),
                         ),
@@ -227,10 +227,10 @@ class _TimerScreenState extends State<TimerScreen> {
                             value: _progress,
                             strokeWidth: 12,
                             color: _isCompleted
-                                ? HiBuddyColors.success
+                                ? HaruTokensV2.success
                                 : _remaining <= 10 && _isRunning
-                                    ? HiBuddyColors.danger
-                                    : HiBuddyColors.primary,
+                                    ? HaruTokensV2.danger
+                                    : HaruTokensV2.brandWarm,
                             backgroundColor: Colors.transparent,
                             strokeCap: StrokeCap.round,
                           ),
@@ -245,10 +245,10 @@ class _TimerScreenState extends State<TimerScreen> {
                                 fontSize: 72,
                                 fontWeight: FontWeight.w800,
                                 color: _isCompleted
-                                    ? HiBuddyColors.success
+                                    ? HaruTokensV2.success
                                     : _remaining <= 10 && _isRunning
-                                        ? HiBuddyColors.danger
-                                        : HiBuddyColors.text,
+                                        ? HaruTokensV2.danger
+                                        : HaruTokensV2.inkPrimary,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
@@ -260,7 +260,7 @@ class _TimerScreenState extends State<TimerScreen> {
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w700,
-                                  color: HiBuddyColors.success,
+                                  color: HaruTokensV2.success,
                                 ),
                               ),
                             if (_isPaused)
@@ -269,7 +269,7 @@ class _TimerScreenState extends State<TimerScreen> {
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w600,
-                                  color: HiBuddyColors.textMuted,
+                                  color: HaruTokensV2.inkMuted,
                                 ),
                               ),
                           ],
@@ -296,7 +296,7 @@ class _TimerScreenState extends State<TimerScreen> {
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: HiBuddyColors.primary,
+                      backgroundColor: HaruTokensV2.brandWarm,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
@@ -327,7 +327,7 @@ class _TimerScreenState extends State<TimerScreen> {
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _isPaused
-                                ? HiBuddyColors.success
+                                ? HaruTokensV2.success
                                 : HiBuddyColors.secondary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
@@ -345,7 +345,7 @@ class _TimerScreenState extends State<TimerScreen> {
                       child: ElevatedButton(
                         onPressed: _reset,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: HiBuddyColors.danger,
+                          backgroundColor: HaruTokensV2.danger,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
@@ -378,7 +378,7 @@ class _TimerScreenState extends State<TimerScreen> {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: HiBuddyColors.primary,
+                            backgroundColor: HaruTokensV2.brandWarm,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
@@ -403,7 +403,7 @@ class _TimerScreenState extends State<TimerScreen> {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: HiBuddyColors.success,
+                            backgroundColor: HaruTokensV2.success,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
