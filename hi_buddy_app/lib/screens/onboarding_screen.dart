@@ -52,20 +52,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Future<void> _finish() async {
-    await SessionService.setRole(_role);
-    await SessionService.setSegment(_segment);
-    await SessionService.setFontSize(_fontSize);
-    await SessionService.setUserName(_nameCtl.text);
-    await SessionService.setCity(_city);
-    await SessionService.setPairCode(_pairCode);
-    await SessionService.completeOnboarding();
+  void _back() {
+    if (_step > 0) {
+      _pc.previousPage(duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      setState(() => _step--);
+    }
+  }
 
+  Future<void> _finish() async {
+    // v1.3.3 — 건너뛰기 크래시 방지: 빈 이름은 '사용자'로 폴백 + 전체 try/catch
+    final cleanName =
+        _nameCtl.text.trim().isEmpty ? '사용자' : _nameCtl.text.trim();
     try {
-      await DatabaseService.updateProfile({
-        'name': _nameCtl.text.trim().isEmpty ? '사용자' : _nameCtl.text.trim()
-      });
-    } catch (_) {}
+      await SessionService.setRole(_role);
+      await SessionService.setSegment(_segment);
+      await SessionService.setFontSize(_fontSize);
+      await SessionService.setUserName(cleanName);
+      await SessionService.setCity(_city);
+      await SessionService.setPairCode(_pairCode);
+      await SessionService.completeOnboarding();
+
+      try {
+        await DatabaseService.updateProfile({'name': cleanName});
+      } catch (_) {}
+    } catch (e) {
+      debugPrint('Onboarding finish error (계속 진행): $e');
+    }
 
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -75,61 +87,92 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: HaruTokens.n50,
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (_step > 0) _progressBar(),
-            Expanded(
-              child: PageView(
-                controller: _pc,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (i) => setState(() => _step = i),
-                children: [
-                  _Step1WelcomeAndRole(
-                    role: _role,
-                    onChange: (r) => setState(() => _role = r),
-                    onNext: _next,
-                  ),
-                  _Step2Profile(
-                    nameCtl: _nameCtl,
-                    segment: _segment,
-                    fontSize: _fontSize,
-                    city: _city,
-                    onSegmentChange: (s) => setState(() => _segment = s),
-                    onFontChange: (f) => setState(() => _fontSize = f),
-                    onCityChange: (c) => setState(() => _city = c),
-                    onNext: _next,
-                    onWaitlistRequest: _handleWaitlist,
-                  ),
-                  _Step3Pair(
-                    role: _role,
-                    code: _pairCode,
-                    onFinish: _finish,
-                    onRegen: () => setState(() => _pairCode = SessionService.generatePairCode()),
-                  ),
-                ],
+    // v1.3.3 — Android 시스템 뒤로가기로 step 되돌리기 (마지막 화면이면 앱 종료 방지)
+    return PopScope(
+      canPop: _step == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _step > 0) _back();
+      },
+      child: Scaffold(
+        backgroundColor: HaruTokensV2.surfaceBase,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _progressBar(),
+              Expanded(
+                child: PageView(
+                  controller: _pc,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (i) => setState(() => _step = i),
+                  children: [
+                    _Step1WelcomeAndRole(
+                      role: _role,
+                      onChange: (r) => setState(() => _role = r),
+                      onNext: _next,
+                    ),
+                    _Step2Profile(
+                      nameCtl: _nameCtl,
+                      segment: _segment,
+                      fontSize: _fontSize,
+                      city: _city,
+                      onSegmentChange: (s) => setState(() => _segment = s),
+                      onFontChange: (f) => setState(() => _fontSize = f),
+                      onCityChange: (c) => setState(() => _city = c),
+                      onNext: _next,
+                      onWaitlistRequest: _handleWaitlist,
+                    ),
+                    _Step3Pair(
+                      role: _role,
+                      code: _pairCode,
+                      onFinish: _finish,
+                      onRegen: () =>
+                          setState(() => _pairCode = SessionService.generatePairCode()),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _progressBar() {
+    // v1.3.3 — 항상 표시, 왼쪽에 뒤로가기, 오른쪽에 건너뛰기
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('$_step / 2',
-              style: const TextStyle(color: HaruTokens.primary, fontSize: 12, fontWeight: FontWeight.w700)),
-          TextButton(
-            onPressed: _finish,
-            style: TextButton.styleFrom(foregroundColor: HaruTokens.n400),
-            child: const Text('건너뛰기', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          // 뒤로가기 (Step 0에서는 빈 자리)
+          SizedBox(
+            width: 88,
+            child: _step > 0
+                ? TextButton.icon(
+                    onPressed: _back,
+                    icon: const Icon(Symbols.arrow_back, size: 20),
+                    label: const Text('뒤로',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    style: TextButton.styleFrom(foregroundColor: HaruTokensV2.inkBody),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          // 진행 표시
+          Text('${_step + 1} / 3',
+              style: const TextStyle(
+                  color: HaruTokensV2.brandWarm, fontSize: 13, fontWeight: FontWeight.w700)),
+          // 건너뛰기 (Step 0 환영화면에서는 노출 X — 시작 전에는 어차피 진행 못함)
+          SizedBox(
+            width: 88,
+            child: _step > 0
+                ? TextButton(
+                    onPressed: _finish,
+                    style: TextButton.styleFrom(foregroundColor: HaruTokensV2.inkMuted),
+                    child: const Text('건너뛰기',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
@@ -148,7 +191,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('준비되면 이메일로 알려드려요.',
-                style: TextStyle(fontSize: 13, color: HaruTokens.n700, height: 1.6)),
+                style: TextStyle(fontSize: 13, color: HaruTokensV2.inkBody, height: 1.6)),
             const SizedBox(height: 14),
             TextField(
               controller: emailCtl,
@@ -214,11 +257,11 @@ class _Step1WelcomeAndRole extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: HaruTokens.primary,
+              color: HaruTokensV2.brandWarm,
               borderRadius: BorderRadius.circular(HaruTokens.radiusXl),
             ),
             child: const Center(
-              child: Icon(Symbols.diversity_3, size: 48, color: HaruTokens.white, fill: 1),
+              child: Icon(Symbols.diversity_3, size: 48, color: HaruTokensV2.surfaceCard, fill: 1),
             ),
           ),
           const SizedBox(height: 24),
@@ -230,12 +273,12 @@ class _Step1WelcomeAndRole extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             '하루를 같이 만드는 도우미',
-            style: TextStyle(fontSize: 14, color: HaruTokens.n400),
+            style: TextStyle(fontSize: 14, color: HaruTokensV2.inkMuted),
           ),
           const Spacer(flex: 2),
           const Text(
             '누구를 위해 쓰시나요?',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: HaruTokens.n900),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: HaruTokensV2.inkPrimary),
           ),
           const SizedBox(height: 16),
           _RoleCard(
@@ -261,7 +304,7 @@ class _Step1WelcomeAndRole extends StatelessWidget {
           const SizedBox(height: 10),
           const Text(
             '사용하면서 개인정보 처리방침에 동의해요',
-            style: TextStyle(fontSize: 11, color: HaruTokens.n400),
+            style: TextStyle(fontSize: 11, color: HaruTokensV2.inkMuted),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
@@ -287,7 +330,7 @@ class _RoleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? HaruTokens.primarySoft : HaruTokens.white,
+      color: selected ? HaruTokensV2.brandWarmSoft : HaruTokensV2.surfaceCard,
       borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
       child: InkWell(
         borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
@@ -297,13 +340,13 @@ class _RoleCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
             border: Border.all(
-              color: selected ? HaruTokens.primary : HaruTokens.n200,
+              color: selected ? HaruTokensV2.brandWarm : HaruTokensV2.borderSoft,
               width: selected ? 2 : 1,
             ),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 32, color: selected ? HaruTokens.primary : HaruTokens.n400),
+              Icon(icon, size: 32, color: selected ? HaruTokensV2.brandWarm : HaruTokensV2.inkMuted),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -311,15 +354,15 @@ class _RoleCard extends StatelessWidget {
                   children: [
                     Text(title,
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w800, color: HaruTokens.n900)),
+                            fontSize: 15, fontWeight: FontWeight.w800, color: HaruTokensV2.inkPrimary)),
                     const SizedBox(height: 2),
                     Text(subtitle,
-                        style: const TextStyle(fontSize: 12, color: HaruTokens.n700)),
+                        style: const TextStyle(fontSize: 12, color: HaruTokensV2.inkBody)),
                   ],
                 ),
               ),
               if (selected)
-                const Icon(Symbols.check_circle, size: 22, color: HaruTokens.primary, fill: 1),
+                const Icon(Symbols.check_circle, size: 22, color: HaruTokensV2.brandWarm, fill: 1),
             ],
           ),
         ),
@@ -366,12 +409,12 @@ class _Step2Profile extends StatelessWidget {
             Text('누구의 일상을\n도와드릴까요?', style: Theme.of(context).textTheme.headlineLarge),
             const SizedBox(height: 6),
             const Text('이름과 기본 설정을 한 번에',
-                style: TextStyle(fontSize: 13, color: HaruTokens.n400)),
+                style: TextStyle(fontSize: 13, color: HaruTokensV2.inkMuted)),
             const SizedBox(height: 20),
 
             // 이름
             const Text('이름',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: HaruTokens.n700)),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: HaruTokensV2.inkBody)),
             const SizedBox(height: 6),
             TextField(
               controller: nameCtl,
@@ -383,7 +426,7 @@ class _Step2Profile extends StatelessWidget {
 
             // 세그먼트
             const Text('어떤 상황인가요?',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: HaruTokens.n700)),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: HaruTokensV2.inkBody)),
             const SizedBox(height: 8),
             ...UserSegment.values.map((s) => Padding(
                   padding: const EdgeInsets.only(bottom: 6),
@@ -405,20 +448,20 @@ class _Step2Profile extends StatelessWidget {
 
             // 도시
             const Text('사는 지역 (날씨 안내용)',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: HaruTokens.n700)),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: HaruTokensV2.inkBody)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: HaruTokens.white,
+                color: HaruTokensV2.surfaceCard,
                 borderRadius: BorderRadius.circular(HaruTokens.radiusSm),
-                border: Border.all(color: HaruTokens.n200),
+                border: Border.all(color: HaruTokensV2.borderSoft),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: city,
                   isExpanded: true,
-                  icon: const Icon(Symbols.expand_more, color: HaruTokens.n400),
+                  icon: const Icon(Symbols.expand_more, color: HaruTokensV2.inkMuted),
                   items: SessionService.supportedCities.entries
                       .map((e) => DropdownMenuItem(
                             value: e.key,
@@ -436,7 +479,7 @@ class _Step2Profile extends StatelessWidget {
 
             // 글자 크기
             const Text('글자와 버튼 크기',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: HaruTokens.n700)),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: HaruTokensV2.inkBody)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -483,7 +526,7 @@ class _MiniSegmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = !available
         ? HaruTokens.n100
-        : (selected ? HaruTokens.primarySoft : HaruTokens.white);
+        : (selected ? HaruTokensV2.brandWarmSoft : HaruTokensV2.surfaceCard);
     return Material(
       color: bg,
       borderRadius: BorderRadius.circular(HaruTokens.radiusSm),
@@ -496,8 +539,8 @@ class _MiniSegmentCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(HaruTokens.radiusSm),
             border: Border.all(
               color: !available
-                  ? HaruTokens.n200
-                  : (selected ? HaruTokens.primary : HaruTokens.n200),
+                  ? HaruTokensV2.borderSoft
+                  : (selected ? HaruTokensV2.brandWarm : HaruTokensV2.borderSoft),
               width: selected && available ? 2 : 1,
             ),
           ),
@@ -509,7 +552,7 @@ class _MiniSegmentCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: available ? HaruTokens.n900 : HaruTokens.n400,
+                    color: available ? HaruTokensV2.inkPrimary : HaruTokensV2.inkMuted,
                   ),
                 ),
               ),
@@ -527,7 +570,7 @@ class _MiniSegmentCard extends StatelessWidget {
                           color: Color(0xFFA06A10))),
                 )
               else if (selected)
-                const Icon(Symbols.check_circle, size: 18, color: HaruTokens.primary, fill: 1),
+                const Icon(Symbols.check_circle, size: 18, color: HaruTokensV2.brandWarm, fill: 1),
             ],
           ),
         ),
@@ -545,7 +588,7 @@ class _SizeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Material(
-        color: selected ? HaruTokens.primary : HaruTokens.n100,
+        color: selected ? HaruTokensV2.brandWarm : HaruTokens.n100,
         borderRadius: BorderRadius.circular(18),
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
@@ -558,7 +601,7 @@ class _SizeChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: selected ? HaruTokens.white : HaruTokens.n700,
+                color: selected ? HaruTokensV2.surfaceCard : HaruTokensV2.inkBody,
               ),
             ),
           ),
@@ -603,15 +646,15 @@ class _Step3Pair extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             isCoord ? '코드를 당사자 폰에 입력하면\n일정을 보낼 수 있어요' : '코드로 연결하면\n일정을 같이 만들어요',
-            style: const TextStyle(fontSize: 13, color: HaruTokens.n400, height: 1.6),
+            style: const TextStyle(fontSize: 13, color: HaruTokensV2.inkMuted, height: 1.6),
           ),
           const SizedBox(height: 28),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
             decoration: BoxDecoration(
-              color: HaruTokens.white,
+              color: HaruTokensV2.surfaceCard,
               borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
-              border: Border.all(color: HaruTokens.n200),
+              border: Border.all(color: HaruTokensV2.borderSoft),
             ),
             child: Column(
               children: [
@@ -620,14 +663,14 @@ class _Step3Pair extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.w800,
-                    color: HaruTokens.primary,
+                    color: HaruTokensV2.brandWarm,
                     letterSpacing: 8,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
                 const SizedBox(height: 10),
                 const Text('이 6자리 숫자를 상대방에게 말해주세요',
-                    style: TextStyle(fontSize: 12, color: HaruTokens.n400)),
+                    style: TextStyle(fontSize: 12, color: HaruTokensV2.inkMuted)),
                 const SizedBox(height: 16),
                 TextButton.icon(
                   onPressed: onRegen,
