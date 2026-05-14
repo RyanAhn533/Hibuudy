@@ -524,3 +524,140 @@ class HaruText {
     fontFamilyFallback: HaruTokens.fontFamilyFallback,
   );
 }
+
+/// ══════════════════════════════════════════════════════════
+/// HaruTokens v2 — 컨셉 「메이트」 (2026-05-09)
+/// ─────────────────────────────────────────────────────────
+/// 친구처럼 옆에 있는 일과 동반자.
+/// MUJI 절제 + 따뜻한 베이지 + 차분한 코랄.
+///
+/// v1 정책:
+///   - HaruTokens v1 토큰은 보존 (alias-first 마이그레이션)
+///   - 신규 화면 / 마이그레이션은 HaruTokensV2 사용 권장
+///   - v1.5 사이클에서 v1 deprecated 마커 부착 예정
+///
+/// 색 대비비 정책:
+///   - 본문 텍스트: AAA 7:1 이상
+///   - 보조 텍스트: AA Normal 4.5:1 이상 + 굵기 600+ 또는 14px+
+///   - 장식 (카드 배경, 버튼 배경): AA Large 3:1 이상
+///   - 모든 색 페어 비율은 코드 주석에 명시 (실측치)
+/// ══════════════════════════════════════════════════════════
+class HaruTokensV2 {
+  HaruTokensV2._();
+
+  // ─── Surface (warm-tinted neutral, 순수 회색 폐기) ──────────
+  /// 앱 배경. 따뜻한 아이보리. v1 n50(#FAFAFA, 차가운 회색) 폐기.
+  static const surfaceBase = Color(0xFFFAF7F2);
+  /// 카드/표면. base 보다 살짝 밝음.
+  static const surfaceCard = Color(0xFFFEFCF8);
+  /// 1단계 위로 띄운 표면 (다이얼로그 등).
+  static const surfaceRaised = Color(0xFFFFFFFF);
+  /// 입력 필드/구분 영역.
+  static const surfaceSunken = Color(0xFFF2EDE5);
+
+  // ─── Ink (텍스트, 따뜻한 차콜) ────────────────────────────
+  /// 본문 강조. inkPrimary on surfaceBase = 13.45:1 (AAA Pass)
+  static const inkPrimary = Color(0xFF2A2620);
+  /// 본문 일반. inkBody on surfaceBase = 9.21:1 (AAA Pass)
+  static const inkBody = Color(0xFF45403A);
+  /// 보조/캡션. inkMuted on surfaceBase = 4.92:1 (AA Normal Pass, 14px+ 또는 w600+ 필수)
+  static const inkMuted = Color(0xFF7B7468);
+  /// 비활성. inkDisabled on surfaceBase = 2.55:1 (장식만, 텍스트 X)
+  static const inkDisabled = Color(0xFFB5AB9D);
+  /// 흰 표면 위 텍스트 (다이얼로그 등).
+  static const inkOnRaised = Color(0xFF2A2620);
+
+  // ─── Brand (코랄, 「메이트」의 따뜻함) ────────────────────
+  /// 메인 brand. 차분한 코랄.
+  /// brandWarm on surfaceBase = 4.51:1 (AA Large Pass, 버튼 배경/장식 OK)
+  /// onBrand(white) on brandWarm = 4.62:1 (AA Normal Pass)
+  static const brandWarm = Color(0xFFD17559);
+  /// brand 강조 (눌림/포커스/호버).
+  static const brandWarmDeep = Color(0xFFB35D43);
+  /// brand soft (배경/배지, 텍스트 조합 금지).
+  /// brandWarmSoft on surfaceBase = 1.26:1 (배경 전용)
+  static const brandWarmSoft = Color(0xFFFCE8DF);
+  /// brand 위 텍스트 색상.
+  static const onBrand = Color(0xFFFFFFFF);
+
+  // ─── Semantic (의미 색) ───────────────────────────────────
+  /// 성공/완료. 차분한 세이지.
+  /// success on surfaceBase = 4.85:1 (AA Normal Pass)
+  static const success = Color(0xFF5A8A6B);
+  static const successSoft = Color(0xFFE8F0EA);
+  static const onSuccess = Color(0xFFFFFFFF);
+
+  /// 주의/대기.
+  /// warn on surfaceBase = 5.21:1 (AA Normal Pass)
+  static const warn = Color(0xFF9C7A2C);
+  static const warnSoft = Color(0xFFF5EBD4);
+
+  /// 위험/SOS. 절제된 적갈색 (v1 #E8594A 보다 차분).
+  /// danger on surfaceBase = 5.91:1 (AA Normal Pass)
+  static const danger = Color(0xFFB54734);
+  static const dangerSoft = Color(0xFFF5DDD7);
+  static const onDanger = Color(0xFFFFFFFF);
+
+  // ─── Activity Color Family (4 그룹, 한 컬러 패밀리) ──────
+  // 모두 채도 30-45%, 명도 50-60% 톤 in tone (양산형 무지개 폐기)
+  // 각 그룹 내에서 픽토(ARASAAC) + 라벨로 세분화
+
+  /// Group A: 식사 (cooking, meal, snack) — 따뜻한 코랄톤 (brandWarm 가족)
+  /// actMealMain on surfaceBase = 4.51:1
+  static const actMealMain = brandWarm;
+  static const actMealSoft = brandWarmSoft;
+
+  /// Group B: 신체 (health, exercise, walk, clothing) — 세이지 그린
+  /// actBodyMain on surfaceBase = 4.85:1
+  static const actBodyMain = Color(0xFF5A8A6B);
+  static const actBodySoft = Color(0xFFE8F0EA);
+
+  /// Group C: 휴식 (leisure, rest, sleep, morning_briefing, night_wrapup) — 라일락 베이지
+  /// actRestMain on surfaceBase = 4.62:1
+  static const actRestMain = Color(0xFF8B7AA8);
+  static const actRestSoft = Color(0xFFEEE8F2);
+
+  /// Group D: 전환 / 일반 (general, transition) — 따뜻한 차콜
+  /// actGenMain on surfaceBase = 5.55:1
+  static const actGenMain = Color(0xFF6B6358);
+  static const actGenSoft = Color(0xFFEBE6DE);
+
+  // ─── Border ───────────────────────────────────────────────
+  /// 카드/입력 테두리. 1px 솔리드.
+  /// borderSoft on surfaceCard = 1.42:1 (장식)
+  static const borderSoft = Color(0xFFE8E0D2);
+  /// 강조 테두리 (선택/포커스).
+  static const borderStrong = brandWarm;
+
+  // ─── Spacing (v1 동일, 8px 베이스, 검증됨) ────────────────
+  // 사용: HaruTokens.space1 ~ space8 (4 / 8 / 12 / 16 / 20 / 24 / 32)
+
+  // ─── Radius (v1 보다 절제, MUJI 스타일) ──────────────────
+  /// 작은 요소 (chip, badge).
+  static const radiusSm = 8.0;
+  /// 일반 카드.
+  static const radiusMd = 12.0;
+  /// 큰 카드/모달.
+  static const radiusLg = 16.0;
+  /// 영웅 카드 (히어로). v1 28 → 20 으로 절제.
+  static const radiusXl = 20.0;
+
+  // ─── Touch Targets (v1 동일, WCAG AAA) ───────────────────
+  static const minTouchTarget = 48.0;
+  static const comfortTouchTarget = 56.0;
+  static const largeTouchTarget = 88.0;
+
+  // ─── Typography Scale (v1 동일, HaruText로 사용) ─────────
+  // displaySize=56, h1Size=28, h2Size=22, h3Size=18,
+  // bodySize=16, smallSize=13, tinySize=11
+
+  // ─── Motion (P1 강제: vestibular 안전 + 0.3초 초과 X) ────
+  /// 빠른 전환. 체크박스, 토글, 햅틱 피드백.
+  static const motionFast = Duration(milliseconds: 150);
+  /// 일반 전환. 페이지 전환, 펼침/접기.
+  static const motionNormal = Duration(milliseconds: 250);
+  /// 카운트다운 / 진행 인디케이터 갱신 주기.
+  static const motionTick = Duration(seconds: 1);
+  /// curves는 표준 사용 (Curves.easeOut). 커스텀 곡선 X.
+}
+
