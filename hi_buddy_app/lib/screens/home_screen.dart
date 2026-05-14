@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../theme/app_theme.dart';
 import '../services/ui_mode_service.dart';
 import '../services/session_service.dart';
@@ -90,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Text('👋', style: TextStyle(fontSize: 56)),
+                    const Icon(Symbols.waving_hand, size: 56, color: Colors.white, fill: 1),
                     const SizedBox(height: 12),
                     Text(
                       '하루메이트',
@@ -132,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('📺', style: TextStyle(fontSize: 64)),
+                        const Icon(Symbols.tv, size: 64, color: HaruTokensV2.brandWarm, fill: 1),
                         const SizedBox(height: 16),
                         Text(
                           '오늘 하루 보기',
@@ -176,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('💬', style: TextStyle(fontSize: 64)),
+                        const Icon(Symbols.chat_bubble, size: 64, color: HaruTokensV2.brandWarm, fill: 1),
                         const SizedBox(height: 16),
                         Text(
                           '도우미에게 물어보기',
@@ -235,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Column(
                   children: [
-                    Text('👋', style: TextStyle(fontSize: 40)),
+                    Icon(Symbols.waving_hand, size: 40, color: HaruTokensV2.brandWarm, fill: 1),
                     SizedBox(height: 8),
                     Text(
                       '하루메이트',
@@ -281,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Column(
                   children: [
-                    Text('🧩', style: TextStyle(fontSize: 48)),
+                    Icon(Symbols.extension, size: 48, color: HaruTokensV2.brandWarm, fill: 1),
                     SizedBox(height: 12),
                     Text(
                       '오늘 하루, 같이 해봐요!',

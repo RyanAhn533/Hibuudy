@@ -370,7 +370,7 @@ class _UserScreenState extends State<UserScreen> {
                       child: Column(
                         children: [
                           Text(
-                            '아직 첫 활동 전이에요.',
+                            '아직 첫 활동 전',
                             style: TextStyle(
                               fontSize: isAccessible ? 24 : 18,
                               color: HaruTokensV2.inkPrimary,

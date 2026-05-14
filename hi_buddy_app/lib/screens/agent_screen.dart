@@ -35,7 +35,7 @@ class _AgentScreenState extends State<AgentScreen> {
 
   final List<_ChatMessage> _messages = [
     _ChatMessage(
-      text: '안녕하세요! 뭐든 물어보세요.',
+      text: '메이트야. 뭐든 물어봐.',
       isUser: false,
       actions: [
         AgentAction(label: '오늘 일정 보기', actionType: 'navigate', data: {'screen': 'today'}),
@@ -48,7 +48,7 @@ class _AgentScreenState extends State<AgentScreen> {
   @override
   void initState() {
     super.initState();
-    TtsService.speak('안녕하세요! 뭐든 물어보세요.');
+    TtsService.speak('메이트야. 뭐든 물어봐.');
   }
 
   @override

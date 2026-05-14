@@ -86,7 +86,7 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
               CircularProgressIndicator(),
               SizedBox(height: 20),
               Text(
-                '유튜브로 이동 중이에요...',
+                '유튜브로 이동 중',
                 style: TextStyle(fontSize: 20),
               ),
             ],
