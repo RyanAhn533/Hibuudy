@@ -10,9 +10,8 @@ import 'user_screen.dart';
 import 'profile_screen.dart';
 
 /// ══════════════════════════════════════════════════════════
-/// HomeCoordinatorScreen — 보호자/교사용 홈
-/// Design: Figma Frame 13 (UR4JMkCsmhZgNmtvznzvv3)
-/// 기능: 오늘 진행상황 + 4개 빠른 작업
+/// HomeCoordinatorScreen — 보호자/교사용 홈 (v1.4「메이트」)
+/// HaruTokensV2 적용, 그라데이션 폐기, 진행률 시각 강화 (P2 합의)
 /// ══════════════════════════════════════════════════════════
 class HomeCoordinatorScreen extends StatefulWidget {
   const HomeCoordinatorScreen({super.key});
@@ -76,45 +75,51 @@ class _HomeCoordinatorScreenState extends State<HomeCoordinatorScreen> {
     final progress = _totalCount > 0 ? _completedCount / _totalCount : 0.0;
 
     return Scaffold(
-      backgroundColor: HaruTokens.n50,
+      backgroundColor: HaruTokensV2.surfaceBase,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(HaruTokens.space4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Topbar
+              // ─── Topbar (단일 솔리드) ───
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(HaruTokens.space4),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [HaruTokens.primary, Color(0xFF6B8EFF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
+                  color: HaruTokensV2.brandWarm,
+                  borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       '$_targetName 담당',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: HaruTokens.white),
+                      style: HaruText.h3.copyWith(
+                        color: HaruTokensV2.onBrand,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: HaruTokens.space1),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 8, height: 8,
+                          width: 8,
+                          height: 8,
                           decoration: BoxDecoration(
-                            color: _pairCode != null ? HaruTokens.success : HaruTokens.n400,
+                            color: _pairCode != null
+                                ? HaruTokensV2.success
+                                : HaruTokensV2.inkDisabled,
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          _pairCode != null ? '연결됨 · 코드 $_pairCode' : '아직 연결 안 됨',
-                          style: TextStyle(fontSize: 12, color: HaruTokens.white.withValues(alpha: 0.9)),
+                          _pairCode != null
+                              ? '연결됨 · 코드 $_pairCode'
+                              : '아직 연결 안 됨',
+                          style: HaruText.small.copyWith(
+                            color: HaruTokensV2.onBrand.withValues(alpha: 0.9),
+                          ),
                         ),
                       ],
                     ),
@@ -122,163 +127,184 @@ class _HomeCoordinatorScreenState extends State<HomeCoordinatorScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: HaruTokens.space5),
 
-              // Section label
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 8),
-                child: Text(
-                  '오늘',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: HaruTokens.n400, letterSpacing: 1),
-                ),
+              // ─── 오늘 진행률 (P2: 큰 시각화) ───
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Text('오늘',
+                    style: HaruText.tiny.copyWith(
+                      color: HaruTokensV2.inkMuted,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1,
+                    )),
               ),
 
-              // Progress card
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(HaruTokens.space4),
                 decoration: BoxDecoration(
-                  color: HaruTokens.white,
-                  borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
-                  border: Border.all(color: HaruTokens.n200),
+                  color: HaruTokensV2.surfaceCard,
+                  borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
+                  border: Border.all(color: HaruTokensV2.borderSoft),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 44, height: 44,
-                      decoration: const BoxDecoration(color: HaruTokens.success, shape: BoxShape.circle),
-                      child: const Icon(Symbols.check, color: HaruTokens.white, size: 22, fill: 1),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
+                            color: HaruTokensV2.success,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Symbols.check,
+                              color: HaruTokensV2.onSuccess, size: 22, fill: 1),
+                        ),
+                        const SizedBox(width: HaruTokens.space3),
+                        Expanded(
+                          child: Text(
                             _totalCount > 0
                                 ? '$_completedCount / $_totalCount 완료'
                                 : '아직 일정 없음',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                            style: HaruText.h3,
                           ),
-                          const SizedBox(height: 6),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(3),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 6,
-                              backgroundColor: HaruTokens.n200,
-                              color: HaruTokens.success,
+                        ),
+                        if (_totalCount > 0)
+                          Text(
+                            '${(progress * 100).toInt()}%',
+                            style: HaruText.h3.copyWith(
+                              color: HaruTokensV2.success,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
-                        ],
+                      ],
+                    ),
+                    const SizedBox(height: HaruTokens.space3),
+                    // P2: 진행 바 6px → 12px (큰 시각화)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(HaruTokensV2.radiusSm),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 12,
+                        backgroundColor: HaruTokensV2.surfaceSunken,
+                        color: HaruTokensV2.success,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: HaruTokens.space5),
 
-              // 사용 안내 — 한 번 끄면 영구 숨김 (다른 앱들처럼 "앞으로 보지 않기")
+              // ─── 사용 안내 (한 번 끄면 영구) ───
               if (!_hintDismissed) ...[
                 Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(HaruTokens.space4),
                   decoration: BoxDecoration(
-                    color: HaruTokens.primarySoft,
-                    borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
+                    color: HaruTokensV2.brandWarmSoft,
+                    borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Symbols.lightbulb, color: HaruTokens.primary, size: 22, fill: 1),
-                          const SizedBox(width: 8),
-                          const Text(
-                            '사용 방법',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: HaruTokens.primary,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
+                          const Icon(Symbols.lightbulb,
+                              color: HaruTokensV2.brandWarm,
+                              size: 20,
+                              fill: 0),
+                          const SizedBox(width: HaruTokens.space2),
+                          Text('사용 방법',
+                              style: HaruText.small.copyWith(
+                                color: HaruTokensV2.brandWarmDeep,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              )),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: HaruTokens.space2),
                       Text(
                         _totalCount == 0
-                            ? '① "일정 만들기"로 오늘 일정을 먼저 만드세요\n② 저장 후 "오늘 하루 시작"을 누르면 당사자 화면이 열려요'
-                            : '"오늘 하루 시작"을 누르면 당사자 화면이 열려요\n당사자에게 폰을 건네주세요',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: HaruTokens.n700,
+                            ? '① "일정 만들기"로 오늘 일정을 먼저 만들어요\n② 저장 후 "오늘 일과 시작"으로 당사자 화면을 열어요'
+                            : '"오늘 일과 시작"으로 당사자 화면을 열어요\n당사자에게 폰을 건네주세요',
+                        style: HaruText.small.copyWith(
+                          color: HaruTokensV2.inkBody,
                           height: 1.6,
-                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 4),
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: _dismissHint,
                           style: TextButton.styleFrom(
-                            foregroundColor: HaruTokens.n400,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            foregroundColor: HaruTokensV2.inkMuted,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             minimumSize: const Size(0, 32),
                           ),
-                          child: const Text(
-                            '앞으로 보지 않기',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                          ),
+                          child: Text('앞으로 보지 않기',
+                              style: HaruText.small.copyWith(
+                                color: HaruTokensV2.inkMuted,
+                                fontWeight: FontWeight.w600,
+                              )),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: HaruTokens.space4),
               ],
 
-              const Padding(
-                padding: EdgeInsets.only(left: 4, bottom: 8),
-                child: Text(
-                  '빠른 작업',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: HaruTokens.n400, letterSpacing: 1),
-                ),
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Text('빠른 작업',
+                    style: HaruText.tiny.copyWith(
+                      color: HaruTokensV2.inkMuted,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1,
+                    )),
               ),
 
-              // 2x2 grid
               GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
+                mainAxisSpacing: HaruTokens.space3,
+                crossAxisSpacing: HaruTokens.space3,
                 childAspectRatio: 1.4,
                 children: [
                   _QuickAction(
                     icon: Symbols.edit_note,
                     label: '일정 만들기',
-                    subtitle: '① 먼저 일정 입력',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CoordinatorScreen())).then((_) => _load()),
+                    subtitle: '먼저 일정 입력',
+                    onTap: () => Navigator.push(context,
+                            MaterialPageRoute(builder: (_) => const CoordinatorScreen()))
+                        .then((_) => _load()),
                   ),
                   _QuickAction(
                     icon: Symbols.play_circle,
-                    label: '오늘 하루 열기',
-                    subtitle: '② 당사자 화면',
+                    label: '오늘 일과 시작',
+                    subtitle: '당사자 화면',
                     highlight: _totalCount > 0,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserScreen())),
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const UserScreen())),
                   ),
                   _QuickAction(
                     icon: Symbols.monitoring,
                     label: '수행 기록',
                     subtitle: '이번 주 확인',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const ProfileScreen())),
                   ),
                   _QuickAction(
                     icon: Symbols.settings,
                     label: '내 정보',
                     subtitle: '이름 · 연락처',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())).then((_) => _load()),
+                    onTap: () => Navigator.push(context,
+                            MaterialPageRoute(builder: (_) => const ProfileScreen()))
+                        .then((_) => _load()),
                   ),
                 ],
               ),
@@ -296,6 +322,7 @@ class _QuickAction extends StatelessWidget {
   final String? subtitle;
   final bool highlight;
   final VoidCallback onTap;
+
   const _QuickAction({
     required this.icon,
     required this.label,
@@ -306,25 +333,28 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = highlight ? HaruTokens.primary : HaruTokens.white;
-    final fg = highlight ? HaruTokens.white : HaruTokens.n900;
-    final iconColor = highlight ? HaruTokens.white : HaruTokens.primary;
+    final bg = highlight ? HaruTokensV2.brandWarm : HaruTokensV2.surfaceCard;
+    final fg = highlight ? HaruTokensV2.onBrand : HaruTokensV2.inkPrimary;
+    final iconColor =
+        highlight ? HaruTokensV2.onBrand : HaruTokensV2.brandWarm;
     final subColor = highlight
-        ? Colors.white.withValues(alpha: 0.8)
-        : HaruTokens.n400;
+        ? HaruTokensV2.onBrand.withValues(alpha: 0.85)
+        : HaruTokensV2.inkMuted;
+    final borderColor =
+        highlight ? HaruTokensV2.brandWarm : HaruTokensV2.borderSoft;
 
     return Material(
       color: bg,
-      borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
+      borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
       child: InkWell(
-        borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
+        borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(HaruTokens.space2),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
+            borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
             border: Border.all(
-              color: highlight ? HaruTokens.primary : HaruTokens.n200,
+              color: borderColor,
               width: highlight ? 2 : 1,
             ),
           ),
@@ -332,17 +362,20 @@ class _QuickAction extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 32, color: iconColor, fill: 1),
-              const SizedBox(height: 6),
+              const SizedBox(height: HaruTokens.space1),
               Text(
                 label,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: fg),
+                style: HaruText.small.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: fg,
+                ),
                 textAlign: TextAlign.center,
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 2),
                 Text(
                   subtitle!,
-                  style: TextStyle(fontSize: 10, color: subColor, fontWeight: FontWeight.w500),
+                  style: HaruText.tiny.copyWith(color: subColor),
                   textAlign: TextAlign.center,
                 ),
               ],
