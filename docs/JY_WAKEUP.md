@@ -119,3 +119,11 @@ adb uninstall com.harumate.care && adb install build/app/outputs/flutter-apk/app
 | 배포/운영 | 60 | 60 (Render 복구, 카드 등록) | 80 |
 
 **문서 끝.** 매 세션 종료 시 갱신.
+
+## 🌙 2026-09-06 밤 종료 시점 — 일어나서 볼 것 3개
+
+1. **Play Console**: AAB v1.5.0+7 업로드됨(JY). 확인할 것 → ① 비공개 테스트 "출시 시작" 눌렸는지 ② 스크린샷 6장 교체 (`docs/store-listing-v1.5.0/` 또는 바탕화면 폴더) ③ 홈 화면 개발자 인증 경고 유무 (9/30)
+2. **테스터 12명 × 14일** 참여 요청 (카페 + `harumate-testers@googlegroups.com`). 프로덕션 재신청 조건. 14일 뒤 = 9/20 이후 재신청.
+3. **키 rotate**: 채팅에 붙인 Cerebras·Upstage 키 재발급 → Render ENV 교체. 로컬 `backend/.env` 삭제해도 됨.
+
+오늘 상태: 앱 `feature/uiux-polish-v134` 30 commits push 완료 · 서버 `main` 배포·AI 복구 · 개인정보처리방침 v1.5 라이브 · Render 결제 등록 · 트리 클린 (v3/ 만 언트랙, JY 결정 대기)
