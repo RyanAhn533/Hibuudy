@@ -17,6 +17,9 @@
 
 ## ⚠️ JY 직접 해야 할 것
 
+-1. **🔴 Play 프로덕션 거부 (Gmail 2026-08-08, 08-25 두 번)**: 사유 = "비공개 테스트 중 테스터가 앱에 참여하지 않았음 · 사용자 의견 수집/조치 권장사항 미이행". 백엔드 503 과 직접 인과는 아니지만(정책상 '참여도' 심사), 4개월간 AI 가 죽어 있었으니 테스터가 써볼 이유가 없었음. **재신청 조건: 실제 테스터 12명 × 14일 연속 참여 + 앱 업데이트로 피드백 반영 흔적.** → v1.5.0 AAB 올리고, 테스터에게 매일 1회 사용 요청, 14일 뒤 재신청.
+-2. **🔴 9/30 마감 — Android 개발자 인증**: Gmail "[최종 알림]" (09-04). Play Console 홈에서 `com.harumate.care` 등록 상태 확인, 미등록이면 등록. **미등록 앱은 9/30 이후 Play 에서 삭제.**
+
 0. ~~백엔드 AI 죽어 있음~~ ✅ **복구 완료 (2026-09-06 19:1x)** — main 핫픽스 배포 + Render `UPSTAGE_API_KEY` 추가 → 프로덕션 generate 200 (2.7s, 7항목). 아래는 경과 기록: `gemini-2.0-flash`(06-01 셧다운)·Groq `llama-3.3-70b`(08 종료) 둘 다 서비스 종료라 일정 생성/수정 전부 503. 핫픽스 브랜치 `hotfix/backend-llm-models` push 해둠 → https://github.com/RyanAhn533/Hibuudy/pull/new/hotfix/backend-llm-models 에서 main 머지하면 Render 자동 배포. (main push 는 자동모드 분류기가 차단해서 내가 못 함)
 0b. ~~Render ENV 에 `UPSTAGE_API_KEY` 추가~~ ✅ 완료. Gemini·Groq 키는 꽂혀 있으나 실호출 실패(만료 추정) → 캐스케이드가 Upstage 로 폴백 중. 여유 있을 때 Gemini 키 재발급. (실측 통과한 공급자. Cerebras 는 무료 키 402 → 제외). Gemini 키는 4개월 방치라 로그로 유효 확인, 죽었으면 재발급 또는 `GEMINI_MODEL=gemini-2.5-flash-lite`.
 0c-1. **키 교체(rotate)**: Cerebras·Upstage 키를 채팅에 붙여넣었음 → 테스트 끝났으니 콘솔에서 재발급하고 Render 에는 새 키. 로컬 `backend/.env` 는 gitignore 상태 (커밋 안 됨).
