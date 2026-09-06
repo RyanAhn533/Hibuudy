@@ -26,6 +26,9 @@ class SosButton extends StatelessWidget {
       // DB 오류 시 119 폴백
     }
 
+    // 3지표: 도움 요청 기록 (실패해도 전화는 진행)
+    DatabaseService.logHelp(source: 'sos').catchError((_) {});
+
     final uri = Uri.parse('tel:$phoneNumber');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);

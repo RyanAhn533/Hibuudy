@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../services/session_service.dart';
 import '../services/schedule_storage.dart';
 import '../services/database_service.dart';
+import '../services/metrics_service.dart';
 import 'coordinator_screen.dart';
 import 'user_screen.dart';
 import 'profile_screen.dart';
@@ -28,6 +29,7 @@ class _HomeCoordinatorScreenState extends State<HomeCoordinatorScreen> {
   int _completedCount = 0;
   String? _pairCode;
   bool _hintDismissed = false;
+  WeeklySummary? _weekly;
 
   @override
   void initState() {
@@ -61,12 +63,14 @@ class _HomeCoordinatorScreenState extends State<HomeCoordinatorScreen> {
         done = logs.where((l) => l['completed'] == 1).length;
       } catch (_) {}
     }
+    final weekly = await MetricsService.weekly(plannedToday: total);
     if (!mounted) return;
     setState(() {
       _targetName = name;
       _totalCount = total;
       _completedCount = done;
       _pairCode = code;
+      _weekly = weekly;
     });
   }
 
@@ -195,6 +199,43 @@ class _HomeCoordinatorScreenState extends State<HomeCoordinatorScreen> {
                   ],
                 ),
               ),
+
+              const SizedBox(height: HaruTokens.space3),
+
+              // ─── 이번 주 한 문장 (P0-4 3지표, G2/G4: 문장형·안심 톤) ───
+              if (_weekly != null)
+                Container(
+                  padding: const EdgeInsets.all(HaruTokens.space4),
+                  decoration: BoxDecoration(
+                    color: HaruTokensV2.surfaceCard,
+                    borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
+                    border: Border.all(color: HaruTokensV2.borderSoft),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Symbols.insights, color: HaruTokensV2.actRestMain, size: 24, fill: 1),
+                      const SizedBox(width: HaruTokens.space3),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_weekly!.sentence,
+                                style: HaruText.body.copyWith(color: HaruTokensV2.inkPrimary, height: 1.5)),
+                            if (_weekly!.moodSentence != null) ...[
+                              const SizedBox(height: HaruTokens.space1),
+                              Text(_weekly!.moodSentence!,
+                                  style: HaruText.small.copyWith(
+                                    color: _weekly!.moodHard >= 2 ? HaruTokensV2.danger : HaruTokensV2.inkBody,
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
               const SizedBox(height: HaruTokens.space5),
 

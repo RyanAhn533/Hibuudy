@@ -162,6 +162,8 @@ class StepsList extends StatefulWidget {
   /// kiosk 전용 단일 단계 포커스 모드. true면 현재 단계 1개만 크게 표시.
   /// normal/simple은 false로 두고 기존 리스트 UX 유지.
   final bool singleFocusMode;
+  /// 모든 단계 완료 시 1회 호출 (수행 기록·완료 인증 트리거)
+  final VoidCallback? onAllDone;
 
   const StepsList({
     super.key,
@@ -169,6 +171,7 @@ class StepsList extends StatefulWidget {
     required this.steps,
     this.color = HiBuddyColors.primary,
     this.singleFocusMode = false,
+    this.onAllDone,
   });
 
   @override
@@ -201,6 +204,7 @@ class _StepsListState extends State<StepsList> {
     if (_completed.every((c) => c) && !_allDoneBannerShown) {
       _allDoneBannerShown = true;
       TtsService.speak('잘했어요! 다 했어요!');
+      widget.onAllDone?.call();
     }
   }
 

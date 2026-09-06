@@ -13,6 +13,8 @@ import '../widgets/morning_briefing.dart';
 import '../widgets/sos_button.dart';
 import '../widgets/haru_bottom_bar.dart';
 import '../services/session_service.dart';
+import '../services/proof_service.dart';
+import '../widgets/haru_feedback.dart';
 import '../services/ui_mode_service.dart';
 import '../services/activity_recommender.dart';
 import '../services/database_service.dart';
@@ -478,6 +480,35 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
+  /// 활동의 모든 단계 완료 → 수행 기록 저장 (P0-3) → 옵션이면 완료 사진 (P0-2)
+  /// 실패/취소는 완료를 막지 않는다 (R6).
+  Future<void> _onActivityDone(ScheduleItem? item, int steps) async {
+    if (item == null) return;
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    try {
+      if (await DatabaseService.hasCompletion(today, item.task)) return;
+      final id = await DatabaseService.logCompletion(
+        date: today,
+        time: item.time,
+        activityType: item.type,
+        task: item.task,
+        completed: true,
+        stepsTotal: steps,
+        stepsCompleted: steps,
+      );
+      if (await ProofService.isEnabled() && mounted) {
+        await TtsService.speak('다 했으면 사진 한 장 남기자.');
+        final path = await ProofService.capture();
+        if (path != null) {
+          await DatabaseService.updateCompletionProof(id, path);
+          if (mounted) HaruFeedback.show(context, '사진 남겼어. 잘했어!');
+        }
+      }
+    } catch (_) {
+      // 기록 실패는 사용자 흐름에 영향 X
+    }
+  }
+
   Widget _buildActivityHeader(ScheduleItem item) {
     final color = HaruTokensV2.activityMainFor(item.type);
     final bgColor = HaruTokensV2.activitySoftFor(item.type);
@@ -659,6 +690,7 @@ class _UserScreenState extends State<UserScreen> {
             steps: item.guideScript,
             color: color,
             singleFocusMode: UiModeService.isKiosk,
+            onAllDone: () => _onActivityDone(item, item.guideScript.length),
           ),
 
         if (item.menus.isNotEmpty) ...[
@@ -775,6 +807,7 @@ class _UserScreenState extends State<UserScreen> {
           steps: recipe.steps,
           color: HaruTokensV2.actMealMain,
           singleFocusMode: UiModeService.isKiosk,
+          onAllDone: () => _onActivityDone(_findActiveAndNext().$1, recipe.steps.length),
         ),
       ],
     );
@@ -820,6 +853,7 @@ class _UserScreenState extends State<UserScreen> {
               steps: routine.steps,
               color: color,
               singleFocusMode: UiModeService.isKiosk,
+              onAllDone: () => _onActivityDone(item, routine.steps.length),
             );
           },
         ),
@@ -831,6 +865,7 @@ class _UserScreenState extends State<UserScreen> {
             steps: item.guideScript,
             color: color,
             singleFocusMode: UiModeService.isKiosk,
+            onAllDone: () => _onActivityDone(item, item.guideScript.length),
           ),
         ],
       ],
@@ -857,6 +892,7 @@ class _UserScreenState extends State<UserScreen> {
       steps: item.guideScript,
       color: color,
       singleFocusMode: UiModeService.isKiosk,
+      onAllDone: () => _onActivityDone(item, item.guideScript.length),
     );
   }
 

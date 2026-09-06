@@ -4,9 +4,10 @@ import 'package:path/path.dart';
 /// ══════════════════════════════════════════════════════════
 /// DatabaseService — 로컬 SQLite 저장소
 /// v1 → v2 마이그레이션 (2026-04-19): paired_session 컬럼 추가
+/// v2 → v3 (2026-09-06): completion_log 에 proof_path / logged_at 추가 (완료 인증·3지표)
 /// ══════════════════════════════════════════════════════════
 class DatabaseService {
-  static const int _dbVersion = 2;
+  static const int _dbVersion = 3;
   static Database? _db;
 
   static Future<Database> get db async {
@@ -69,7 +70,9 @@ class DatabaseService {
             completed INTEGER DEFAULT 0,
             steps_total INTEGER DEFAULT 0,
             steps_completed INTEGER DEFAULT 0,
-            needed_help INTEGER DEFAULT 0
+            needed_help INTEGER DEFAULT 0,
+            proof_path TEXT,
+            logged_at TEXT
           )
         ''');
 
@@ -143,7 +146,11 @@ class DatabaseService {
       ''');
     }
 
-    // 향후: if (oldVersion < 3) { ... }
+    // v2 → v3: 완료 인증 사진 경로 + 기록 시각
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE completion_log ADD COLUMN proof_path TEXT');
+      await db.execute('ALTER TABLE completion_log ADD COLUMN logged_at TEXT');
+    }
   }
 
   // ── 프로필 ──
@@ -187,24 +194,58 @@ class DatabaseService {
   }
 
   // ── 수행 기록 ──
-  static Future<void> logCompletion({
+  /// 완료 기록 1건 삽입. 삽입된 row id 반환 (사진 인증 경로 후속 업데이트용).
+  static Future<int> logCompletion({
     required String date,
     required String activityType,
     required String task,
     required bool completed,
+    String? time,
     int stepsTotal = 0,
     int stepsCompleted = 0,
     bool neededHelp = false,
+    String? proofPath,
   }) async {
     final d = await db;
-    await d.insert('completion_log', {
+    return d.insert('completion_log', {
       'date': date,
+      'time': time,
       'activity_type': activityType,
       'task': task,
       'completed': completed ? 1 : 0,
       'steps_total': stepsTotal,
       'steps_completed': stepsCompleted,
       'needed_help': neededHelp ? 1 : 0,
+      'proof_path': proofPath,
+      'logged_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// 같은 날 같은 활동이 이미 완료 기록됐는지 (중복 방지)
+  static Future<bool> hasCompletion(String date, String task) async {
+    final d = await db;
+    final rows = await d.query('completion_log',
+        where: 'date = ? AND task = ? AND completed = 1', whereArgs: [date, task], limit: 1);
+    return rows.isNotEmpty;
+  }
+
+  static Future<void> updateCompletionProof(int id, String path) async {
+    final d = await db;
+    await d.update('completion_log', {'proof_path': path}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// 도움 요청(SOS/전화) 1건 기록 — 3지표의 "막힘" 대리 지표
+  static Future<void> logHelp({String source = 'sos'}) async {
+    final d = await db;
+    final now = DateTime.now();
+    await d.insert('completion_log', {
+      'date': now.toIso8601String().substring(0, 10),
+      'time': '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+      'activity_type': 'HELP',
+      'task': source,
+      'completed': 0,
+      'needed_help': 1,
+      'logged_at': now.toIso8601String(),
     });
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/database_service.dart';
+import '../services/proof_service.dart';
 import '../services/ui_mode_service.dart';
 import '../services/export_service.dart';
 
@@ -34,6 +35,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── 수행 기록 ──
   List<Map<String, dynamic>> _completionLogs = [];
+  /// 완료 인증 사진 (P0-2) — 기본 OFF, 기관 사용 시 권장
+  bool _proofPhoto = false;
 
   bool _isLoading = true;
 
@@ -91,6 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final contacts = await DatabaseService.getEmergencyContacts();
       final medicines = await DatabaseService.getMedicineSchedules();
       final logs = await DatabaseService.getCompletionLogs(limit: 30);
+      final proof = await ProofService.isEnabled();
 
       if (!mounted) return;
       setState(() {
@@ -104,6 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _contacts = contacts;
         _medicines = medicines;
         _completionLogs = logs;
+        _proofPhoto = proof;
         _isLoading = false;
       });
     } catch (e) {
@@ -121,6 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'ui_mode': newMode,
       'tts_speed': _ttsSpeed,
     });
+    await ProofService.setEnabled(_proofPhoto);
     // UI 모드 즉시 반영
     UiModeService.currentMode = newMode;
     if (mounted) {
@@ -382,6 +388,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text(
             '현재: ${_ttsSpeed.toStringAsFixed(2)}',
             style: const TextStyle(fontSize: 14, color: HaruTokensV2.inkMuted),
+          ),
+
+          const SizedBox(height: 16),
+
+          // 완료 인증 사진 (P0-2) — 「보통의 하루」 사진/NFC 해제 패턴의 옵션판
+          Container(
+            decoration: BoxDecoration(
+              color: HaruTokensV2.surfaceCard,
+              borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
+              border: Border.all(color: HaruTokensV2.borderSoft),
+            ),
+            child: SwitchListTile(
+              value: _proofPhoto,
+              onChanged: (v) => setState(() => _proofPhoto = v),
+              activeThumbColor: HaruTokensV2.brandWarm,
+              title: const Text('완료할 때 사진 남기기',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: HaruTokensV2.inkPrimary)),
+              subtitle: const Text('단계를 다 마치면 카메라가 열려요. 사진은 이 기기에만 저장돼요. 복지관·기관 사용 시 권장.',
+                  style: TextStyle(fontSize: 13, color: HaruTokensV2.inkMuted, height: 1.4)),
+              secondary: const Icon(Icons.photo_camera_outlined, color: HaruTokensV2.brandWarm),
+            ),
           ),
 
           const SizedBox(height: 16),

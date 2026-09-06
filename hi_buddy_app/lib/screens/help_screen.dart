@@ -60,6 +60,7 @@ class _HelpScreenState extends State<HelpScreen> {
   }
 
   Future<void> _callContact() async {
+    DatabaseService.logHelp(source: 'call').catchError((_) {});
     final number = _phone ?? '119';
     await _launch(Uri.parse('tel:$number'), '$number 전화 연결이 안 됨');
   }
@@ -70,6 +71,7 @@ class _HelpScreenState extends State<HelpScreen> {
       HaruFeedback.show(context, '문자 보낼 사람이 아직 없음', error: true);
       return;
     }
+    DatabaseService.logHelp(source: 'sms').catchError((_) {});
     final uri = Uri(
       scheme: 'sms',
       path: number,
