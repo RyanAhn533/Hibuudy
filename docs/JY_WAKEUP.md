@@ -73,6 +73,13 @@ adb uninstall com.harumate.care && adb install build/app/outputs/flutter-apk/app
 - agent_plan_card 이모지·12px 제거 (미사용 위젯이지만 /ux-status 회귀 지표 오염 방지)
 - 미반영: "v3/ 를 커밋하라" — JY 결정 사안 (v3 코드 830KB, 데이터는 gitignore 됨)
 
+### P0 완료 (세션 7 후반) — 「보통의 하루」 대비 열세 2개 해소
+- **완료 인증 사진** `ProofService` (image_picker, 기기 내 저장, 기본 OFF, 내 정보 토글) — E2E: 단계 완료 → 카메라 실행 확인
+- **수행 기록 실제 저장**: `logCompletion()` 호출부가 지금까지 **0개**였음 → 5개 활동 뷰 `onAllDone` 연결. DB v3 (proof_path/logged_at). SOS/전화/문자 = `logHelp()`
+- **3지표 주간 문장** `MetricsService.weekly()` → 보호자 홈 "오늘 6개 중 1개 했어요 · 이번 주 1일 활동" + 기분 요약
+- **릴리즈**: version 1.5.0+7, 바탕화면 `하루메이트-care-v1.5.0.aab/.apk` + 릴리즈노트 → Play Console 비공개 테스트 업로드는 JY
+- **Render**: 결제수단 등록으로 복구, /health 200
+
 ### 도구
 - `.claude/skills/apple-design/` (dickwu, vendored) — HIG 53문서 리뷰어
 - `.claude/skills/harumate-cognitive-a11y/SKILL.md` — 12원칙 감사 (우리 것)
@@ -85,9 +92,10 @@ adb uninstall com.harumate.care && adb install build/app/outputs/flutter-apk/app
 
 1. ~~Render 재가동~~ ✅
 2. settings.json (JY)
-3. **P0-2 완료 인증 옵션** (사진/NFC, 기관 모드 ON) — 로드맵 §4
-4. **P0-3 이행률 로그** (sqflite 1테이블 + 코디 홈 문장형 요약)
-5. **P0-4 3지표 계측** (완료율·오류·만족)
+3. ~~P0-2 완료 인증 옵션(사진)~~ ✅ ProofService, 내 정보 토글, 기본 OFF (NFC는 보류)
+4. ~~P0-3 이행률 로그~~ ✅ StepsList.onAllDone → completion_log (호출부 0개였던 것 발견·연결)
+5. ~~P0-4 3지표~~ ✅ MetricsService.weekly() → 보호자 홈 한 문장 (오류 지표는 도움 요청 대리)
+5b. **P0-5 NFC 인증** (nfc_manager, 실기기 필요) · **P1 사진 온디바이스 판정** (Gemini Nano) — 다음
 6. `/ux-screenshot` 명령을 uninstall→install + seed 방식으로 갱신
 7. ARASAAC/국내 심볼 (기존 Gate 4), M4 모션 잔여
 
@@ -99,7 +107,7 @@ adb uninstall com.harumate.care && adb install build/app/outputs/flutter-apk/app
 |---|---|---|---|
 | UX/UI | 75 | **82** (4타일·하단바·2칸·R1~R11 통과) | 90 |
 | 접근성 | 72 | **80** (아이콘+라벨 100%, 타임아웃 0, 48pt) | 88 |
-| 검증 | 60 | 60 (실사용자 0, 계측 미착수) | 80 |
+| 검증 | 60 | **68** (완료·도움·기분 계측 시작, 실사용자 0) | 80 |
 | 배포/운영 | 60 | 60 (Render 복구, 카드 등록) | 80 |
 
 **문서 끝.** 매 세션 종료 시 갱신.
