@@ -25,7 +25,8 @@ class ActivityCard extends StatelessWidget {
     this.isActive = false,
   });
 
-  IconData _iconFor(String type) {
+  /// 활동 타입 → Material Symbols 픽토. NowNextCard 등에서 재사용.
+  static IconData iconFor(String type) {
     switch (type.toUpperCase()) {
       case 'COOKING':
         return Symbols.restaurant;
@@ -58,7 +59,7 @@ class ActivityCard extends StatelessWidget {
     final color = HaruTokensV2.activityMainFor(type);
     final bgColor = HaruTokensV2.activitySoftFor(type);
     final groupLabel = HaruTokensV2.activityGroupLabel(type);
-    final icon = _iconFor(type);
+    final icon = iconFor(type);
 
     return Semantics(
       label: '$time $groupLabel $task',

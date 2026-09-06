@@ -4,15 +4,22 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../theme/app_theme.dart';
 import '../services/session_service.dart';
 import '../services/schedule_storage.dart';
+import '../services/ui_mode_service.dart';
 import '../models/schedule_item.dart';
+import '../widgets/now_next_card.dart';
 import '../widgets/sos_button.dart';
 import 'user_screen.dart';
+import 'today_screen.dart';
+import 'help_screen.dart';
 import 'agent_screen.dart';
 
 /// ══════════════════════════════════════════════════════════
-/// HomeUserScreen — 당사자용 홈 (v1.4「메이트」)
-/// HaruTokensV2 적용: warm coral brand + warm-tinted surface
-/// 폐기: 그라데이션 (P6 적출) / "~님" 호칭 (H1) / "~보세요" (H1)
+/// HomeUserScreen — 당사자용 홈 (v1.5「메이트」루트 4타일)
+/// Apple Assistive Access 구조 이식:
+///   - 루트 타일 ≤ 4 (R1): 지금 할 일 / 오늘 일과 / 도움 / 메이트
+///   - 그리드 ⇄ 줄 레이아웃 토글 (P9), 선택은 기기에 저장
+///   - 아이콘 + 라벨 항상 쌍 (R2), 그라데이션 0, 이모지 0
+///   - 상단에 「지금 | 다음」 2칸 + 남은 시간 링 (P1, P2)
 /// ══════════════════════════════════════════════════════════
 class HomeUserScreen extends StatefulWidget {
   const HomeUserScreen({super.key});
@@ -25,7 +32,6 @@ class _HomeUserScreenState extends State<HomeUserScreen> {
   String _name = '';
   ScheduleItem? _currentActivity;
   ScheduleItem? _nextActivity;
-  int _totalToday = 0;
 
   @override
   void initState() {
@@ -38,9 +44,7 @@ class _HomeUserScreenState extends State<HomeUserScreen> {
     final schedule = await ScheduleStorage.load();
     ScheduleItem? current;
     ScheduleItem? next;
-    int total = 0;
     if (schedule != null && schedule.items.isNotEmpty) {
-      total = schedule.items.length;
       final now = DateTime.now();
       final nowMin = now.hour * 60 + now.minute;
       int currentIdx = -1;
@@ -63,7 +67,6 @@ class _HomeUserScreenState extends State<HomeUserScreen> {
       _name = name;
       _currentActivity = current;
       _nextActivity = next;
-      _totalToday = total;
     });
   }
 
@@ -72,9 +75,50 @@ class _HomeUserScreenState extends State<HomeUserScreen> {
     return days[DateTime.now().weekday - 1];
   }
 
+  Future<void> _push(Widget screen) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    // 돌아오면 지금/다음 갱신
+    _loadSession();
+  }
+
+  Future<void> _toggleLayout() async {
+    final next = UiModeService.homeLayout == 'grid' ? 'row' : 'grid';
+    await UiModeService.setHomeLayout(next);
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final timeStr = DateFormat('a h시 m분', 'ko').format(DateTime.now());
+    final isGrid = UiModeService.homeLayout == 'grid';
+
+    final tiles = <_TileSpec>[
+      _TileSpec(
+        icon: Symbols.play_circle,
+        label: '지금 할 일',
+        color: HaruTokensV2.brandWarm,
+        filled: true,
+        onTap: () => _push(const UserScreen()),
+      ),
+      _TileSpec(
+        icon: Symbols.view_agenda,
+        label: '오늘 일과',
+        color: HaruTokensV2.actRestMain,
+        onTap: () => _push(const TodayScreen()),
+      ),
+      _TileSpec(
+        icon: Symbols.support,
+        label: '도움',
+        color: HaruTokensV2.danger,
+        onTap: () => _push(const HelpScreen()),
+      ),
+      _TileSpec(
+        icon: Symbols.chat_bubble,
+        label: '메이트',
+        color: HaruTokensV2.actBodyMain,
+        onTap: () => _push(const AgentScreen()),
+      ),
+    ];
 
     return Scaffold(
       backgroundColor: HaruTokensV2.surfaceBase,
@@ -84,104 +128,54 @@ class _HomeUserScreenState extends State<HomeUserScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ─── 헤더 (단일 솔리드, 그라데이션 폐기) ───
+              // ─── 헤더 (단일 솔리드) + 레이아웃 토글 ───
               Container(
-                padding: const EdgeInsets.all(HaruTokens.space5),
+                padding: const EdgeInsets.all(HaruTokens.space4),
                 decoration: BoxDecoration(
                   color: HaruTokensV2.brandWarm,
                   borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(
-                      _name.isEmpty ? '안녕' : '$_name 안녕',
-                      style: HaruText.h2.copyWith(
-                        color: HaruTokensV2.onBrand,
-                        fontWeight: FontWeight.w800,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _name.isEmpty ? '안녕' : '$_name 안녕',
+                            style: HaruText.h2.copyWith(
+                              color: HaruTokensV2.onBrand,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: HaruTokens.space1),
+                          Text(
+                            '${_koreanDayName()} $timeStr',
+                            style: HaruText.small.copyWith(
+                              color: HaruTokensV2.onBrand.withValues(alpha: 0.85),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: HaruTokens.space1),
-                    Text(
-                      '${_koreanDayName()} $timeStr',
-                      style: HaruText.small.copyWith(
-                        color: HaruTokensV2.onBrand.withValues(alpha: 0.85),
-                      ),
-                    ),
+                    _LayoutToggle(isGrid: isGrid, onTap: _toggleLayout),
                   ],
                 ),
               ),
               const SizedBox(height: HaruTokens.space3),
 
-              // ─── 히어로 카드 (3 상태) ───
-              if (_currentActivity != null)
-                _HeroCard(
-                  badge: '지금 할 일',
-                  badgeIcon: Symbols.schedule,
-                  badgeColor: HaruTokensV2.brandWarm,
-                  title: _currentActivity!.task,
-                  subtitle: '${_currentActivity!.time}부터',
-                  bgColor: HaruTokensV2.brandWarmSoft,
-                  borderColor: HaruTokensV2.brandWarm,
-                  next: _nextActivity != null
-                      ? '다음: ${_nextActivity!.time} ${_nextActivity!.task}'
-                      : null,
-                )
-              else if (_nextActivity != null)
-                _HeroCard(
-                  badge: '곧 시작',
-                  badgeIcon: Symbols.upcoming,
-                  badgeColor: HaruTokensV2.actRestMain,
-                  title: _nextActivity!.task,
-                  subtitle: '${_nextActivity!.time} 시작',
-                  bgColor: HaruTokensV2.actRestSoft,
-                  borderColor: HaruTokensV2.actRestMain,
-                  next: _totalToday > 1 ? '오늘 일정 $_totalToday개' : null,
-                )
-              else
-                _HeroCard(
-                  badge: '자유시간',
-                  badgeIcon: Symbols.wb_sunny,
-                  badgeColor: HaruTokensV2.actRestMain,
-                  title: '오늘은 자유시간',
-                  subtitle: null,
-                  bgColor: HaruTokensV2.actRestSoft,
-                  borderColor: HaruTokensV2.actRestMain,
-                  next: null,
-                ),
-
+              // ─── 지금 | 다음 ───
+              NowNextCard(
+                current: _currentActivity,
+                next: _nextActivity,
+                onTap: () => _push(const UserScreen()),
+              ),
               const SizedBox(height: HaruTokens.space4),
 
-              // ─── CTA 1: 오늘 일정 (강조) ───
+              // ─── 루트 4타일 ───
               Expanded(
-                child: _BigCta(
-                  label: '오늘 일정',
-                  icon: Symbols.list_alt,
-                  color: HaruTokensV2.brandWarm,
-                  textColor: HaruTokensV2.onBrand,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const UserScreen()),
-                  ),
-                ),
+                child: isGrid ? _Grid(tiles: tiles) : _Rows(tiles: tiles),
               ),
-              const SizedBox(height: HaruTokens.space3),
-
-              // ─── CTA 2: 메이트 (보조) ───
-              Expanded(
-                child: _BigCta(
-                  label: '메이트한테 물어보기',
-                  icon: Symbols.chat_bubble,
-                  color: HaruTokensV2.surfaceCard,
-                  textColor: HaruTokensV2.inkPrimary,
-                  borderColor: HaruTokensV2.brandWarm,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AgentScreen()),
-                  ),
-                ),
-              ),
-              const SizedBox(height: HaruTokens.space2),
             ],
           ),
         ),
@@ -191,140 +185,173 @@ class _HomeUserScreenState extends State<HomeUserScreen> {
   }
 }
 
-/// 히어로 카드 — 3 상태 통일 위젯
-class _HeroCard extends StatelessWidget {
-  final String badge;
-  final IconData badgeIcon;
-  final Color badgeColor;
-  final String title;
-  final String? subtitle;
-  final Color bgColor;
-  final Color borderColor;
-  final String? next;
-
-  const _HeroCard({
-    required this.badge,
-    required this.badgeIcon,
-    required this.badgeColor,
-    required this.title,
-    required this.subtitle,
-    required this.bgColor,
-    required this.borderColor,
-    required this.next,
+class _TileSpec {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool filled;
+  final VoidCallback onTap;
+  const _TileSpec({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.filled = false,
   });
+}
+
+class _Grid extends StatelessWidget {
+  final List<_TileSpec> tiles;
+  const _Grid({required this.tiles});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(HaruTokens.space5),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
-        border: Border.all(color: borderColor, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
             children: [
-              Icon(badgeIcon, size: 18, color: badgeColor, fill: 0),
-              const SizedBox(width: HaruTokens.space2),
-              Text(
-                badge,
-                style: HaruText.small.copyWith(
-                  color: badgeColor,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              Expanded(child: _Tile(spec: tiles[0])),
+              const SizedBox(width: HaruTokens.space3),
+              Expanded(child: _Tile(spec: tiles[1])),
             ],
           ),
-          const SizedBox(height: HaruTokens.space2),
-          Text(
-            title,
-            style: HaruText.h2.copyWith(color: HaruTokensV2.inkPrimary),
+        ),
+        const SizedBox(height: HaruTokens.space3),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: _Tile(spec: tiles[2])),
+              const SizedBox(width: HaruTokens.space3),
+              Expanded(child: _Tile(spec: tiles[3])),
+            ],
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              subtitle!,
-              style: HaruText.small.copyWith(color: HaruTokensV2.inkBody),
-            ),
-          ],
-          if (next != null) ...[
-            const SizedBox(height: HaruTokens.space3),
-            Container(height: 1, color: HaruTokensV2.borderSoft),
-            const SizedBox(height: HaruTokens.space3),
-            Row(
-              children: [
-                Icon(Symbols.arrow_forward,
-                    size: 14, color: HaruTokensV2.inkMuted),
-                const SizedBox(width: HaruTokens.space2),
-                Expanded(
-                  child: Text(
-                    next!,
-                    style: HaruText.small.copyWith(color: HaruTokensV2.inkBody),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _Rows extends StatelessWidget {
+  final List<_TileSpec> tiles;
+  const _Rows({required this.tiles});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (int i = 0; i < tiles.length; i++) ...[
+          Expanded(child: _Tile(spec: tiles[i], horizontal: true)),
+          if (i < tiles.length - 1) const SizedBox(height: HaruTokens.space3),
         ],
+      ],
+    );
+  }
+}
+
+class _Tile extends StatelessWidget {
+  final _TileSpec spec;
+  final bool horizontal;
+  const _Tile({required this.spec, this.horizontal = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = spec.filled ? HaruTokensV2.onBrand : HaruTokensV2.inkPrimary;
+    final iconColor = spec.filled ? HaruTokensV2.onBrand : spec.color;
+    final icon = Icon(spec.icon, size: horizontal ? 36 : 44, color: iconColor, fill: 1);
+    final label = Text(
+      spec.label,
+      style: HaruText.h2.copyWith(color: fg, fontWeight: FontWeight.w800),
+      textAlign: horizontal ? TextAlign.start : TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+
+    return Semantics(
+      button: true,
+      label: spec.label,
+      child: Material(
+        color: spec.filled ? spec.color : HaruTokensV2.surfaceCard,
+        borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
+          onTap: spec.onTap,
+          child: Container(
+            padding: const EdgeInsets.all(HaruTokens.space4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
+              border: spec.filled
+                  ? null
+                  : Border.all(color: spec.color, width: 2),
+            ),
+            child: horizontal
+                ? Row(
+                    children: [
+                      icon,
+                      const SizedBox(width: HaruTokens.space4),
+                      Expanded(child: label),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      icon,
+                      const SizedBox(height: HaruTokens.space3),
+                      label,
+                    ],
+                  ),
+          ),
+        ),
       ),
     );
   }
 }
 
-class _BigCta extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final Color textColor;
-  final Color? borderColor;
+/// 그리드 ⇄ 줄 토글. 아이콘+라벨 (R2).
+class _LayoutToggle extends StatelessWidget {
+  final bool isGrid;
   final VoidCallback onTap;
-
-  const _BigCta({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.textColor,
-    required this.onTap,
-    this.borderColor,
-  });
+  const _LayoutToggle({required this.isGrid, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
-            border: borderColor != null
-                ? Border.all(color: borderColor!, width: 1.5)
-                : null,
-          ),
-          padding: const EdgeInsets.all(HaruTokens.space5),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Icon(icon, size: 36, color: textColor, fill: 1),
-              const SizedBox(width: HaruTokens.space4),
-              Flexible(
-                child: Text(
-                  label,
-                  style: HaruText.h2.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+    final label = isGrid ? '줄로' : '모아서';
+    return Semantics(
+      button: true,
+      label: '화면 배치 바꾸기. 지금은 ${isGrid ? "모아 보기" : "줄로 보기"}',
+      child: Material(
+        color: HaruTokensV2.onBrand.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(
+              minWidth: HaruTokensV2.minTouchTarget,
+              minHeight: HaruTokensV2.minTouchTarget,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: HaruTokens.space3,
+              vertical: HaruTokens.space2,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isGrid ? Symbols.view_agenda : Symbols.grid_view,
+                  size: 22,
+                  color: HaruTokensV2.onBrand,
                 ),
-              ),
-            ],
+                const SizedBox(width: HaruTokens.space1),
+                Text(
+                  label,
+                  style: HaruText.small.copyWith(
+                    color: HaruTokensV2.onBrand,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

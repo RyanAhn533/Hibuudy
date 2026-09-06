@@ -271,32 +271,33 @@ TextTheme _buildTextTheme() {
 }
 
 /// ══════════════════════════════════════════════════════════
-/// App Theme Builder
+/// App Theme Builder — v1.5: 전역 V2 「메이트」 매핑 (Gate 2 완료)
+/// primary/CTA/outline/input/chip 전부 brandWarm, surface는 warm-tinted.
 /// ══════════════════════════════════════════════════════════
 ThemeData buildAppTheme({bool kioskMode = false}) {
-  final bgColor = kioskMode ? HaruTokens.kioskBg : HaruTokens.n50;
-  final cardColor = kioskMode ? HaruTokens.kioskCard : HaruTokens.white;
+  final bgColor = kioskMode ? HaruTokens.kioskBg : HaruTokensV2.surfaceBase;
+  final cardColor = kioskMode ? HaruTokens.kioskCard : HaruTokensV2.surfaceCard;
 
   return ThemeData(
     useMaterial3: true,
     colorScheme: kioskMode
         ? const ColorScheme.dark(
-            primary: HaruTokens.primary,
-            secondary: HaruTokens.accent,
-            error: HaruTokens.danger,
+            primary: HaruTokensV2.brandWarm,
+            secondary: HaruTokensV2.actRestMain,
+            error: HaruTokensV2.danger,
             surface: HaruTokens.kioskCard,
             onPrimary: HaruTokens.white,
             onSurface: HaruTokens.white,
           )
         : const ColorScheme.light(
-            primary: HaruTokens.primary,
-            secondary: HaruTokens.accent,
-            error: HaruTokens.danger,
-            surface: HaruTokens.white,
-            surfaceContainerHighest: HaruTokens.n100,
+            primary: HaruTokensV2.brandWarm,
+            secondary: HaruTokensV2.actRestMain,
+            error: HaruTokensV2.danger,
+            surface: HaruTokensV2.surfaceCard,
+            surfaceContainerHighest: HaruTokensV2.surfaceSunken,
             onPrimary: HaruTokens.white,
-            onSurface: HaruTokens.n900,
-            outline: HaruTokens.n200,
+            onSurface: HaruTokensV2.inkPrimary,
+            outline: HaruTokensV2.borderSoft,
           ),
     scaffoldBackgroundColor: bgColor,
     fontFamily: HaruTokens.fontFamily,
@@ -306,14 +307,14 @@ ThemeData buildAppTheme({bool kioskMode = false}) {
     // ── AppBar ──
     appBarTheme: AppBarTheme(
       backgroundColor: bgColor,
-      foregroundColor: kioskMode ? HaruTokens.white : HaruTokens.n900,
+      foregroundColor: kioskMode ? HaruTokens.white : HaruTokensV2.inkPrimary,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
         fontSize: HaruTokens.h3Size,
         fontWeight: FontWeight.w800,
-        color: kioskMode ? HaruTokens.white : HaruTokens.n900,
+        color: kioskMode ? HaruTokens.white : HaruTokensV2.inkPrimary,
         fontFamily: HaruTokens.fontFamily,
         fontFamilyFallback: HaruTokens.fontFamilyFallback,
       ),
@@ -322,13 +323,13 @@ ThemeData buildAppTheme({bool kioskMode = false}) {
     // ── Elevated Button (Primary CTA) ──
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: HaruTokens.primary,
+        backgroundColor: HaruTokensV2.brandWarm,
         foregroundColor: HaruTokens.white,
         minimumSize: const Size(double.infinity, HaruTokens.comfortTouchTarget),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(HaruTokens.radiusSm)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd)),
         textStyle: const TextStyle(
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.2,
         ),
@@ -339,10 +340,10 @@ ThemeData buildAppTheme({bool kioskMode = false}) {
     // ── Outlined Button (Secondary) ──
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: HaruTokens.primary,
+        foregroundColor: HaruTokensV2.brandWarm,
         minimumSize: const Size(double.infinity, HaruTokens.comfortTouchTarget),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        side: const BorderSide(color: HaruTokens.primary, width: 2),
+        side: const BorderSide(color: HaruTokensV2.brandWarm, width: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(HaruTokens.radiusSm)),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
       ),
@@ -351,7 +352,7 @@ ThemeData buildAppTheme({bool kioskMode = false}) {
     // ── Text Button ──
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: HaruTokens.primary,
+        foregroundColor: HaruTokensV2.brandWarm,
         minimumSize: const Size(64, HaruTokens.minTouchTarget),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
@@ -365,7 +366,7 @@ ThemeData buildAppTheme({bool kioskMode = false}) {
       shadowColor: Colors.black.withValues(alpha: 0.04),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(HaruTokens.radiusMd),
-        side: BorderSide(color: kioskMode ? HaruTokens.kioskCard : HaruTokens.n200, width: 1),
+        side: BorderSide(color: kioskMode ? HaruTokens.kioskCard : HaruTokensV2.borderSoft, width: 1),
       ),
       margin: EdgeInsets.zero,
     ),
@@ -377,28 +378,28 @@ ThemeData buildAppTheme({bool kioskMode = false}) {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(HaruTokens.radiusSm),
-        borderSide: const BorderSide(color: HaruTokens.n200, width: 1.5),
+        borderSide: const BorderSide(color: HaruTokensV2.borderSoft, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(HaruTokens.radiusSm),
-        borderSide: const BorderSide(color: HaruTokens.n200, width: 1.5),
+        borderSide: const BorderSide(color: HaruTokensV2.borderSoft, width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(HaruTokens.radiusSm),
-        borderSide: const BorderSide(color: HaruTokens.primary, width: 2),
+        borderSide: const BorderSide(color: HaruTokensV2.brandWarm, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(HaruTokens.radiusSm),
-        borderSide: const BorderSide(color: HaruTokens.danger, width: 1.5),
+        borderSide: const BorderSide(color: HaruTokensV2.danger, width: 1.5),
       ),
-      hintStyle: const TextStyle(color: HaruTokens.n400, fontSize: 14),
-      labelStyle: const TextStyle(color: HaruTokens.n700, fontSize: 13, fontWeight: FontWeight.w600),
+      hintStyle: const TextStyle(color: HaruTokensV2.inkMuted, fontSize: 14),
+      labelStyle: const TextStyle(color: HaruTokensV2.inkBody, fontSize: 13, fontWeight: FontWeight.w600),
     ),
 
     // ── Chip ──
     chipTheme: ChipThemeData(
-      backgroundColor: HaruTokens.n100,
-      selectedColor: HaruTokens.primary,
+      backgroundColor: HaruTokensV2.surfaceSunken,
+      selectedColor: HaruTokensV2.brandWarm,
       labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: HaruTokens.n700),
       secondaryLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: HaruTokens.white),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -436,7 +437,7 @@ ThemeData buildAppTheme({bool kioskMode = false}) {
 
     // ── SnackBar ──
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: HaruTokens.n900,
+      backgroundColor: HaruTokensV2.inkPrimary,
       contentTextStyle: const TextStyle(color: HaruTokens.white, fontSize: 14, fontWeight: FontWeight.w600),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(HaruTokens.radiusSm)),
       behavior: SnackBarBehavior.floating,
@@ -444,13 +445,13 @@ ThemeData buildAppTheme({bool kioskMode = false}) {
 
     // ── Divider ──
     dividerTheme: const DividerThemeData(
-      color: HaruTokens.n200,
+      color: HaruTokensV2.borderSoft,
       thickness: 1,
       space: 1,
     ),
 
     // ── Icon ──
-    iconTheme: const IconThemeData(color: HaruTokens.n700, size: 24),
+    iconTheme: const IconThemeData(color: HaruTokensV2.inkBody, size: 24),
 
     // ── Visual Density ──
     visualDensity: VisualDensity.standard,

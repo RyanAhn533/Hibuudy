@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/database_service.dart';
 import '../services/ui_mode_service.dart';
+import 'haru_feedback.dart';
 
 /// ══════════════════════════════════════════════════════════
 /// SOS 버튼 (v1.4「메이트」)
@@ -13,7 +14,8 @@ import '../services/ui_mode_service.dart';
 class SosButton extends StatelessWidget {
   const SosButton({super.key});
 
-  static Future<void> _call(BuildContext context) async {
+  /// 긴급 연락처 1번(없으면 119)으로 즉시 전화. HelpScreen에서도 사용.
+  static Future<void> call(BuildContext context) async {
     String phoneNumber = '119';
     try {
       final contacts = await DatabaseService.getEmergencyContacts();
@@ -29,13 +31,7 @@ class SosButton extends StatelessWidget {
       await launchUrl(uri);
     } else {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$phoneNumber 으로 전화할 수 없어요',
-                style: HaruText.body.copyWith(color: HaruTokensV2.onDanger)),
-            backgroundColor: HaruTokensV2.danger,
-          ),
-        );
+        HaruFeedback.show(context, '$phoneNumber 전화 연결이 안 됨', error: true);
       }
     }
   }
@@ -69,7 +65,7 @@ class SosButton extends StatelessWidget {
         height: HaruTokens.largeTouchTarget,
         child: FloatingActionButton(
           heroTag: 'sos_button',
-          onPressed: () => _call(context),
+          onPressed: () => call(context),
           backgroundColor: HaruTokensV2.danger,
           elevation: 4,
           shape: const CircleBorder(),
@@ -93,7 +89,7 @@ class SosButton extends StatelessWidget {
           height: HaruTokens.largeTouchTarget,
           child: FloatingActionButton(
             heroTag: 'sos_fab',
-            onPressed: () => _call(context),
+            onPressed: () => call(context),
             backgroundColor: HaruTokensV2.danger,
             elevation: 4,
             shape: const CircleBorder(),

@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'database_service.dart';
 
 /// 장애 강도별 UI 모드 서비스
@@ -10,6 +11,23 @@ class UiModeService {
   static Future<void> loadMode() async {
     final profile = await DatabaseService.getProfile();
     currentMode = profile['ui_mode'] as String? ?? 'normal';
+    await _loadHomeLayout();
+  }
+
+  // ── 홈 레이아웃 (Assistive Access grid/row 토글, P9) ──
+  static const _kHomeLayout = 'harumate_home_layout';
+  /// 'grid' (2x2 모아 보기) | 'row' (줄로 보기)
+  static String homeLayout = 'grid';
+
+  static Future<void> _loadHomeLayout() async {
+    final prefs = await SharedPreferences.getInstance();
+    homeLayout = prefs.getString(_kHomeLayout) ?? 'grid';
+  }
+
+  static Future<void> setHomeLayout(String layout) async {
+    homeLayout = layout == 'row' ? 'row' : 'grid';
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kHomeLayout, homeLayout);
   }
 
   static bool get isSimple => currentMode == 'simple';

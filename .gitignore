@@ -16,3 +16,17 @@ key.properties
 *-keys-backup.txt
 *key.properties
 
+
+# v3 large data / caches / local DBs (6GB+, never commit)
+v3/data/
+v3/personas/*.parquet
+v3/personas/download.log
+v3/memory/*.db
+v3/simulation/results/
+*.arrow
+backend/*.db
+hi_buddy_app/android/.gradle/
+
+# vendored skill clones (upstream repos, not ours)
+.claude/skills/_flutter_official/
+.claude/skills/_ecc/

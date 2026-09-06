@@ -11,6 +11,7 @@ import '../widgets/activity_card.dart';
 import '../widgets/step_card.dart';
 import '../widgets/morning_briefing.dart';
 import '../widgets/sos_button.dart';
+import '../widgets/haru_bottom_bar.dart';
 import '../services/ui_mode_service.dart';
 import '../services/activity_recommender.dart';
 import '../services/database_service.dart';
@@ -305,6 +306,7 @@ class _UserScreenState extends State<UserScreen> {
         ],
       ),
       floatingActionButton: SosButton.floatingButton(context),
+      bottomNavigationBar: HaruBottomBar.maybe(context),
       body: Row(
         children: [
           // ── Main Content ──

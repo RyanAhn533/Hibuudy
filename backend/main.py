@@ -81,6 +81,20 @@ async def startup():
         )
 
 
+# ── v3 멀티 에이전트 라우터 (옵트인) ─────────────────────────────────
+# ENV USE_V3_ORCHESTRATOR=false 면 스킵. 기본 활성화.
+if os.getenv("USE_V3_ORCHESTRATOR", "true").lower() != "false":
+    try:
+        import sys as _sys
+        from pathlib import Path as _Path
+        _sys.path.insert(0, str(_Path(__file__).parent.parent))
+        from v3.agents.backend_integration import v3_router  # noqa: E402
+        app.include_router(v3_router, prefix="/api/v3")
+        logger.info("✅ v3 multi-agent router mounted at /api/v3")
+    except Exception as e:
+        logger.warning("v3 router 로드 실패 (v2.1 단독 동작): %s", e)
+
+
 # ── Auth Dependency ─────────────────────────────────────────────────
 
 

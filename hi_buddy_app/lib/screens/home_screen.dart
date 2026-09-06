@@ -82,12 +82,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [HaruTokensV2.brandWarm, HaruTokensV2.brandWarmDeep],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
+                  color: HaruTokensV2.brandWarm,
+                  borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
                 ),
                 child: Column(
                   children: [
@@ -126,8 +122,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(28),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(24),
+                      color: HaruTokensV2.brandWarmSoft,
+                      borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
                       border: Border.all(color: HaruTokensV2.brandWarm, width: 3),
                     ),
                     child: Column(
@@ -220,12 +216,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [HaruTokensV2.brandWarm, HaruTokensV2.brandWarmDeep],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
+                  color: HaruTokensV2.brandWarm,
+                  borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
                   boxShadow: [
                     BoxShadow(
                       color: HaruTokensV2.brandWarm.withAlpha(40),
@@ -236,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Column(
                   children: [
-                    Icon(Symbols.waving_hand, size: 40, color: HaruTokensV2.brandWarm, fill: 1),
+                    Icon(Symbols.waving_hand, size: 40, color: Colors.white, fill: 1),
                     SizedBox(height: 8),
                     Text(
                       '하루메이트',
@@ -266,16 +258,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      HaruTokensV2.brandWarmSoft,
-                      Color(0xFFDBEAFE),
-                      Color(0xFFFEF3C7),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
+                  color: HaruTokensV2.brandWarmSoft,
+                  borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
                   border: Border.all(
                     color: HaruTokensV2.brandWarm.withAlpha(25),
                   ),
@@ -312,7 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (context, constraints) {
                   final cards = [
                     _FeatureCard(
-                      icon: '📝',
+                      icon: Symbols.edit_note,
                       iconBgColor: HaruTokensV2.brandWarmSoft,
                       title: '일정 만들기',
                       features: const [
@@ -329,8 +313,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     _FeatureCard(
-                      icon: '📺',
-                      iconBgColor: const Color(0xFFFEF3C7),
+                      icon: Symbols.today,
+                      iconBgColor: HaruTokensV2.actRestSoft,
                       title: '오늘 하루',
                       features: const [
                         '하루 종일 켜두는 안내 화면',
@@ -346,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     _FeatureCard(
-                      icon: '💬',
+                      icon: Symbols.chat_bubble,
                       iconBgColor: HiBuddyColors.healthBg,
                       title: '도우미',
                       features: const [
@@ -363,7 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     _FeatureCard(
-                      icon: '⚙️',
+                      icon: Symbols.settings,
                       iconBgColor: HiBuddyColors.clothingBg,
                       title: '나의 정보',
                       features: const [
@@ -452,13 +436,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: HaruTokensV2.brandWarm.withAlpha(50),
                   ),
                 ),
-                child: const Text(
-                  'ℹ️ 어렵게 조작할 필요 없습니다. 화면에 나오는 안내를 그대로 따라 하면 됩니다.',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: HaruTokensV2.inkPrimary,
-                    height: 1.5,
-                  ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Symbols.info, size: 20, color: HaruTokensV2.brandWarm),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '어렵게 조작할 필요 없습니다. 화면에 나오는 안내를 그대로 따라 하면 됩니다.',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: HaruTokensV2.inkPrimary,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -529,7 +522,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _FeatureCard extends StatelessWidget {
-  final String icon;
+  final IconData icon;
   final Color iconBgColor;
   final String title;
   final List<String> features;
@@ -570,7 +563,7 @@ class _FeatureCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             alignment: Alignment.center,
-            child: Text(icon, style: const TextStyle(fontSize: 28)),
+            child: Icon(icon, size: 28, color: HaruTokensV2.brandWarm, fill: 1),
           ),
           const SizedBox(height: 12),
           Text(
@@ -588,12 +581,9 @@ class _FeatureCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '✓ ',
-                    style: TextStyle(
-                      color: HaruTokensV2.success,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2, right: 4),
+                    child: Icon(Symbols.check, size: 14, color: HaruTokensV2.success),
                   ),
                   Expanded(
                     child: Text(

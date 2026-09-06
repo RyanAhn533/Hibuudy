@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/haru_bottom_bar.dart';
 import '../services/haru_agent.dart';
 import '../services/tts_service.dart';
 import 'youtube_screen.dart';
@@ -155,8 +156,9 @@ class _AgentScreenState extends State<AgentScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('하루 도우미'),
+        title: const Text('메이트'),
       ),
+      bottomNavigationBar: HaruBottomBar.maybe(context),
       body: Column(
         children: [
           // ── 채팅 메시지 리스트 ──

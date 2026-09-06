@@ -100,14 +100,20 @@ class SessionService {
   }
 
   // ── 역할 ──
+  /// 마지막으로 읽은 역할 (동기 접근용 캐시). getRole/setRole이 갱신.
+  /// 위젯 트리에서 async 없이 당사자/코디 분기할 때 사용 (HaruBottomBar 등).
+  static UserRole currentRole = UserRole.coordinator;
+
   static Future<UserRole> getRole() async {
     final prefs = await SharedPreferences.getInstance();
     final v = prefs.getString(_kRoleKey);
-    return v == 'coordinator' ? UserRole.coordinator : UserRole.self;
+    currentRole = v == 'coordinator' ? UserRole.coordinator : UserRole.self;
+    return currentRole;
   }
 
   static Future<void> setRole(UserRole role) async {
     final prefs = await SharedPreferences.getInstance();
+    currentRole = role;
     await prefs.setString(_kRoleKey, role == UserRole.coordinator ? 'coordinator' : 'self');
   }
 
