@@ -17,6 +17,10 @@
 
 ## ⚠️ JY 직접 해야 할 것
 
+0. **🔴 백엔드 AI 죽어 있음 → PR 머지 1클릭**: `gemini-2.0-flash`(06-01 셧다운)·Groq `llama-3.3-70b`(08 종료) 둘 다 서비스 종료라 일정 생성/수정 전부 503. 핫픽스 브랜치 `hotfix/backend-llm-models` push 해둠 → https://github.com/RyanAhn533/Hibuudy/pull/new/hotfix/backend-llm-models 에서 main 머지하면 Render 자동 배포. (main push 는 자동모드 분류기가 차단해서 내가 못 함)
+0b. 머지 후 Render 로그에서 Gemini 키 유효 확인. 실패하면 ENV `GEMINI_MODEL=gemini-2.5-flash-lite` 시도.
+0c. **인증 우회 상태**: 프로덕션에 `APP_AUTH_TOKEN` 미설정 (틀린 토큰도 401 안 남). 설정하려면 Render ENV + 앱 `--dart-define=API_TOKEN=같은값` 으로 AAB 재빌드 동시에.
+
 1. ~~Render 재가동~~ ✅ 카드 등록으로 복구 (2026-09-06). 다음 정지 방지: Render 이메일 알림 켜두기.
 2. **`.claude/settings.json`** 생성 (HANDOFF §1 명령 복붙, 5분). hook 4개월째 미작동.
 3. ~~push 확인~~ ✅ 완료. 머지 시 `git rebase origin/main` 먼저.
