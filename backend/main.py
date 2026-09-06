@@ -42,8 +42,12 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "") or GOOGLE_API_KEY
 APP_AUTH_TOKEN = os.getenv("APP_AUTH_TOKEN", "")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "") or os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
+# Gemini: gemini-2.0-flash 는 2026-06-01 셧다운 → 2.5-flash (2026-10-16 종료 예정, 그 뒤 3.5-flash).
+# 모델 교체는 코드 수정 없이 Render ENV GEMINI_MODEL 로.
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+# Groq: llama-3.3-70b-versatile 은 2026-08 서비스 종료 → Groq 권장 대체 openai/gpt-oss-120b
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 # Edge TTS 한국어 음성 (여성: ko-KR-SunHiNeural, 남성: ko-KR-InJoonNeural)
 EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "ko-KR-SunHiNeural")
@@ -186,7 +190,7 @@ async def gemini_generate(
 
     client = await get_client()
     resp = await client.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}",
         headers={"Content-Type": "application/json"},
         json={
             "systemInstruction": {"parts": [{"text": system_prompt}]},

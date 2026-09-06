@@ -54,7 +54,9 @@ void main() {
       final theme = buildAppTheme();
       expect(theme, isNotNull);
       expect(theme.useMaterial3, true);
-      expect(theme.scaffoldBackgroundColor, HiBuddyColors.bg);
+      // v1.5: 전역 V2 「메이트」 매핑 — 배경은 warm-tinted surfaceBase
+      expect(theme.scaffoldBackgroundColor, HaruTokensV2.surfaceBase);
+      expect(theme.colorScheme.primary, HaruTokensV2.brandWarm);
     });
   });
 }
