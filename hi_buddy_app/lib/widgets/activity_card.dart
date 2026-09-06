@@ -129,6 +129,8 @@ class ActivityCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         task,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: HaruText.body.copyWith(
                           color: HaruTokensV2.inkPrimary,
                           fontWeight: FontWeight.w600,

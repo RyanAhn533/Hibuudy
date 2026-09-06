@@ -105,7 +105,7 @@ class AgentPlanCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '제가 이렇게 도와드릴게요:',
+              '이렇게 도울게',
               style: TextStyle(fontSize: base, color: Colors.grey[700]),
             ),
             const SizedBox(height: 8),
@@ -130,7 +130,7 @@ class AgentPlanCard extends StatelessWidget {
                         '$i',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: base - 2,
+                          fontSize: base,
                         ),
                       ),
                     ),
@@ -146,12 +146,19 @@ class AgentPlanCard extends StatelessWidget {
                           if (step.requiresConfirmation)
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
-                              child: Text(
-                                '⚠️ 중요한 단계예요',
-                                style: TextStyle(
-                                  fontSize: base - 4,
-                                  color: Colors.orange[800],
-                                ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.warning_amber_rounded,
+                                      size: base, color: Colors.orange[800]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '중요한 단계',
+                                    style: TextStyle(
+                                      fontSize: base,
+                                      color: Colors.orange[800],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                         ],

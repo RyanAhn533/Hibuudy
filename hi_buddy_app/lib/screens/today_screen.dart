@@ -143,7 +143,10 @@ class _TodayScreenState extends State<TodayScreen> {
         children: [
           Expanded(
             child: Column(
-              children: [for (int i = start; i < end; i++) _card(i)],
+              // 큰 글자/작은 화면에서 넘치지 않게 각 카드에 Flexible
+              children: [
+                for (int i = start; i < end; i++) Flexible(child: _card(i)),
+              ],
             ),
           ),
           Row(

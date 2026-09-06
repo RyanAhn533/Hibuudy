@@ -61,9 +61,17 @@ adb uninstall com.harumate.care && adb install build/app/outputs/flutter-apk/app
 - R11: 마지막 그라데이션 제거 → **전체 0건**
 - 카피 클러스터 정리 (오늘 하루 빈 화면·오프라인 배너·메이트 hint/오류)
 
-### Round 3 — 잔여
+### Round 3 `0a62e02` — 잔여
 - 날씨 옷차림 카피 친구 톤 · `_headerText` 전 타입 라벨 · 체크박스 48pt
-- code-review 스킬 결과 반영 (있으면)
+
+### Round 3b — `/code-review medium bb00ed2` 8건 반영 (실제 버그 5 + 위생 3)
+- **backend**: `/api/v3/*` 가 bearer 인증 없이 마운트되던 것 → `dependencies=[Depends(verify_token)]` + 기본 OFF(`USE_V3_ORCHESTRATOR=true` 명시 시만, 실패 시 부팅 중단)
+- **AndroidManifest**: `<queries>` tel/sms/https 추가 — Android 11+ 에서 `canLaunchUrl` 이 항상 false 라 SOS/전화/문자가 전부 실패하던 잠재 버그
+- **HomeUserScreen**: 1분 타이머로 지금/다음 재계산 (켜둔 채 시각 넘기면 stale 이던 것) · SOS FAB 제거(도움 타일이 대체, simple 모드 메이트 타일 가림 방지)
+- **TodayScreen**: 페이지 모드 카드 Flexible + ActivityCard maxLines 2 (큰 글자 오버플로)
+- **hook**: python 프로브(Store 스텁 회피) · fail-closed · `--force-with-lease` 허용 앵커. 자가 테스트 4/4 통과. **settings.json 등록은 여전히 JY**
+- agent_plan_card 이모지·12px 제거 (미사용 위젯이지만 /ux-status 회귀 지표 오염 방지)
+- 미반영: "v3/ 를 커밋하라" — JY 결정 사안 (v3 코드 830KB, 데이터는 gitignore 됨)
 
 ### 도구
 - `.claude/skills/apple-design/` (dickwu, vendored) — HIG 53문서 리뷰어

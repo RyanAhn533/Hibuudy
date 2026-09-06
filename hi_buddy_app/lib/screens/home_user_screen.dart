@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -7,7 +9,6 @@ import '../services/schedule_storage.dart';
 import '../services/ui_mode_service.dart';
 import '../models/schedule_item.dart';
 import '../widgets/now_next_card.dart';
-import '../widgets/sos_button.dart';
 import 'user_screen.dart';
 import 'today_screen.dart';
 import 'help_screen.dart';
@@ -32,11 +33,20 @@ class _HomeUserScreenState extends State<HomeUserScreen> {
   String _name = '';
   ScheduleItem? _currentActivity;
   ScheduleItem? _nextActivity;
+  Timer? _minuteTick;
 
   @override
   void initState() {
     super.initState();
     _loadSession();
+    // 홈을 켜둔 채로 다음 일정 시각을 넘기면 지금/다음·헤더 시각을 다시 계산 (1분 주기)
+    _minuteTick = Timer.periodic(const Duration(minutes: 1), (_) => _loadSession());
+  }
+
+  @override
+  void dispose() {
+    _minuteTick?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSession() async {
@@ -180,7 +190,8 @@ class _HomeUserScreenState extends State<HomeUserScreen> {
           ),
         ),
       ),
-      floatingActionButton: SosButton.floatingButton(context),
+      // SOS FAB 는 「도움」 타일이 대체 (simple 모드에서 메이트 타일을 덮는 문제 방지)
+      floatingActionButton: null,
     );
   }
 }

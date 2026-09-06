@@ -14,25 +14,28 @@ input=$(cat)
 
 # ── Python 경로 자동 탐색 (Windows + Linux + Mac) ─────────────
 PYTHON_CMD=""
-for cmd in python3 /c/Users/wnsdu/anaconda3/python.exe python py; do
-  if command -v "$cmd" >/dev/null 2>&1; then
+# Windows 의 python3/python 은 Microsoft Store 스텁(exit 49)일 수 있어 실제 실행으로 프로브
+for cmd in /c/Users/wnsdu/anaconda3/python.exe python3 python py; do
+  if "$cmd" -c 'import json' >/dev/null 2>&1; then
     PYTHON_CMD="$cmd"
     break
   fi
 done
 
-# JSON 파싱 (Python 있으면), 없으면 raw input 사용
-if [ -n "$PYTHON_CMD" ]; then
-  cmd=$(echo "$input" | "$PYTHON_CMD" -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null || echo "$input")
-else
-  cmd="$input"
+# JSON 파싱. 파서가 없거나 실패하면 fail-closed (envelope 전체를 grep 하지 않는다)
+if [ -z "$PYTHON_CMD" ]; then
+  echo "🚫 require_human_gate: JSON 파서(python) 없음 — 안전을 위해 차단. anaconda python 경로 확인." >&2
+  exit 2
+fi
+if ! cmd=$(printf '%s' "$input" | "$PYTHON_CMD" -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('command',''))" 2>/dev/null); then
+  echo "🚫 require_human_gate: hook 입력 JSON 파싱 실패 — 안전을 위해 차단." >&2
+  exit 2
 fi
 
 # ── 무조건 차단 패턴 ────────────────────────────────────
 deny_patterns=(
-  'git push --force'
-  'git push -f '
-  'git push.*-f$'
+  'git push .*--force( |$)'
+  'git push .*-f( |$)'
   'git reset --hard'
   'git branch -D'
   'git checkout -- \.'

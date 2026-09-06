@@ -81,20 +81,6 @@ async def startup():
         )
 
 
-# ── v3 멀티 에이전트 라우터 (옵트인) ─────────────────────────────────
-# ENV USE_V3_ORCHESTRATOR=false 면 스킵. 기본 활성화.
-if os.getenv("USE_V3_ORCHESTRATOR", "true").lower() != "false":
-    try:
-        import sys as _sys
-        from pathlib import Path as _Path
-        _sys.path.insert(0, str(_Path(__file__).parent.parent))
-        from v3.agents.backend_integration import v3_router  # noqa: E402
-        app.include_router(v3_router, prefix="/api/v3")
-        logger.info("✅ v3 multi-agent router mounted at /api/v3")
-    except Exception as e:
-        logger.warning("v3 router 로드 실패 (v2.1 단독 동작): %s", e)
-
-
 # ── Auth Dependency ─────────────────────────────────────────────────
 
 
@@ -105,6 +91,19 @@ def verify_token(request: Request):
     auth = request.headers.get("Authorization", "")
     if auth != f"Bearer {APP_AUTH_TOKEN}":
         raise HTTPException(status_code=401, detail="인증 실패")
+
+
+# ── v3 멀티 에이전트 라우터 (옵트인, 기본 OFF) ───────────────────────
+# HANDOFF §2: USE_V3_ORCHESTRATOR=true 일 때만 마운트. v3/ 는 backend/ Docker 컨텍스트 밖이라
+# Render 에서는 명시적으로 켰을 때만 시도하고, 실패하면 조용히 넘기지 않고 부팅을 막는다.
+# 모든 v3 엔드포인트는 v2 와 동일한 bearer 인증(verify_token)을 라우터 레벨로 강제.
+if os.getenv("USE_V3_ORCHESTRATOR", "false").lower() == "true":
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).parent.parent))
+    from v3.agents.backend_integration import v3_router  # noqa: E402
+    app.include_router(v3_router, prefix="/api/v3", dependencies=[Depends(verify_token)])
+    logger.info("✅ v3 multi-agent router mounted at /api/v3 (auth: verify_token)")
 
 
 # ── Input Sanitization ──────────────────────────────────────────────
