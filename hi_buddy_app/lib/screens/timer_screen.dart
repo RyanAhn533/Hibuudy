@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../services/timer_service.dart';
 import '../services/tts_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/haru_bottom_bar.dart';
 
 /// 큰 글씨, 큰 버튼의 접근성 높은 타이머 화면
 class TimerScreen extends StatefulWidget {
@@ -169,15 +170,20 @@ class _TimerScreenState extends State<TimerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.label ?? '타이머'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, size: 28),
-          onPressed: () {
-            TimerService.cancel();
-            Navigator.of(context).pop();
-          },
-          tooltip: '뒤로 가기',
-        ),
+        // 당사자 모드는 하단 바(뒤로/홈)가 담당 (R3). 코디 normal 모드만 상단 뒤로.
+        leading: HaruBottomBar.maybe(context) != null
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back, size: 28),
+                onPressed: () {
+                  TimerService.cancel();
+                  Navigator.of(context).pop();
+                },
+                tooltip: '뒤로 가기',
+              ),
+        automaticallyImplyLeading: false,
       ),
+      bottomNavigationBar: HaruBottomBar.maybe(context),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),

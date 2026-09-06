@@ -257,13 +257,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    HaruTokensV2.brandWarmSoft,
-                    HaruTokensV2.brandWarmSoft.withAlpha(200),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
+                // R11: 그라데이션 0건 — 단일 솔리드
+                color: HaruTokensV2.brandWarmSoft,
+                borderRadius: BorderRadius.circular(HaruTokensV2.radiusLg),
               ),
               child: const Column(
                 children: [

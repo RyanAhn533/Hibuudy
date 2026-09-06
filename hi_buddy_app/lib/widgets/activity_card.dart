@@ -49,6 +49,8 @@ class ActivityCard extends StatelessWidget {
         return Symbols.wb_sunny;
       case 'NIGHT_WRAPUP':
         return Symbols.dark_mode;
+      case 'ROUTINE':
+        return Symbols.cleaning_services;
       default:
         return Symbols.event;
     }

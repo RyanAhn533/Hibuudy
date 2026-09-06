@@ -118,37 +118,30 @@ class StepCard extends StatelessWidget {
                 ),
               ),
             ),
+            // R2: 아이콘 + 라벨 쌍. 56pt.
             if (timerMinutes != null)
-              SizedBox(
-                width: HaruTokens.minTouchTarget,
-                height: HaruTokens.minTouchTarget,
-                child: IconButton(
-                  icon: const Icon(Icons.timer, size: 28),
-                  color: HaruTokensV2.actMealMain,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => TimerScreen(
-                          minutes: timerMinutes,
-                          label: '$stepNumber단계 타이머',
-                        ),
+              _StepAction(
+                icon: Icons.timer,
+                label: '$timerMinutes분',
+                color: HaruTokensV2.actMealMain,
+                semantics: '$timerMinutes분 타이머',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => TimerScreen(
+                        minutes: timerMinutes,
+                        label: '$stepNumber단계 타이머',
                       ),
-                    );
-                  },
-                  tooltip: '$timerMinutes분 타이머',
-                  padding: EdgeInsets.zero,
-                ),
+                    ),
+                  );
+                },
               ),
-            SizedBox(
-              width: HaruTokens.minTouchTarget,
-              height: HaruTokens.minTouchTarget,
-              child: IconButton(
-                icon: const Icon(Icons.volume_up, size: 32),
-                color: color,
-                onPressed: () => TtsService.speak('$stepNumber단계. $text'),
-                tooltip: '$stepNumber단계 듣기',
-                padding: EdgeInsets.zero,
-              ),
+            _StepAction(
+              icon: Icons.volume_up,
+              label: '듣기',
+              color: color,
+              semantics: '$stepNumber단계 듣기',
+              onTap: () => TtsService.speak('$stepNumber단계. $text'),
             ),
           ],
         ),
@@ -462,6 +455,48 @@ class _SingleFocusStep extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 단계 카드 우측 액션 — 아이콘 + 라벨 (R2), 56pt
+class _StepAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final String semantics;
+  final VoidCallback onTap;
+  const _StepAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.semantics,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: semantics,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(HaruTokensV2.radiusSm),
+        onTap: onTap,
+        child: SizedBox(
+          width: HaruTokensV2.comfortTouchTarget,
+          height: HaruTokensV2.comfortTouchTarget,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 26, color: color),
+              Text(
+                label,
+                style: HaruText.tiny.copyWith(color: color, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -101,7 +101,7 @@ class _HomeUserScreenState extends State<HomeUserScreen> {
         onTap: () => _push(const UserScreen()),
       ),
       _TileSpec(
-        icon: Symbols.view_agenda,
+        icon: Symbols.checklist,
         label: '오늘 일과',
         color: HaruTokensV2.actRestMain,
         onTap: () => _push(const TodayScreen()),

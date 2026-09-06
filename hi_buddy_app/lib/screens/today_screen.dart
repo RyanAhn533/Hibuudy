@@ -75,7 +75,7 @@ class _TodayScreenState extends State<TodayScreen> {
       appBar: AppBar(
         title: const Row(
           children: [
-            Icon(Symbols.view_agenda, size: 24, color: HaruTokensV2.brandWarm, fill: 1),
+            Icon(Symbols.checklist, size: 24, color: HaruTokensV2.brandWarm, fill: 1),
             SizedBox(width: HaruTokens.space2),
             Text('오늘 일과'),
           ],

@@ -107,7 +107,10 @@ class _HelpScreenState extends State<HelpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final who = _contactName ?? (_phone == null ? '119' : '가족');
+    // 이름 있으면 "○○한테 전화", 번호만 있으면 "가족한테 전화", 없으면 "119에 전화"
+    final callLabel = _contactName != null
+        ? '$_contactName한테 전화'
+        : (_phone != null ? '가족한테 전화' : '119에 전화');
 
     return Scaffold(
       backgroundColor: HaruTokensV2.surfaceBase,
@@ -129,7 +132,7 @@ class _HelpScreenState extends State<HelpScreen> {
             // ─── 1탭 3버튼 ───
             _BigAction(
               icon: Symbols.call,
-              label: '$who한테 전화',
+              label: callLabel,
               color: HaruTokensV2.brandWarm,
               onTap: _callContact,
             ),

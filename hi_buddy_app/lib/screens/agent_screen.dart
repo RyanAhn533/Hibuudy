@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/haru_bottom_bar.dart';
+import '../services/session_service.dart';
 import '../services/haru_agent.dart';
 import '../services/tts_service.dart';
 import 'youtube_screen.dart';
@@ -106,7 +107,7 @@ class _AgentScreenState extends State<AgentScreen> {
       if (!mounted) return;
       setState(() {
         _messages.add(const _ChatMessage(
-          text: '죄송해요, 문제가 생겼어요. 다시 시도해 주세요.',
+          text: '문제가 생겼어. 다시 한 번 해보자.',
           isUser: false,
         ));
         _isLoading = false;
@@ -157,6 +158,8 @@ class _AgentScreenState extends State<AgentScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('메이트'),
+        // 당사자 역할: 상단 뒤로 제거 (하단 고정 바, R3)
+        automaticallyImplyLeading: SessionService.currentRole != UserRole.self,
       ),
       bottomNavigationBar: HaruBottomBar.maybe(context),
       body: Column(
@@ -423,7 +426,7 @@ class _AgentScreenState extends State<AgentScreen> {
               focusNode: _focusNode,
               style: const TextStyle(fontSize: 17),
               decoration: InputDecoration(
-                hintText: '여기에 입력하세요...',
+                hintText: '메이트에게 할 말',
                 hintStyle: const TextStyle(
                   fontSize: 16,
                   color: HaruTokensV2.inkMuted,
@@ -451,43 +454,75 @@ class _AgentScreenState extends State<AgentScreen> {
           ),
           const SizedBox(width: 6),
 
-          // TTS/마이크 버튼
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: IconButton(
-              onPressed: () {
-                // 마지막 에이전트 메시지를 다시 읽어줌
-                final lastAgent = _messages.lastWhere(
-                  (m) => !m.isUser,
-                  orElse: () => const _ChatMessage(text: '', isUser: false),
-                );
-                if (lastAgent.text.isNotEmpty) {
-                  TtsService.speak(lastAgent.text);
-                }
-              },
-              icon: const Icon(Icons.volume_up),
-              color: HaruTokensV2.brandWarm,
-              tooltip: '마지막 답변 듣기',
-            ),
+          // R2: 아이콘 + 라벨 (아이콘 단독 금지), 56pt 터치 타겟
+          _InputAction(
+            icon: Icons.volume_up,
+            label: '듣기',
+            onTap: () {
+              // 마지막 에이전트 메시지를 다시 읽어줌
+              final lastAgent = _messages.lastWhere(
+                (m) => !m.isUser,
+                orElse: () => const _ChatMessage(text: '', isUser: false),
+              );
+              if (lastAgent.text.isNotEmpty) {
+                TtsService.speak(lastAgent.text);
+              }
+            },
           ),
-
-          // 전송 버튼
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: IconButton(
-              onPressed: () => _sendMessage(_textController.text),
-              icon: const Icon(Icons.send_rounded),
-              color: Colors.white,
-              style: IconButton.styleFrom(
-                backgroundColor: HaruTokensV2.brandWarm,
-                shape: const CircleBorder(),
-              ),
-              tooltip: '보내기',
-            ),
+          const SizedBox(width: 6),
+          _InputAction(
+            icon: Icons.send_rounded,
+            label: '보내기',
+            filled: true,
+            onTap: () => _sendMessage(_textController.text),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 입력줄 액션 버튼 — 아이콘 + 라벨 쌍 (R2), 56pt (comfortTouchTarget)
+class _InputAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+  const _InputAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = filled ? HaruTokensV2.onBrand : HaruTokensV2.brandWarm;
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: filled ? HaruTokensV2.brandWarm : HaruTokensV2.brandWarmSoft,
+        borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(HaruTokensV2.radiusMd),
+          onTap: onTap,
+          child: SizedBox(
+            width: 64,
+            height: HaruTokensV2.comfortTouchTarget,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 24, color: fg),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: HaruText.tiny.copyWith(color: fg, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

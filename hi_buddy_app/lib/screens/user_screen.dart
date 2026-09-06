@@ -12,6 +12,7 @@ import '../widgets/step_card.dart';
 import '../widgets/morning_briefing.dart';
 import '../widgets/sos_button.dart';
 import '../widgets/haru_bottom_bar.dart';
+import '../services/session_service.dart';
 import '../services/ui_mode_service.dart';
 import '../services/activity_recommender.dart';
 import '../services/database_service.dart';
@@ -249,7 +250,7 @@ class _UserScreenState extends State<UserScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  '코디네이터 선생님께\n일정을 만들어 달라고 해주세요',
+                  '선생님이 일정을 만들면\n여기에 나타남',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18,
@@ -292,16 +293,18 @@ class _UserScreenState extends State<UserScreen> {
           '오늘 하루',
           style: TextStyle(fontSize: isAccessible ? headSize : null),
         ),
-        // 키오스크 모드에서는 뒤로가기 버튼 제거
-        automaticallyImplyLeading: !UiModeService.isKiosk,
+        // 키오스크 모드 / 당사자 역할: 상단 뒤로 제거 (하단 고정 바가 담당, R3)
+        automaticallyImplyLeading:
+            !UiModeService.isKiosk && SessionService.currentRole != UserRole.self,
         actions: [
-          IconButton(
-            icon: Icon(Icons.refresh, size: UiModeService.iconSize),
+          // R2: 아이콘 단독 금지 → 아이콘 + 라벨
+          TextButton.icon(
             onPressed: () {
               setState(() => _isLoading = true);
               _loadSchedule();
             },
-            tooltip: '새로고침',
+            icon: Icon(Icons.refresh, size: UiModeService.iconSize),
+            label: Text('새로고침', style: TextStyle(fontSize: UiModeService.fontSize - 2)),
           ),
         ],
       ),
@@ -324,7 +327,7 @@ class _UserScreenState extends State<UserScreen> {
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3CD),
+                        color: HaruTokensV2.warnSoft,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: HaruTokensV2.warn,
@@ -341,11 +344,11 @@ class _UserScreenState extends State<UserScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              '${_schedule!.date} 일정을 보여드려요.\n새 일정은 코디네이터 선생님이 저장하면 나와요.',
+                              '${_schedule!.date} 일정을 보는 중.\n새 일정은 선생님이 저장하면 바뀜',
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF856404),
+                                color: HaruTokensV2.warn,
                                 height: 1.5,
                               ),
                             ),
@@ -476,9 +479,8 @@ class _UserScreenState extends State<UserScreen> {
   }
 
   Widget _buildActivityHeader(ScheduleItem item) {
-    final color = HiBuddyColors.getActivityColor(item.type);
-    final bgColor = HiBuddyColors.getActivityBgColor(item.type);
-    final emoji = HiBuddyColors.getActivityEmoji(item.type);
+    final color = HaruTokensV2.activityMainFor(item.type);
+    final bgColor = HaruTokensV2.activitySoftFor(item.type);
     final isAccessible = UiModeService.isAccessibilityMode;
 
     return Container(
@@ -491,13 +493,23 @@ class _UserScreenState extends State<UserScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$emoji ${_headerText(item.type)}',
-            style: TextStyle(
-              fontSize: isAccessible ? 34 : 26,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
+          // P6/R2: 이모지 → 픽토 아이콘 + 라벨
+          Row(
+            children: [
+              Icon(ActivityCard.iconFor(item.type),
+                  size: isAccessible ? 40 : 30, color: color, fill: 1),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _headerText(item.type),
+                  style: TextStyle(
+                    fontSize: isAccessible ? 34 : 26,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
@@ -922,7 +934,6 @@ class _UserScreenState extends State<UserScreen> {
   }
 
   Widget _timelineItem(ScheduleItem item, bool isActive, bool isPast) {
-    final emoji = HiBuddyColors.getActivityEmoji(item.type);
     final dotColor = isActive
         ? HaruTokensV2.success
         : isPast
@@ -950,8 +961,8 @@ class _UserScreenState extends State<UserScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Text(emoji, style: const TextStyle(fontSize: 14)),
-          const SizedBox(width: 4),
+          Icon(ActivityCard.iconFor(item.type), size: 16, color: dotColor, fill: 1),
+          const SizedBox(width: 6),
           Expanded(
             child: Text(
               '${item.time} ${item.task}',
