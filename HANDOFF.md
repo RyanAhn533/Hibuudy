@@ -19,7 +19,7 @@ v2.1.3     : 안정 (Play Console v1.3.3 비공개 테스트)
 v3.0-dev   : 멀티 에이전트 백엔드 (로컬 OK, Render 미배포)
 v1.4-dev   : UX/UI 「메이트」 리디자인 (현재 브랜치 feature/uiux-polish-v134)
 v1.5       : 루트 4타일 + Assistive Access 구조 (2026-09-06, R1~R11 통과, 에뮬 검증)
-⚠️ 백엔드   : 2026-09-06 기준 Render 서스펜드 (503) — JY 대시보드 확인 필요
+백엔드     : Render 복구 (2026-09-06, 무료계정 카드 등록). 정지 원인 = 결제수단 미등록
 컨셉       : 「메이트」 (친구 톤, warm coral + warm-tinted neutral, MUJI 절제)
 ```
 
@@ -196,7 +196,7 @@ git checkout v2.1.3-baseline-pre-v3            # v3 작업 전 스냅샷으로
 
 ## 7. Pending Gates (JY 결정 받을 거) — 2026-09-06 갱신
 
-0. **🔴 Render 서스펜드 해제** (JY 대시보드) — 테스터 앱 API 전부 503
+0. ~~Render 서스펜드 해제~~ ✅ 2026-09-06 카드 등록으로 복구
 1. **settings.json 박기** (5분) ← Claude Code 자동 차단, JY 직접
 2. ~~buildAppTheme() 전역 V2~~ ✅ 세션 7 완료
 3. ~~작은 카드 이모지~~ ✅ 세션 7 완료

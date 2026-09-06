@@ -18,7 +18,7 @@
 ### 현재 버전: v2.1.3 (안정) + v3.0-dev (병행) + **v1.5-dev (「메이트」 + Assistive Access 4타일, 2026-09)**
 - 패키지: **com.harumate.care** (com.harumate.app 아님 — 실제 build.gradle 기준)
 - 앱 이름: 하루메이트 (구 Hi-Buddy, 이름 변경 완료)
-- 서버: https://hibuudy.onrender.com (Render Free) — **2026-09-06 서스펜드(503), 재가동 필요**
+- 서버: https://hibuudy.onrender.com (Render Free + 카드 등록) — 2026-09-06 서스펜드→결제수단 등록으로 복구
 - LLM: Claude Haiku 4.5 (에이전트 대화) + Gemini 2.0 Flash (백엔드) + Groq 폴백
 - TTS: flutter_tts (디바이스, 오프라인) + Edge TTS (서버 캐시)
 - DB: sqflite 로컬 (7 테이블) + SharedPreferences

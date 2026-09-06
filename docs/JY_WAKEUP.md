@@ -9,7 +9,7 @@
 
 1. **v1.5 루트 4타일 홈 + Assistive Access 구조 구현·에뮬 검증 완료** (지금|다음 2칸, 하단 고정 뒤로/홈, 도움 탭, 오늘 일과, 타임아웃 0). 3 commits, 런타임 예외 0.
 2. **리서치 2편**: `docs/RESEARCH_UX_REFERENCE_2026-09.md` (수요통계·벤치마크·12원칙·IA), `docs/COMPETITIVE_TECH_ROADMAP_2026-09.md` (「보통의 하루」 해부 + SOTA 기술 로드맵 P0~P3).
-3. **🔴 Render 백엔드 서스펜드** (503 Service Suspended). 대시보드 로그인 필요 → JY 직접.
+3. **✅ Render 복구** — 서스펜드(503) 원인은 무료 계정 결제수단 요구. JY 카드 등록 후 자동 재기동, /health 200 확인 (2026-09-06).
 4. **✅ 브랜치 `feature/uiux-polish-v134` origin에 push 완료** (0a62e02, 17 commits). main 대비 1 behind (README 9-01 커밋) — 머지 전 rebase.
 5. **「보통의 하루」는 베낀 게 아님** — 알람+사진/NFC 인증 3종, 로펌 계열, 45명 기관 배포. 우리가 뒤진 건 "완료 인증"과 "실사용 데이터" 둘. 11월 검증 발표 추적.
 
@@ -17,7 +17,7 @@
 
 ## ⚠️ JY 직접 해야 할 것
 
-1. **Render 대시보드** → hibuudy.onrender.com 서스펜드 사유 확인·재가동 (Free hours / 미배포 정리 / 결제). 앱 테스터가 지금 일정 생성·TTS 못 씀.
+1. ~~Render 재가동~~ ✅ 카드 등록으로 복구 (2026-09-06). 다음 정지 방지: Render 이메일 알림 켜두기.
 2. **`.claude/settings.json`** 생성 (HANDOFF §1 명령 복붙, 5분). hook 4개월째 미작동.
 3. ~~push 확인~~ ✅ 완료. 머지 시 `git rebase origin/main` 먼저.
 4. 결정 4개 (COMPETITIVE_TECH_ROADMAP §6): 완료 인증 기본값 / 보호자 목소리 클로닝 동의 문구 / Wear OS 기기 / 서울시복지재단 접촉 시점.
@@ -83,7 +83,7 @@ adb uninstall com.harumate.care && adb install build/app/outputs/flutter-apk/app
 
 ## 🚧 Pending Gates (다음 세션)
 
-1. Render 재가동 (JY)
+1. ~~Render 재가동~~ ✅
 2. settings.json (JY)
 3. **P0-2 완료 인증 옵션** (사진/NFC, 기관 모드 ON) — 로드맵 §4
 4. **P0-3 이행률 로그** (sqflite 1테이블 + 코디 홈 문장형 요약)
@@ -100,6 +100,6 @@ adb uninstall com.harumate.care && adb install build/app/outputs/flutter-apk/app
 | UX/UI | 75 | **82** (4타일·하단바·2칸·R1~R11 통과) | 90 |
 | 접근성 | 72 | **80** (아이콘+라벨 100%, 타임아웃 0, 48pt) | 88 |
 | 검증 | 60 | 60 (실사용자 0, 계측 미착수) | 80 |
-| 배포/운영 | 60 | **40** (Render 서스펜드) | 80 |
+| 배포/운영 | 60 | 60 (Render 복구, 카드 등록) | 80 |
 
 **문서 끝.** 매 세션 종료 시 갱신.
