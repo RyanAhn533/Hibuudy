@@ -77,7 +77,10 @@ C:/Users/wnsdu/Hibuudy/
 ### TODO (우선순위순)
 - [ ] 대중교통 API + 외출 알림
 - [ ] 앱 아이콘 커스텀
-- [ ] Play Store 등록 (v1.3.3 검토 중)
+- [ ] Play Store 프로덕션 (v1.5.0+7 비공개 테스트 업로드 2026-09-06, 테스터 12명×14일 후 재신청)
+- [ ] R7 보호자 위저드 · R12 리마인더 3토글 (12원칙 잔여)
+- [ ] P0-5 NFC 인증 · P1 온디바이스 사진 판정 (Gemini Nano)
+- [ ] APP_AUTH_TOKEN 활성화 (Render ENV + dart-define 동시)
 - [ ] Firebase 동기화
 - [ ] 노인 모드
 - [ ] 수행 기록 리포트
@@ -95,7 +98,8 @@ C:/Users/wnsdu/Hibuudy/
 
 ### 우선순위: 크래시 > UX > 차별화 > 비즈니스 > 최적화
 ### 규칙: YAGNI, 오프라인 우선, 접근성 (16px+/48px+), 기술 용어 금지
-### 테스트: dart analyze → APK 빌드 → 바탕화면 복사 → git push
+### 테스트: flutter analyze → `tools/emu/run_ui_check.sh` (깨끗한 설치+캡처+예외 0) → flutter test → 백엔드 pytest → git push
+### 리뷰 하네스: `.claude/skills/README.md` (cognitive-a11y · apple-design · code-review 3라운드)
 
 ### 실패 패턴 (반복 금지)
 - 패키지 리네이밍 시 Kotlin 디렉토리도 이동
@@ -179,7 +183,7 @@ API 키: .env 또는 Render 환경변수에서 관리 (절대 git에 올리지 �
 | 명령 | 용도 |
 |---|---|
 | `/ux-status` | 잔여 양산형 패턴 grep + 빌드 산출물 |
-| `/ux-screenshot [화면]` | APK 빌드 + 설치 + 캡처 |
+| `/ux-screenshot [역할] [proof] [prefix]` | `tools/emu/run_ui_check.sh` — 빌드·깨끗한 설치·시드·캡처·예외 0 |
 | `/ux-commit-check` | analyze + build + diff 게이트 |
 | `/v3-deploy-check` | Render + v3 엔드포인트 진단 |
 

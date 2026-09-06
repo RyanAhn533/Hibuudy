@@ -96,3 +96,7 @@
 ## 2026-09 리서치
 
 - **RESEARCH_UX_REFERENCE_2026-09.md** — 발달장애인 수요통계 · 국내외 앱 벤치마크 14패턴 · Apple Assistive Access/W3C COGA → 하루메이트 12원칙 · GitHub HIG 스킬 평가 · IA 뼈대(4타일) · 니즈→기능→UI 매핑 · P0/P1/P2 우선순위
+- **COMPETITIVE_TECH_ROADMAP_2026-09.md** — 「보통의 하루」 해부 · 하루메이트 정면 비교 · 2026 SOTA(온디바이스 VLM·음성 클로닝·JITAI·웨어러블·에이전트 메모리) · P0~P3 로드맵 · 검증 설계
+- **store-listing-v1.5.0/** — Play Console 스토어 등록정보 애셋 (스크린샷 6·그래픽·복붙 텍스트·README)
+- **privacy-policy.html** — 개인정보처리방침 v1.5 (GitHub Pages 라이브, main 브랜치)
+- 하네스: `../.claude/skills/README.md`, `../tools/emu/run_ui_check.sh`, `../backend/test_cascade.py`

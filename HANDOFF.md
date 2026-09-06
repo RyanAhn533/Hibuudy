@@ -1,8 +1,9 @@
 # 하루메이트 — Master Handoff
 
 > **목적:** 새 Claude 세션 또는 새 환경에서 **5분 안에 모든 상황 파악 + 즉시 작업 재개** 가능하도록 설계한 단일 진입점.
-> **마지막 갱신:** 2026-09-06 (세션 7)
-> **읽는 순서:** 이 파일 → CLAUDE.md → docs/JY_WAKEUP.md → docs/UX_v1.4_PROGRESS.md
+> **마지막 갱신:** 2026-09-06 밤 (세션 7 종료)
+> **읽는 순서:** 이 파일 → docs/JY_WAKEUP.md (직전 종료 상태) → CLAUDE.md → 작업별 문서
+> **세션 7 요약:** 4개월 공백 복구(Render·LLM·미푸시) + 리서치 2편 + v1.5 「4타일」 + P0 완료인증·수행기록·3지표 + 백엔드 5단 캐스케이드 + 스토어 등록정보 v1.5. 하네스는 §12.
 
 ---
 
@@ -30,21 +31,27 @@ v1.5       : 루트 4타일 + Assistive Access 구조 (2026-09-06, R1~R11 통과
 ```bash
 cd /c/Users/wnsdu/Hibuudy
 
-# 0) 현재 상태 5초 파악
-git branch --show-current                      # feature/uiux-polish-v134 (UI 작업 중)
-git log --oneline -5                           # 최근 변경
-git status                                     # 미커밋 변경
+# 0) 상태 5초
+git fetch -q && git status --short | grep -v "^?? v3/"     # 비어야 정상 (v3/ 는 의도적 언트랙)
+git log --oneline -5                                       # feature/uiux-polish-v134
+git log origin/main --oneline -3                           # 서버 배포 브랜치 (Render 자동 배포)
 
-# 1) 핸드오프 문서 (5분)
-cat HANDOFF.md                                  # 이 파일
-cat docs/JY_WAKEUP.md                           # 직전 세션 종료 상태
-cat docs/UX_v1.4_PROGRESS.md | head -80         # UX 진행 상세
+# 1) 핸드오프 (5분)
+cat docs/JY_WAKEUP.md                                      # 직전 세션 종료 상태 + JY 할 일
+cat docs/COMPETITIVE_TECH_ROADMAP_2026-09.md | head -60    # 다음 개발 우선순위 P0~P3
 
-# 2) 슬래시 명령 사용 가능 (settings.json 박힌 후)
-# /ux-status / /ux-screenshot / /ux-commit-check / /v3-deploy-check
+# 2) 서버 생사
+curl -s https://hibuudy.onrender.com/health                # llm_providers 에 true 가 하나는 있어야 AI 동작
+
+# 3) 앱 검증 (에뮬)
+bash tools/emu/run_ui_check.sh self 0 ui_                  # 빌드→깨끗한 설치→시드→캡처→예외 0
+cd hi_buddy_app && /c/flutter/bin/flutter.bat test         # 54개 (api_integration 3건은 서버 의존)
+
+# 4) 백엔드 검증 (키 없이도)
+cd backend && /c/Users/wnsdu/anaconda3/python.exe -m pytest test_cascade.py -q   # 6/6
 ```
 
-**⚠️ settings.json 우선 작성 (Claude Code 자기수정 차단으로 자동 작성 불가):**
+**⚠️ settings.json (JY 직접, 아직 미생성 — hook 은 고쳐놨고 등록만 남음):**
 ```bash
 cat > .claude/settings.json <<'EOF'
 {
@@ -60,6 +67,11 @@ cat > .claude/settings.json <<'EOF'
 }
 EOF
 ```
+
+**브랜치 규칙 (세션 7 확정):**
+- 앱 작업 = `feature/uiux-polish-v134` (origin 추적). 서버 배포 = `main` (Render 가 `backend/` Docker 로 자동 배포, GitHub Pages 가 `docs/` 서빙).
+- 서버·문서 핫픽스를 main 에 올릴 때: `git checkout -B hotfix/<이름> origin/main && git checkout feature/uiux-polish-v134 -- <파일> && git commit && git push origin hotfix/<이름>:main`. **앱 코드는 main 에 섞지 않는다** (v1.5 머지는 JY 결정).
+- main push 는 자동모드 분류기가 막을 수 있음 → JY 가 "푸시 권한 준다" 명시하면 진행.
 
 ---
 
@@ -77,7 +89,9 @@ EOF
 ├──────────────────────────────────────────────────────────────┤
 │ FastAPI 백엔드 (Render Free, hibuudy.onrender.com)            │
 │  ├ /api/* 16 엔드포인트 + slowapi rate limit                  │
-│  ├ LLM 캐스케이드: Claude Haiku 4.5 → Gemini 2.0 → Groq      │
+│  ├ LLM 5단 캐스케이드 (ENV LLM_CASCADE): gemini→upstage→groq→ │
+│  │   openrouter→cerebras. 실제 1차 응답자 = Upstage solar-pro3   │
+│  ├ 에이전트 대화: Claude Haiku 4.5                              │
 │  ├ Edge TTS (ko-KR) + SHA256 캐시                            │
 │  └ /api/v3/* (멀티 에이전트, USE_V3_ORCHESTRATOR=true 옵트인) │
 ├──────────────────────────────────────────────────────────────┤
@@ -94,10 +108,25 @@ EOF
 
 ## 3. 현재 작업 브랜치 — `feature/uiux-polish-v134`
 
-### 진행 (15 commits)
+### 진행 (30 commits, 세션 7 = 18개)
 
+세션 7 (2026-09-06) 핵심 커밋:
 ```
-ⓞ (R3)     Round 3 — 날씨 카피 친구 톤 · 헤더 라벨 전 타입 · 체크박스 48pt
+b40ace2  docs: 스토어 등록정보 애셋 v1.5.0 + JY_WAKEUP 밤 종료
+5963c67  docs(privacy): 개인정보처리방침 v1.5 (main 에도 → GitHub Pages 라이브)
+7bc1d3e  test(backend): 캐스케이드 테스트 6건 + 실측 순서 gemini→upstage→groq→openrouter→cerebras
+6c7b701  feat(backend): 무료 LLM 5단 캐스케이드 + /api/metrics slowapi 부팅 버그
+3593633  fix(backend): gemini-2.0-flash(06-01 셧다운)·Groq llama-3.3(08 종료) 교체
+75ff63d  feat(p0): 완료 인증 사진 + 수행 기록 실제 저장(호출부 0개였음) + 3지표 주간 문장, v1.5.0+7
+88b0ae0  fix: Round 3b — code-review 8건 (v3 인증 우회, Android 11+ tel/sms, stale 홈, FAB 겹침, 페이지 오버플로, hook)
+0a62e02  fix: Round 3 — 날씨 카피 친구 톤 · 헤더 라벨 · 체크박스 48pt
+fbc3ea3  fix(a11y): Round 2 — 아이콘+라벨 100% · 상단 뒤로 제거 · 그라데이션 0 · 이모지 0
+bb00ed2  feat(ui): v1.5 루트 4타일 + Assistive Access 구조 (NowNext·하단바·도움·오늘일과·HaruFeedback·전역 V2)
+```
+main (서버·문서) : e0691e2 백엔드 핫픽스 3/3 → fdb2bec 개인정보처리방침 v1.5
+
+세션 6 이전:
+```
 ⓝ fbc3ea3  Round 2 — R2 아이콘+라벨 100% · R3 상단 뒤로 제거 · R11 그라데이션 0 · P6 이모지 0
 ⓜ bb00ed2  v1.5 루트 4타일 + NowNext 2칸 + 하단 고정 바 + 도움 탭 + 오늘 일과 + 전역 V2 테마
 ⓛ 69bd4ce  M3 이모지 5건 + AI 카피 4건 폐기
@@ -159,6 +188,8 @@ EOF
 | — | **docs/EVOLUTION.md** | 562 | 5개월 진화사 (7 페이즈) |
 | — | **docs/PERSONA_VALIDATION.md** | 461 | NVIDIA Nemotron-Personas-Korea 방법론 |
 | — | **docs/ONE_PAGER.md** | 104 | 발표/공모전 1장 요약 |
+| — | **docs/store-listing-v1.5.0/** | — | Play Console 스토어 등록정보 애셋 (스크린샷 6·그래픽·복붙 텍스트·README) |
+| — | **.claude/skills/README.md** | — | 리뷰 하네스 (스킬 4·명령 4·hook·테스트) 사용법 |
 | — | **docs/COMPETITIVE_TECH_ROADMAP_2026-09.md** | ~200 | 「보통의 하루」 해부 + 2026 SOTA 기술 로드맵 P0~P3 + 검증 설계 |
 | — | **docs/RESEARCH_UX_REFERENCE_2026-09.md** | ~250 | 수요통계·벤치마크·Assistive Access/COGA 12원칙·IA 뼈대·우선순위 (2026-09 리서치) |
 | — | **docs/INDEX.md** | — | docs 가이드 |
@@ -194,16 +225,20 @@ git checkout v2.1.3-baseline-pre-v3            # v3 작업 전 스냅샷으로
 
 ---
 
-## 7. Pending Gates (JY 결정 받을 거) — 2026-09-06 갱신
+## 7. Pending Gates — 2026-09-06 밤 기준
 
-0. ~~Render 서스펜드 해제~~ ✅ 2026-09-06 카드 등록으로 복구
-1. **settings.json 박기** (5분) ← Claude Code 자동 차단, JY 직접
-2. ~~buildAppTheme() 전역 V2~~ ✅ 세션 7 완료
-3. ~~작은 카드 이모지~~ ✅ 세션 7 완료
-3b. **P0 완료 인증(사진/NFC) + 이행률 로그 + 3지표 계측** — `docs/COMPETITIVE_TECH_ROADMAP_2026-09.md` §4
-4. **ARASAAC 픽토 다운로드** (1-2시간 + CC BY-NC-SA 라이선스 표기)
-5. **M4 모션** (5일) — 카운트다운 시각화 + 활동 전환 의식
-6. **에뮬 캡처 5장** — 일정 데이터 + 키오스크 모드 토글 필요
+**JY 직접 (콘솔·계정)**
+1. Play Console: v1.5.0+7 AAB 업로드됨 → "출시 시작" 확인 · 스크린샷 6장 교체 (`docs/store-listing-v1.5.0/`) · **9/30 Android 개발자 인증 등록 확인**
+2. 테스터 12명 × 14일 참여 (프로덕션 재신청 조건. 거부 사유 = 참여도 부족, Gmail 08-08·08-25)
+3. `.claude/settings.json` 생성 (§1)
+4. API 키 rotate (채팅 노출 Cerebras·Upstage) → Render ENV. Gemini 키 재발급(현재 실패). `gemini-2.5-flash` 10/16 종료 → `GEMINI_MODEL=gemini-3.5-flash`
+5. 결정: v3/ 코드 커밋 여부 · 완료 인증 기관 기본 ON 여부 · 보호자 목소리 동의 문구 · Wear OS 기기 · 서울시복지재단 접촉 시점(11월 검증 후)
+
+**다음 개발 (COMPETITIVE_TECH_ROADMAP §4 순)**
+6. R7 보호자 위저드(한 화면 한 결정) · R12 리마인더 3토글 → 12원칙 완주 (UX 82→88)
+7. P0-5 NFC 인증 (nfc_manager, 실기기) · P1 온디바이스 사진 판정 (Gemini Nano Kotlin 어댑터 = CLAUDE.md v3 TODO 1)
+8. APP_AUTH_TOKEN 활성화 — Render ENV + `--dart-define=API_TOKEN` 재빌드 **동시에**
+9. `/api/agent` (Claude) 실호출 확인 — 세션 7 미검증
 
 ---
 
@@ -237,24 +272,12 @@ git checkout v2.1.3-baseline-pre-v3            # v3 작업 전 스냅샷으로
 ## 10. 다음 세션 시작 순서 (5분)
 
 ```bash
-# 1. 환경 부팅 (1분)
-cd /c/Users/wnsdu/Hibuudy
-git status
-git log --oneline -5
-
-# 2. settings.json 박기 (5분, 처음만)
-# 위 §1의 cat > .claude/settings.json 명령
-
-# 3. 상태 점검 (1분)
-/ux-status                                     # 또는 cat docs/JY_WAKEUP.md
-
-# 4. 작업 선택 (위 §7 Pending Gates 중 하나)
-#    - 최우선: buildAppTheme() 전역 V2 매핑 (시각 임팩트 최대)
-#    - 또는 작은 카드 이모지 정리
-#    - 또는 ARASAAC 픽토
-
-# 5. 변경 후 commit 게이트
-/ux-commit-check                               # analyze + build + diff 자동
+git fetch -q && git status --short | grep -v "^?? v3/"
+cat docs/JY_WAKEUP.md                      # 1) 직전 종료 상태 + JY 할 일
+curl -s https://hibuudy.onrender.com/health # 2) 서버·AI 키 생사
+bash tools/emu/run_ui_check.sh self 0 ui_  # 3) 앱 빌드·캡처·예외 0 (에뮬 켜고)
+# 4) 작업 선택: §7 Pending Gates 6~9 또는 docs/COMPETITIVE_TECH_ROADMAP §4
+# 5) 변경 후: cognitive-a11y 스킬 → /code-review → /ux-commit-check → commit (§12 리뷰 루프)
 ```
 
 ---
@@ -270,23 +293,56 @@ git log --oneline -5
 
 ---
 
-## 12. 최종 점수 (자체 평가)
+
+## 12. 하네스 — 다음 세션에서 바로 쓰는 것 (세션 7 정리)
+
+| 종류 | 이름 | 실행 | 용도 |
+|---|---|---|---|
+| 스크립트 | `tools/emu/run_ui_check.sh [self\|coordinator] [proof] [prefix]` | bash | 빌드→깨끗한 설치→시드→캡처→예외 0 (에뮬 함정 전부 반영) |
+| 스크립트 | `tools/emu/seed_prefs.py` | python | 역할·이름·오늘 일정·완료사진 옵션 시드 (UTC) |
+| 스크립트 | `tools/emu/tap_checkboxes.py` | python | uiautomator dump 로 체크박스 위치 찾아 탭 (좌표 탭 대신) |
+| 스크립트 | `tools/store/make_store_assets.py` | python | 캡처 → 1080x1920 스토어 스크린샷 + 1024x500 그래픽 |
+| 테스트 | `hi_buddy_app/test/` 54개 | `flutter test` | theme·모델·서비스 + api_integration(서버 의존 3) |
+| 테스트 | `backend/test_cascade.py` 6개 | `pytest` | LLM 캐스케이드 로직 (네트워크 X) |
+| E2E | `backend/e2e_backend.py` | 로컬 uvicorn 8010 + `backend/.env` 키 | 실제 공급자로 한국어 일정 생성·수정 스키마 검증 |
+| 스킬 | `harumate-cognitive-a11y` | Skill | 12원칙 판정 (Blocker R3/R4/R5/R6) |
+| 스킬 | `apple-design` | Skill | HIG 리뷰 (references/hig/*.md) |
+| 명령 | `/ux-status` `/ux-screenshot` `/ux-commit-check` `/v3-deploy-check` | 슬래시 | 상태·캡처·커밋 게이트·서버 진단 |
+| hook | `.claude/hooks/require_human_gate.sh` | settings.json 등록 후 자동 | 위험 명령 차단 (fail-closed, 자가테스트 4/4) |
+| 리뷰 | `/code-review medium <commit>` | Skill | 세션 7에서 실제 버그 5건 잡음 |
+
+**리뷰 루프**: 구현 → run_ui_check → cognitive-a11y → apple-design → code-review → 수정 → 재검증 → ux-commit-check → commit. 3라운드 기준.
+
+**서버 검증 순서**: `pytest test_cascade.py` → `backend/.env` 에 키 넣고 `LLM_CASCADE=upstage python -m uvicorn main:app --port 8010` → `python e2e_backend.py` → main 푸시 → `curl /health` 로 배포·키 확인.
+
+**함정 목록 (다시 밟지 말 것)**
+- 에뮬 `adb install -r` 조용한 실패 → 항상 uninstall→install, `lastUpdateTime` 확인
+- 모델명 하드코딩 → 전부 ENV. 분기마다 deprecation 확인 (2.0-flash 6/1, llama-3.3 8월, 2.5-flash 10/16)
+- `git add -A` 금지 (v3/ 6GB) — commit-check 가 명시 add
+- 조사 블로그의 "무료 한도"는 낡음 → 실호출로 확인 (Cerebras 무료 키 402)
+- Git Bash curl 로 한글 JSON 보내면 인코딩 깨져 400 → python/httpx 로
+- Windows `python3` 은 Store 스텁(exit 49) → anaconda 절대경로
+- 키를 채팅에 붙이면 `.env`(gitignore)에만, 출력 마스킹, rotate 권고
+
+---
+
+## 13. 최종 점수 (자체 평가)
 
 | 영역 | 점수 |
 |---|---|
 | 기술 스택 / 아키텍처 | 88 |
 | 코드 품질 | 75 |
-| **UX / UI** | **75** (v1.4 진행 중, 목표 90) |
-| 접근성 | 72 |
-| 검증 / 테스팅 | 60 (실사용자 0) |
+| **UX / UI** | **82** (v1.5 4타일, 12원칙 R1~R11) |
+| 접근성 | 80 |
+| 검증 / 테스팅 | 68 (계측 시작, 실사용자 0) |
 | 보안 | 78 |
 | 성능 | 70 |
-| 배포 / 운영 | 60 |
+| 배포 / 운영 | 65 (Render 복구·카드, LLM 5단, 인증 우회 잔존) |
 | 비즈니스 / 제품 | 35 (사용자 0) |
 | 차별화 / 시장 적합성 | 80 |
-| **종합** | **~73** (Indie 출시 임박 사이드 프로젝트 상위) |
+| **종합** | **~77** (세션 7) |
 
-→ **다음 게이트:** 사용자 12명 확보 (Play 정식 출시) + UI v1.4 완성 (M3-M5).
+→ **다음 게이트:** 테스터 12명 × 14일 (프로덕션 승인) + R7/R12 + NFC/온디바이스 판정.
 
 ---
 
