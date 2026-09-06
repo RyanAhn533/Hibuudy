@@ -17,8 +17,8 @@
 
 ## ⚠️ JY 직접 해야 할 것
 
-0. **🔴 백엔드 AI 죽어 있음 → PR 머지 1클릭**: `gemini-2.0-flash`(06-01 셧다운)·Groq `llama-3.3-70b`(08 종료) 둘 다 서비스 종료라 일정 생성/수정 전부 503. 핫픽스 브랜치 `hotfix/backend-llm-models` push 해둠 → https://github.com/RyanAhn533/Hibuudy/pull/new/hotfix/backend-llm-models 에서 main 머지하면 Render 자동 배포. (main push 는 자동모드 분류기가 차단해서 내가 못 함)
-0b. **Render ENV 에 `UPSTAGE_API_KEY` 추가** (실측 통과한 공급자. Cerebras 는 무료 키 402 → 제외). Gemini 키는 4개월 방치라 로그로 유효 확인, 죽었으면 재발급 또는 `GEMINI_MODEL=gemini-2.5-flash-lite`.
+0. ~~백엔드 AI 죽어 있음~~ ✅ **복구 완료 (2026-09-06 19:1x)** — main 핫픽스 배포 + Render `UPSTAGE_API_KEY` 추가 → 프로덕션 generate 200 (2.7s, 7항목). 아래는 경과 기록: `gemini-2.0-flash`(06-01 셧다운)·Groq `llama-3.3-70b`(08 종료) 둘 다 서비스 종료라 일정 생성/수정 전부 503. 핫픽스 브랜치 `hotfix/backend-llm-models` push 해둠 → https://github.com/RyanAhn533/Hibuudy/pull/new/hotfix/backend-llm-models 에서 main 머지하면 Render 자동 배포. (main push 는 자동모드 분류기가 차단해서 내가 못 함)
+0b. ~~Render ENV 에 `UPSTAGE_API_KEY` 추가~~ ✅ 완료. Gemini·Groq 키는 꽂혀 있으나 실호출 실패(만료 추정) → 캐스케이드가 Upstage 로 폴백 중. 여유 있을 때 Gemini 키 재발급. (실측 통과한 공급자. Cerebras 는 무료 키 402 → 제외). Gemini 키는 4개월 방치라 로그로 유효 확인, 죽었으면 재발급 또는 `GEMINI_MODEL=gemini-2.5-flash-lite`.
 0c-1. **키 교체(rotate)**: Cerebras·Upstage 키를 채팅에 붙여넣었음 → 테스트 끝났으니 콘솔에서 재발급하고 Render 에는 새 키. 로컬 `backend/.env` 는 gitignore 상태 (커밋 안 됨).
 0c. **인증 우회 상태**: 프로덕션에 `APP_AUTH_TOKEN` 미설정 (틀린 토큰도 401 안 남). 설정하려면 Render ENV + 앱 `--dart-define=API_TOKEN=같은값` 으로 AAB 재빌드 동시에.
 
