@@ -10,7 +10,7 @@
 1. **v1.5 루트 4타일 홈 + Assistive Access 구조 구현·에뮬 검증 완료** (지금|다음 2칸, 하단 고정 뒤로/홈, 도움 탭, 오늘 일과, 타임아웃 0). 3 commits, 런타임 예외 0.
 2. **리서치 2편**: `docs/RESEARCH_UX_REFERENCE_2026-09.md` (수요통계·벤치마크·12원칙·IA), `docs/COMPETITIVE_TECH_ROADMAP_2026-09.md` (「보통의 하루」 해부 + SOTA 기술 로드맵 P0~P3).
 3. **🔴 Render 백엔드 서스펜드** (503 Service Suspended). 대시보드 로그인 필요 → JY 직접.
-4. **🔴 브랜치 `feature/uiux-polish-v134` 16 commits 로컬만** → 세션 말 push 시도 (아래 상태 확인).
+4. **✅ 브랜치 `feature/uiux-polish-v134` origin에 push 완료** (0a62e02, 17 commits). main 대비 1 behind (README 9-01 커밋) — 머지 전 rebase.
 5. **「보통의 하루」는 베낀 게 아님** — 알람+사진/NFC 인증 3종, 로펌 계열, 45명 기관 배포. 우리가 뒤진 건 "완료 인증"과 "실사용 데이터" 둘. 11월 검증 발표 추적.
 
 ---
@@ -19,7 +19,7 @@
 
 1. **Render 대시보드** → hibuudy.onrender.com 서스펜드 사유 확인·재가동 (Free hours / 미배포 정리 / 결제). 앱 테스터가 지금 일정 생성·TTS 못 씀.
 2. **`.claude/settings.json`** 생성 (HANDOFF §1 명령 복붙, 5분). hook 4개월째 미작동.
-3. **push 확인**: `git log origin/feature/uiux-polish-v134 -1` 이 없으면 `git push -u origin feature/uiux-polish-v134`.
+3. ~~push 확인~~ ✅ 완료. 머지 시 `git rebase origin/main` 먼저.
 4. 결정 4개 (COMPETITIVE_TECH_ROADMAP §6): 완료 인증 기본값 / 보호자 목소리 클로닝 동의 문구 / Wear OS 기기 / 서울시복지재단 접촉 시점.
 
 ---
