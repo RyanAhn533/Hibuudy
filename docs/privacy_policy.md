@@ -1,5 +1,9 @@
 # Hi-Buddy 개인정보처리방침 / Privacy Policy
 
+> **⚠️ 2026-09-06 (v1.5) 갱신 안내** — 스토어에 게시되는 최신 방침은 `privacy-policy.html` (https://ryanahn533.github.io/Hibuudy/privacy-policy.html) 입니다.
+> 주요 변경: 운영 주체를 개발자 개인으로 정정(연세대는 이력), OpenAI 삭제 → Google Gemini/Upstage/Groq/OpenRouter/Cerebras/Anthropic/Microsoft Edge TTS 명시, 완료 사진(기기 내 저장, 기본 OFF)·기분 기록·오류 로그·대기자 이메일·일정 동기화(연결 코드) 항목 추가, 카메라·알림·진동 권한 설명 추가.
+
+
 ---
 
 ## 한국어 (Korean)
