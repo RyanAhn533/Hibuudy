@@ -1,7 +1,7 @@
 # 하루메이트 — Master Handoff
 
 > **목적:** 새 Claude 세션 또는 새 환경에서 **5분 안에 모든 상황 파악 + 즉시 작업 재개** 가능하도록 설계한 단일 진입점.
-> **마지막 갱신:** 2026-05-22
+> **마지막 갱신:** 2026-09-06 (세션 7)
 > **읽는 순서:** 이 파일 → CLAUDE.md → docs/JY_WAKEUP.md → docs/UX_v1.4_PROGRESS.md
 
 ---
@@ -18,6 +18,8 @@
 v2.1.3     : 안정 (Play Console v1.3.3 비공개 테스트)
 v3.0-dev   : 멀티 에이전트 백엔드 (로컬 OK, Render 미배포)
 v1.4-dev   : UX/UI 「메이트」 리디자인 (현재 브랜치 feature/uiux-polish-v134)
+v1.5       : 루트 4타일 + Assistive Access 구조 (2026-09-06, R1~R11 통과, 에뮬 검증)
+⚠️ 백엔드   : 2026-09-06 기준 Render 서스펜드 (503) — JY 대시보드 확인 필요
 컨셉       : 「메이트」 (친구 톤, warm coral + warm-tinted neutral, MUJI 절제)
 ```
 
@@ -92,9 +94,12 @@ EOF
 
 ## 3. 현재 작업 브랜치 — `feature/uiux-polish-v134`
 
-### 진행 (12 commits)
+### 진행 (15 commits)
 
 ```
+ⓞ (R3)     Round 3 — 날씨 카피 친구 톤 · 헤더 라벨 전 타입 · 체크박스 48pt
+ⓝ fbc3ea3  Round 2 — R2 아이콘+라벨 100% · R3 상단 뒤로 제거 · R11 그라데이션 0 · P6 이모지 0
+ⓜ bb00ed2  v1.5 루트 4타일 + NowNext 2칸 + 하단 고정 바 + 도움 탭 + 오늘 일과 + 전역 V2 테마
 ⓛ 69bd4ce  M3 이모지 5건 + AI 카피 4건 폐기
 ⓚ 2094809  M2 D5 잔여 6 화면 V2 매핑
 ⓙ 012e78b  M2 D4 OnboardingScreen V2
@@ -119,7 +124,7 @@ EOF
 | M4 | 모션 + 마이크로 인터랙션 | ❌ 미진행 |
 | M5 | 외부 검증 + 시연 캡처 5장 | ⏳ 캡처 1.5장 / ❌ 외부 시각 테스트 (JY 보류) |
 
-**점수:** UX/UI 55 → **75** (목표 90까지 -15).
+**점수:** UX/UI 55 → 75 → **82** (세션 7, 목표 90까지 -8). 접근성 72 → **80**.
 
 ---
 
@@ -135,6 +140,8 @@ EOF
 | 카피 룰 | "~님/~보세요/~예요" 클러스터 폐기 (사용자 화면) | TTS/알림 자연 발화는 보존 |
 | 이모지 | 사용자 노출 0건 (Material Symbols 통일) | P6 적출 |
 | 그라데이션 | 0건 | P6 + P1 적출 |
+| **당사자 UI 구조** | **Apple Assistive Access 이식**: 루트 타일 ≤4 · 아이콘+라벨 쌍 · 하단 고정 뒤로/홈 · 숨은 제스처 0 · 타임아웃 UI 0 · 삭제 없음 | 세션 7. 근거 `docs/RESEARCH_UX_REFERENCE_2026-09.md` §3 (12원칙 R1~R12) |
+| **인지접근성 감사** | 당사자 화면 변경 시 `harumate-cognitive-a11y` 스킬 + `apple-design` 스킬 리뷰 필수 | R4/R5/R8/R11 = 0 이 commit 조건 |
 
 ---
 
@@ -152,6 +159,7 @@ EOF
 | — | **docs/EVOLUTION.md** | 562 | 5개월 진화사 (7 페이즈) |
 | — | **docs/PERSONA_VALIDATION.md** | 461 | NVIDIA Nemotron-Personas-Korea 방법론 |
 | — | **docs/ONE_PAGER.md** | 104 | 발표/공모전 1장 요약 |
+| — | **docs/COMPETITIVE_TECH_ROADMAP_2026-09.md** | ~200 | 「보통의 하루」 해부 + 2026 SOTA 기술 로드맵 P0~P3 + 검증 설계 |
 | — | **docs/RESEARCH_UX_REFERENCE_2026-09.md** | ~250 | 수요통계·벤치마크·Assistive Access/COGA 12원칙·IA 뼈대·우선순위 (2026-09 리서치) |
 | — | **docs/INDEX.md** | — | docs 가이드 |
 
@@ -186,11 +194,13 @@ git checkout v2.1.3-baseline-pre-v3            # v3 작업 전 스냅샷으로
 
 ---
 
-## 7. Pending Gates (JY 결정 받을 거)
+## 7. Pending Gates (JY 결정 받을 거) — 2026-09-06 갱신
 
+0. **🔴 Render 서스펜드 해제** (JY 대시보드) — 테스터 앱 API 전부 503
 1. **settings.json 박기** (5분) ← Claude Code 자동 차단, JY 직접
-2. **buildAppTheme() 전역 ElevatedButton V2** (30분) — "시작할게요" 등 잔여 v1 primary 버튼 전역 코랄 통일
-3. **작은 카드 이모지** (`icon: '📝'/'📺'/'💬'/'⚙️'` string → IconData) 30분
+2. ~~buildAppTheme() 전역 V2~~ ✅ 세션 7 완료
+3. ~~작은 카드 이모지~~ ✅ 세션 7 완료
+3b. **P0 완료 인증(사진/NFC) + 이행률 로그 + 3지표 계측** — `docs/COMPETITIVE_TECH_ROADMAP_2026-09.md` §4
 4. **ARASAAC 픽토 다운로드** (1-2시간 + CC BY-NC-SA 라이선스 표기)
 5. **M4 모션** (5일) — 카운트다운 시각화 + 활동 전환 의식
 6. **에뮬 캡처 5장** — 일정 데이터 + 키오스크 모드 토글 필요

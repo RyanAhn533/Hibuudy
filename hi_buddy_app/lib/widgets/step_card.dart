@@ -67,15 +67,20 @@ class StepCard extends StatelessWidget {
             if (onCompletedChanged != null)
               Padding(
                 padding: const EdgeInsets.only(right: HaruTokens.space2),
+                // 터치 타겟 48pt (minTouchTarget), 체크 표시는 1.4배 확대
                 child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: Checkbox(
-                    value: isCompleted,
-                    onChanged: (v) => onCompletedChanged?.call(v ?? false),
-                    activeColor: HaruTokensV2.success,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
+                  width: HaruTokensV2.minTouchTarget,
+                  height: HaruTokensV2.minTouchTarget,
+                  child: Transform.scale(
+                    scale: 1.4,
+                    child: Checkbox(
+                      value: isCompleted,
+                      onChanged: (v) => onCompletedChanged?.call(v ?? false),
+                      activeColor: HaruTokensV2.success,
+                      materialTapTargetSize: MaterialTapTargetSize.padded,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                     ),
                   ),
                 ),

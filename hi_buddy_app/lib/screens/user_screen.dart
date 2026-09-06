@@ -992,7 +992,15 @@ class _UserScreenState extends State<UserScreen> {
       'LEISURE': '여가',
       'CLOTHING': '옷 입기',
       'NIGHT_WRAPUP': '마무리',
+      // v1.5: 4그룹 매핑에 있는 타입은 전부 라벨 부여 ('활동' 폴백 최소화)
+      'ROUTINE': '준비·위생',
+      'WALK': '산책',
+      'EXERCISE': '운동',
+      'SNACK': '간식',
+      'SLEEP': '잠자기',
+      'TRANSITION': '다음 준비',
+      'GENERAL': '할 일',
     };
-    return map[type.toUpperCase()] ?? '활동';
+    return map[type.toUpperCase()] ?? '할 일';
   }
 }

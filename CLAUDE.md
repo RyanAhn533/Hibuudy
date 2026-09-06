@@ -15,10 +15,10 @@
 
 ## 1. 프로젝트 상태 (V: Vision)
 
-### 현재 버전: v2.1.3 (안정) + v3.0-dev (병행) + **v1.4-dev (UI/UX 「메이트」)**
+### 현재 버전: v2.1.3 (안정) + v3.0-dev (병행) + **v1.5-dev (「메이트」 + Assistive Access 4타일, 2026-09)**
 - 패키지: **com.harumate.care** (com.harumate.app 아님 — 실제 build.gradle 기준)
 - 앱 이름: 하루메이트 (구 Hi-Buddy, 이름 변경 완료)
-- 서버: https://hibuudy.onrender.com (Render Free)
+- 서버: https://hibuudy.onrender.com (Render Free) — **2026-09-06 서스펜드(503), 재가동 필요**
 - LLM: Claude Haiku 4.5 (에이전트 대화) + Gemini 2.0 Flash (백엔드) + Groq 폴백
 - TTS: flutter_tts (디바이스, 오프라인) + Edge TTS (서버 캐시)
 - DB: sqflite 로컬 (7 테이블) + SharedPreferences
@@ -120,6 +120,7 @@ C:/Users/wnsdu/Hibuudy/
 ### 세션 4 (2026-05-08): **v3.0 멀티 에이전트 + Nemotron-Personas-Korea 검증 + Mem0 3-tier + Gemini Nano 브리지 + 투명성 UI** — 신규 모듈 12개, 백엔드 6개 엔드포인트, 시뮬레이션 240건 라우팅 100%
 ### 세션 5 (2026-05-08~09): **D1-D3 디자인 시스템 일관 적용 시작** — HaruText 7개 const + HomeUserScreen + step_card 키오스크 single-focus + intl 한국어 locale 잠재 버그 수정
 ### 세션 6 (2026-05-14~22): **v1.4 「메이트」 UX 리디자인 풀 마이그레이션** — HaruTokensV2 (warm coral) + 9 화면 + 5 위젯 + 4 그룹 컬러 패밀리 + 그라데이션/이모지/H1 클러스터 폐기. 12 commits. UX 점수 55→75.
+### 세션 7 (2026-09-06): **4개월 공백 팔로우업 + 리서치 2편 + v1.5 「루트 4타일」 3라운드 자율 구현** — Render 서스펜드·미푸시 14 commits·v3 6GB 언트랙 발견 → .gitignore 방어. `RESEARCH_UX_REFERENCE`(수요통계·벤치마크 14패턴·Assistive Access/COGA 12원칙·IA) + `COMPETITIVE_TECH_ROADMAP`(「보통의 하루」해부·SOTA P0~P3). 구현: HomeUser 4타일+grid/row, NowNextCard, HaruBottomBar, HelpScreen, TodayScreen, HaruFeedback, 전역 V2 테마, 이모지/그라데이션 0, 아이콘+라벨 100%. 스킬: apple-design(vendored) + harumate-cognitive-a11y. 에뮬 11캡처, 런타임 예외 0. UX 75→82.
 ### 세션 6 도구 통합 (2026-05-22): **claude-research-engine v2 자산 통합** — `.claude/hooks/require_human_gate.sh` (위험 명령 차단) + `.claude/commands/` 4개 (ux-status, ux-screenshot, ux-commit-check, v3-deploy-check) + `HANDOFF.md` (새 세션 단일 진입점) + `docs/JY_WAKEUP.md` 표준화
 
 ---
@@ -154,6 +155,12 @@ API 키: .env 또는 Render 환경변수에서 관리 (절대 git에 올리지 �
 
 에뮬레이터:
   /c/Users/wnsdu/AppData/Local/Android/Sdk/emulator/emulator.exe -avd Medium_Phone_API_36.1 -no-snapshot
+
+에뮬 검증 루틴 (세션 7 확정):
+  - 저장소 91% → `adb install -r` 조용히 실패. 항상 `adb uninstall com.harumate.care` 후 `adb install`
+  - `flutter build apk --debug --target-platform android-x64` (204→179MB)
+  - 기기 시계 UTC. 당사자 역할·오늘 일정 시드는 run-as 로 FlutterSharedPreferences.xml 주입
+  - 검증 = 캡처 Read + `adb logcat -s flutter | grep ErrorReporter:flutter` = 0
 ```
 
 ---

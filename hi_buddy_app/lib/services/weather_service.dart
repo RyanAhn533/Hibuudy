@@ -99,24 +99,25 @@ class WeatherService {
 
   /// 온도 기반 옷차림 추천 (한국어) — 폴백용 템플릿
   static String getClothingAdvice(double temp) {
+    // v1.5 카피 룰: 사용자 화면 "~요/~세요" 클러스터 X, 메이트(친구) 톤, 한 문장 = 한 행동
     if (temp <= -10) {
-      return '많이 추워요! 패딩, 목도리, 장갑 꼭 챙기세요.';
+      return '많이 춥다. 패딩, 목도리, 장갑 꼭 챙기자.';
     } else if (temp <= 0) {
-      return '아주 추워요. 두꺼운 겨울옷 입으세요.';
+      return '아주 춥다. 두꺼운 겨울옷 입자.';
     } else if (temp <= 5) {
-      return '추워요. 코트나 패딩을 입으세요.';
+      return '춥다. 코트나 패딩 입자.';
     } else if (temp <= 10) {
-      return '쌀쌀해요. 자켓이나 가디건을 챙기세요.';
+      return '쌀쌀하다. 자켓이나 가디건 챙기자.';
     } else if (temp <= 15) {
-      return '선선해요. 긴팔에 얇은 겉옷이 좋아요.';
+      return '선선하다. 긴팔에 얇은 겉옷.';
     } else if (temp <= 20) {
-      return '활동하기 좋은 날씨예요. 긴팔이면 딱이에요.';
+      return '움직이기 좋은 날. 긴팔이면 딱.';
     } else if (temp <= 25) {
-      return '따뜻해요. 반팔이나 얇은 긴팔이 좋아요.';
+      return '따뜻하다. 반팔이나 얇은 긴팔.';
     } else if (temp <= 30) {
-      return '더워요. 시원한 반팔, 반바지 입으세요.';
+      return '덥다. 시원한 반팔, 반바지 입자.';
     } else {
-      return '많이 더워요! 가장 시원한 옷을 입고 물 많이 마시세요.';
+      return '많이 덥다. 가장 시원한 옷, 물 자주 마시자.';
     }
   }
 
