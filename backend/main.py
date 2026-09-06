@@ -42,8 +42,12 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "") or GOOGLE_API_KEY
 APP_AUTH_TOKEN = os.getenv("APP_AUTH_TOKEN", "")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "") or os.getenv("ANTHROPIC_API_KEY", "")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
+# Gemini: gemini-2.0-flash 는 2026-06-01 셧다운 → 2.5-flash (2026-10-16 종료 예정, 그 뒤 3.5-flash).
+# 모델 교체는 코드 수정 없이 Render ENV GEMINI_MODEL 로.
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+# Groq: llama-3.3-70b-versatile 은 2026-08 서비스 종료 → Groq 권장 대체 openai/gpt-oss-120b
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 # Edge TTS 한국어 음성 (여성: ko-KR-SunHiNeural, 남성: ko-KR-InJoonNeural)
 EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "ko-KR-SunHiNeural")
@@ -91,6 +95,19 @@ def verify_token(request: Request):
     auth = request.headers.get("Authorization", "")
     if auth != f"Bearer {APP_AUTH_TOKEN}":
         raise HTTPException(status_code=401, detail="인증 실패")
+
+
+# ── v3 멀티 에이전트 라우터 (옵트인, 기본 OFF) ───────────────────────
+# HANDOFF §2: USE_V3_ORCHESTRATOR=true 일 때만 마운트. v3/ 는 backend/ Docker 컨텍스트 밖이라
+# Render 에서는 명시적으로 켰을 때만 시도하고, 실패하면 조용히 넘기지 않고 부팅을 막는다.
+# 모든 v3 엔드포인트는 v2 와 동일한 bearer 인증(verify_token)을 라우터 레벨로 강제.
+if os.getenv("USE_V3_ORCHESTRATOR", "false").lower() == "true":
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).parent.parent))
+    from v3.agents.backend_integration import v3_router  # noqa: E402
+    app.include_router(v3_router, prefix="/api/v3", dependencies=[Depends(verify_token)])
+    logger.info("✅ v3 multi-agent router mounted at /api/v3 (auth: verify_token)")
 
 
 # ── Input Sanitization ──────────────────────────────────────────────
@@ -173,7 +190,7 @@ async def gemini_generate(
 
     client = await get_client()
     resp = await client.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}",
         headers={"Content-Type": "application/json"},
         json={
             "systemInstruction": {"parts": [{"text": system_prompt}]},
@@ -414,6 +431,62 @@ async def collect_errors(request: Request):
         logger.warning("error collect: %s", e)
         return Response(status_code=500)
     return {"saved": saved}
+
+
+@app.get("/api/metrics")
+@limiter.limit("30/minute")
+async def metrics(_=Depends(verify_token)):
+    """관리자용 통합 메트릭 (토큰 필요)."""
+    result: dict = {
+        "ts": __import__("datetime").datetime.utcnow().isoformat(),
+        "env": {
+            "gemini": bool(GEMINI_API_KEY),
+            "groq": bool(GROQ_API_KEY),
+            "claude": bool(CLAUDE_API_KEY),
+            "auth": bool(APP_AUTH_TOKEN),
+        },
+    }
+    # 에러 수집
+    try:
+        with sqlite3.connect(str(ERROR_DB)) as conn:
+            result["errors_total"] = conn.execute(
+                "SELECT COUNT(*) FROM errors"
+            ).fetchone()[0]
+            result["errors_24h"] = conn.execute(
+                "SELECT COUNT(*) FROM errors WHERE datetime(received_at) > datetime('now', '-1 day')"
+            ).fetchone()[0]
+    except Exception:
+        result["errors_total"] = 0
+        result["errors_24h"] = 0
+
+    # waitlist
+    try:
+        with sqlite3.connect(str(WAITLIST_DB)) as conn:
+            result["waitlist_total"] = conn.execute(
+                "SELECT COUNT(*) FROM waitlist"
+            ).fetchone()[0]
+            rows = conn.execute(
+                "SELECT segment, COUNT(*) FROM waitlist GROUP BY segment"
+            ).fetchall()
+            result["waitlist_by_segment"] = {r[0]: r[1] for r in rows}
+    except Exception:
+        result["waitlist_total"] = 0
+        result["waitlist_by_segment"] = {}
+
+    # schedule DB
+    try:
+        with sqlite3.connect(str(SCHEDULE_DB)) as conn:
+            result["schedules_stored"] = conn.execute(
+                "SELECT COUNT(*) FROM schedules"
+            ).fetchone()[0]
+            result["unique_users"] = conn.execute(
+                "SELECT COUNT(DISTINCT user_id) FROM schedules"
+            ).fetchone()[0]
+    except Exception:
+        result["schedules_stored"] = 0
+        result["unique_users"] = 0
+
+    return result
 
 
 @app.get("/api/errors/recent")
