@@ -49,6 +49,23 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 # Groq: llama-3.3-70b-versatile 은 2026-08 서비스 종료 → Groq 권장 대체 openai/gpt-oss-120b
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
+# ── 무료 OpenAI 호환 공급자 (2026-09 조사, docs/COMPETITIVE_TECH_ROADMAP §3 참고) ──
+# 순서는 ENV LLM_CASCADE 로 조정. 키 없는 공급자는 자동 스킵.
+#   gemini    : Google AI Studio 무료 (Flash/Flash-Lite 5~15 RPM, ~1,000 RPD). 한국어 품질 1위.
+#   cerebras  : 1M tokens/day 무료, 14,400 req/day, 2,600 tok/s. 모델 gpt-oss-120b / qwen-3-235b.
+#   groq      : gpt-oss-120b 30 RPM · 1,000 RPD · 200K tok/day.
+#   upstage   : Solar Pro (한국어 특화). 가입 $10 크레딧, 비영리/학교/병원은 1년 무료.
+#   openrouter: ":free" 모델 50 RPD (10$ 1회 충전 시 1,000 RPD). 최후 폴백.
+CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY", "")
+CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
+UPSTAGE_API_KEY = os.getenv("UPSTAGE_API_KEY", "")
+UPSTAGE_MODEL = os.getenv("UPSTAGE_MODEL", "solar-pro3")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b:free")
+LLM_CASCADE = [
+    x.strip() for x in os.getenv("LLM_CASCADE", "gemini,cerebras,groq,upstage,openrouter").split(",") if x.strip()
+]
+
 # Edge TTS 한국어 음성 (여성: ko-KR-SunHiNeural, 남성: ko-KR-InJoonNeural)
 EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "ko-KR-SunHiNeural")
 
@@ -208,23 +225,48 @@ async def gemini_generate(
     return _clean_json_response(raw_text) if json_mode else raw_text.strip()
 
 
-# ── Groq Helper (무료 14,400 req/일 · Llama 3.3 70B) ──────────────
+# ── OpenAI 호환 공급자 헬퍼 (Groq / Cerebras / Upstage / OpenRouter) ──────────
+
+OPENAI_COMPAT_PROVIDERS: dict[str, dict] = {
+    "groq": {
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "key": lambda: GROQ_API_KEY,
+        "model": lambda: GROQ_MODEL,
+    },
+    "cerebras": {
+        "url": "https://api.cerebras.ai/v1/chat/completions",
+        "key": lambda: CEREBRAS_API_KEY,
+        "model": lambda: CEREBRAS_MODEL,
+    },
+    "upstage": {
+        "url": "https://api.upstage.ai/v1/chat/completions",
+        "key": lambda: UPSTAGE_API_KEY,
+        "model": lambda: UPSTAGE_MODEL,
+    },
+    "openrouter": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "key": lambda: OPENROUTER_API_KEY,
+        "model": lambda: OPENROUTER_MODEL,
+    },
+}
 
 
-async def groq_generate(
+async def openai_compat_generate(
+    provider: str,
     system_prompt: str,
     user_text: str,
     json_mode: bool = False,
     max_tokens: int = 800,
 ) -> str:
-    """Groq API 호출 → 응답 텍스트 반환.
-    Gemini 폴백용. OpenAI 호환 인터페이스."""
-    if not GROQ_API_KEY:
-        raise HTTPException(status_code=503, detail="Groq 키 미설정")
+    """OpenAI 호환 chat/completions 호출 → 응답 텍스트. provider 는 OPENAI_COMPAT_PROVIDERS 키."""
+    cfg = OPENAI_COMPAT_PROVIDERS[provider]
+    key = cfg["key"]()
+    if not key:
+        raise HTTPException(status_code=503, detail=f"{provider} 키 미설정")
 
     client = await get_client()
     payload = {
-        "model": GROQ_MODEL,
+        "model": cfg["model"](),
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_text},
@@ -234,28 +276,29 @@ async def groq_generate(
     }
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    if provider == "openrouter":
+        headers["HTTP-Referer"] = "https://hibuudy.onrender.com"
+        headers["X-Title"] = "HaruMate"
 
-    resp = await client.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json=payload,
-        timeout=30.0,
-    )
+    resp = await client.post(cfg["url"], headers=headers, json=payload, timeout=30.0)
     if resp.status_code != 200:
         body = resp.text[:200] if resp.text else "(empty)"
-        logger.warning("Groq %s: %s", resp.status_code, body)
-        raise HTTPException(status_code=resp.status_code, detail=f"Groq {resp.status_code}: {body}")
+        logger.warning("%s %s: %s", provider, resp.status_code, body)
+        raise HTTPException(status_code=resp.status_code, detail=f"{provider} {resp.status_code}: {body}")
 
     data = resp.json()
     try:
         text = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError):
-        raise HTTPException(status_code=502, detail="Groq: 응답 파싱 실패")
+        raise HTTPException(status_code=502, detail=f"{provider}: 응답 파싱 실패")
 
     return _clean_json_response(text) if json_mode else text.strip()
+
+
+async def groq_generate(system_prompt: str, user_text: str, json_mode: bool = False, max_tokens: int = 800) -> str:
+    """하위 호환 래퍼 (기존 호출부용)."""
+    return await openai_compat_generate("groq", system_prompt, user_text, json_mode=json_mode, max_tokens=max_tokens)
 
 
 async def llm_generate(
@@ -265,29 +308,35 @@ async def llm_generate(
     json_mode: bool = False,
     max_tokens: int = 800,
 ) -> str:
-    """LLM 캐스케이드: Gemini → Groq → 503.
-    json_schema 제공 시 자동 json_mode=True."""
+    """LLM 캐스케이드: ENV LLM_CASCADE 순서대로 (기본 gemini → cerebras → groq → upstage → openrouter).
+    키 없는 공급자는 스킵. 전부 실패하면 503. json_schema 제공 시 자동 json_mode=True."""
     if json_schema is not None:
         json_mode = True
 
-    # 1순위: Gemini (한국어 품질 1위, 무료 1500/일)
-    if GEMINI_API_KEY:
+    tried: list[str] = []
+    for provider in LLM_CASCADE:
         try:
-            return await gemini_generate(
-                system_prompt, user_text, json_schema, json_mode=json_mode, max_tokens=max_tokens
-            )
+            if provider == "gemini":
+                if not GEMINI_API_KEY:
+                    continue
+                tried.append(provider)
+                return await gemini_generate(
+                    system_prompt, user_text, json_schema, json_mode=json_mode, max_tokens=max_tokens
+                )
+            if provider in OPENAI_COMPAT_PROVIDERS:
+                if not OPENAI_COMPAT_PROVIDERS[provider]["key"]():
+                    continue
+                tried.append(provider)
+                return await openai_compat_generate(
+                    provider, system_prompt, user_text, json_mode=json_mode, max_tokens=max_tokens
+                )
+            logger.warning("LLM_CASCADE 에 모르는 공급자: %s", provider)
         except HTTPException as e:
-            logger.warning("Gemini→Groq fallback: %s", str(e.detail)[:100])
+            logger.warning("%s 실패 → 다음 공급자: %s", provider, str(e.detail)[:100])
         except Exception as e:
-            logger.warning("Gemini exception, →Groq: %s", e)
+            logger.warning("%s 예외 → 다음 공급자: %s", provider, e)
 
-    # 2순위: Groq (무료 14,400/일, Llama 3.3 70B)
-    if GROQ_API_KEY:
-        try:
-            return await groq_generate(system_prompt, user_text, json_mode=json_mode, max_tokens=max_tokens)
-        except Exception as e:
-            logger.warning("Groq also failed: %s", e)
-
+    logger.error("LLM 캐스케이드 전부 실패 (시도: %s). 키 설정 확인: GEMINI/CEREBRAS/GROQ/UPSTAGE/OPENROUTER", tried)
     raise HTTPException(status_code=503, detail="AI 서비스가 잠시 쉬고 있어요.")
 
 
@@ -320,7 +369,7 @@ def _clean_json_response(text: str) -> str:
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "llm_cascade": LLM_CASCADE, "llm_providers": {"gemini": bool(GEMINI_API_KEY), "cerebras": bool(CEREBRAS_API_KEY), "groq": bool(GROQ_API_KEY), "upstage": bool(UPSTAGE_API_KEY), "openrouter": bool(OPENROUTER_API_KEY)}}
 
 
 # ── Waitlist (준비 중 세그먼트 이메일 수집) ─────────────────────────
@@ -435,7 +484,8 @@ async def collect_errors(request: Request):
 
 @app.get("/api/metrics")
 @limiter.limit("30/minute")
-async def metrics(_=Depends(verify_token)):
+async def metrics(request: Request, _=Depends(verify_token)):
+    # slowapi 는 `request` 인자가 없으면 import 시점에 예외 (로컬 최신 slowapi 에서 부팅 실패하던 버그)
     """관리자용 통합 메트릭 (토큰 필요)."""
     result: dict = {
         "ts": __import__("datetime").datetime.utcnow().isoformat(),
