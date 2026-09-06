@@ -52,10 +52,11 @@ GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 # ── 무료 OpenAI 호환 공급자 (2026-09 조사, docs/COMPETITIVE_TECH_ROADMAP §3 참고) ──
 # 순서는 ENV LLM_CASCADE 로 조정. 키 없는 공급자는 자동 스킵.
 #   gemini    : Google AI Studio 무료 (Flash/Flash-Lite 5~15 RPM, ~1,000 RPD). 한국어 품질 1위.
-#   cerebras  : 1M tokens/day 무료, 14,400 req/day, 2,600 tok/s. 모델 gpt-oss-120b / qwen-3-235b.
+#   upstage   : Solar Pro 3 (한국어 특화). 가입 $10 크레딧, 비영리/학교/병원은 1년 무료.
+#               ✅ 2026-09-06 실측: 한국어 일정 8개 JSON 3.7s, 수정 1.2s, 스키마 준수 (E2E 통과)
 #   groq      : gpt-oss-120b 30 RPM · 1,000 RPD · 200K tok/day.
-#   upstage   : Solar Pro (한국어 특화). 가입 $10 크레딧, 비영리/학교/병원은 1년 무료.
-#   openrouter: ":free" 모델 50 RPD (10$ 1회 충전 시 1,000 RPD). 최후 폴백.
+#   openrouter: ":free" 모델 50 RPD (10$ 1회 충전 시 1,000 RPD).
+#   cerebras  : ⚠️ 2026-09-06 실측: 무료 키로 전 모델 402 payment_required → 결제 등록해야 사용. 최후 순위.
 CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY", "")
 CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
 UPSTAGE_API_KEY = os.getenv("UPSTAGE_API_KEY", "")
@@ -63,7 +64,7 @@ UPSTAGE_MODEL = os.getenv("UPSTAGE_MODEL", "solar-pro3")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b:free")
 LLM_CASCADE = [
-    x.strip() for x in os.getenv("LLM_CASCADE", "gemini,cerebras,groq,upstage,openrouter").split(",") if x.strip()
+    x.strip() for x in os.getenv("LLM_CASCADE", "gemini,upstage,groq,openrouter,cerebras").split(",") if x.strip()
 ]
 
 # Edge TTS 한국어 음성 (여성: ko-KR-SunHiNeural, 남성: ko-KR-InJoonNeural)
@@ -308,7 +309,7 @@ async def llm_generate(
     json_mode: bool = False,
     max_tokens: int = 800,
 ) -> str:
-    """LLM 캐스케이드: ENV LLM_CASCADE 순서대로 (기본 gemini → cerebras → groq → upstage → openrouter).
+    """LLM 캐스케이드: ENV LLM_CASCADE 순서대로 (기본 gemini → upstage → groq → openrouter → cerebras).
     키 없는 공급자는 스킵. 전부 실패하면 503. json_schema 제공 시 자동 json_mode=True."""
     if json_schema is not None:
         json_mode = True
