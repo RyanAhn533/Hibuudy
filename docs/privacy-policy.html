@@ -3,83 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hi-Buddy 개인정보처리방침</title>
+    <title>하루메이트(하이버디) 개인정보처리방침</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            max-width: 700px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+            max-width: 720px;
             margin: 40px auto;
             padding: 0 20px;
             line-height: 1.8;
-            color: #1a1a1a;
+            color: #2A2620;
+            background: #FAF7F2;
         }
-        h1 { font-size: 24px; border-bottom: 3px solid #3B82F6; padding-bottom: 8px; }
-        h2 { font-size: 18px; margin-top: 32px; color: #3B82F6; }
-        .date { color: #666; font-size: 14px; }
+        h1 { font-size: 24px; border-bottom: 3px solid #D17559; padding-bottom: 8px; }
+        h2 { font-size: 18px; margin-top: 32px; color: #B35D43; }
+        .date { color: #7B7468; font-size: 14px; }
         ul { padding-left: 20px; }
         li { margin-bottom: 6px; }
-        .contact { background: #F0F7FF; padding: 16px; border-radius: 12px; margin-top: 24px; }
+        table { border-collapse: collapse; width: 100%; font-size: 15px; }
+        th, td { border: 1px solid #E8E0D2; padding: 8px 10px; text-align: left; vertical-align: top; }
+        th { background: #FCE8DF; }
+        .contact { background: #FCE8DF; padding: 16px; border-radius: 12px; margin-top: 24px; }
+        .note { background: #FEFCF8; border: 1px solid #E8E0D2; padding: 12px 16px; border-radius: 12px; }
     </style>
 </head>
 <body>
-    <h1>Hi-Buddy 개인정보처리방침</h1>
-    <p class="date">시행일: 2026년 3월 15일</p>
+    <h1>하루메이트(하이버디) 개인정보처리방침</h1>
+    <p class="date">시행일: 2026년 9월 6일 (v1.5) · 최초 시행: 2026년 3월 15일</p>
 
     <p>
-        Hi-Buddy(이하 "앱")는 발달장애인의 일상생활 자립을 돕기 위한 일정 관리 앱입니다.
-        연세대학교 사회복지대학원 HEART Lab 연구팀에서 운영하며,
-        이용자의 개인정보를 소중히 보호합니다.
+        하루메이트(스토어 등록명 "하이버디", 패키지명 com.harumate.care, 이하 "앱")는 발달장애 당사자가 하루 일과를 스스로 따라갈 수 있도록 돕는
+        일정 안내 앱입니다. 앱은 개발자 안준영(개인)이 운영하며, 이용자·보호자·코디네이터의 개인정보를 소중히 보호합니다.
+        발달장애인 이용자의 권리 보호에 각별히 주의합니다.
+    </p>
+    <p class="note">
+        요약: <strong>이름, 연락처, 약 알림, 일정, 완료 사진, 기분 기록은 사용자 기기 안에만 저장</strong>됩니다.
+        서버로 가는 것은 AI 처리를 위한 <strong>텍스트</strong>(일정 문장, 질문, 안내 문장, 검색어)와 앱 오류 로그이며, 개인 식별 정보는 포함하지 않습니다.
     </p>
 
-    <h2>1. 수집하는 정보</h2>
+    <h2>1. 기기에만 저장되는 정보 (서버 전송 없음)</h2>
     <ul>
-        <li><strong>일정 텍스트</strong>: 코디네이터가 입력하는 일정 내용 (예: "08:00 아침 인사"). AI 일정 생성을 위해 서버로 전송됩니다.</li>
-        <li><strong>검색어</strong>: 요리 사진, 영상 검색을 위해 입력하는 검색어.</li>
-        <li><strong>TTS 텍스트</strong>: 음성 안내를 위해 서버로 전송되는 안내 문장.</li>
+        <li><strong>프로필</strong>: 이름(별칭), 장애 정도, UI 모드, 음성 속도</li>
+        <li><strong>일정과 수행 기록</strong>: 하루 일정, 각 활동의 완료 여부와 시각, 도움 요청 횟수</li>
+        <li><strong>완료 사진 (선택 기능)</strong>: 보호자가 "완료할 때 사진 남기기"를 켠 경우, 활동을 마칠 때 기기 카메라로 찍은 사진 1장. 앱 전용 폴더에만 저장되며 서버로 전송되지 않습니다. 기본값은 꺼짐입니다.</li>
+        <li><strong>기분 기록</strong>: 도움 화면에서 고른 기분(좋아/보통/힘들어)과 시각</li>
+        <li><strong>긴급 연락처, 약 알림, 자주 가는 장소, 냉장고 재료</strong></li>
     </ul>
-    <p>개인을 식별할 수 있는 정보(이름, 전화번호, 위치 등)는 수집하지 않습니다.</p>
+    <p>위 정보는 앱을 삭제하면 함께 삭제됩니다. 보호자는 "수행 기록 내보내기"로 기기 안의 기록을 엑셀 파일로 직접 내보낼 수 있으며, 이 파일의 공유 여부는 이용자가 결정합니다.</p>
 
-    <h2>2. 정보의 이용 목적</h2>
-    <ul>
-        <li>AI 기반 일정 자동 생성 및 수정</li>
-        <li>음성 안내(TTS) 생성</li>
-        <li>요리 관련 이미지 및 영상 검색</li>
-    </ul>
+    <h2>2. 서버로 전송되는 정보</h2>
+    <table>
+        <tr><th>항목</th><th>내용</th><th>목적</th></tr>
+        <tr><td>일정 텍스트</td><td>코디네이터가 입력한 일정 문장, 수정 요청 문장</td><td>AI 일정 생성·수정</td></tr>
+        <tr><td>대화 텍스트</td><td>"메이트"에게 입력한 질문과, 답변에 필요한 오늘 일정·냉장고 재료 텍스트</td><td>AI 대화 응답</td></tr>
+        <tr><td>안내 문장</td><td>음성으로 읽어 줄 문장</td><td>음성 안내(TTS) 생성</td></tr>
+        <tr><td>검색어</td><td>활동명 등 검색어</td><td>유튜브 영상·이미지 검색</td></tr>
+        <tr><td>도시명</td><td>이용자가 선택한 도시(예: 서울)</td><td>날씨·옷차림 안내. 위치 권한은 사용하지 않습니다.</td></tr>
+        <tr><td>일정 동기화 (선택)</td><td>보호자와 당사자 기기를 6자리 코드로 연결한 경우, 일정 데이터(시간·활동명·안내문)</td><td>두 기기 간 일정 공유. 코드로만 식별되며 이름·연락처는 포함되지 않습니다.</td></tr>
+        <tr><td>앱 오류 로그</td><td>오류 발생 시각, 오류 종류, 메시지, 코드 위치, 플랫폼(Android/iOS)</td><td>앱 안정성 개선. 개인 식별 정보·일정 내용은 포함하지 않습니다.</td></tr>
+        <tr><td>대기자 이메일 (선택)</td><td>준비 중인 서비스(노인·치매·청소년 버전) 알림을 신청한 경우의 이메일 주소와 선택한 분야</td><td>출시 알림 발송</td></tr>
+    </table>
 
     <h2>3. 정보의 보관 및 파기</h2>
     <ul>
-        <li><strong>서버</strong>: 전송된 텍스트는 AI 처리 후 서버에 영구 저장하지 않습니다. TTS 음성은 성능 향상을 위해 임시 캐싱될 수 있으며, 주기적으로 삭제됩니다.</li>
-        <li><strong>기기</strong>: 일정 데이터는 사용자 기기에만 저장되며, 앱 삭제 시 함께 삭제됩니다.</li>
-        <li><strong>제3자 API</strong>: OpenAI, Google API를 통해 텍스트가 처리되며, 각 서비스의 개인정보처리방침이 적용됩니다.</li>
+        <li><strong>AI 처리 텍스트</strong>: 처리 후 앱 서버에 영구 저장하지 않습니다. 음성 안내(TTS) 결과는 성능을 위해 임시 캐싱될 수 있으며 주기적으로 삭제됩니다.</li>
+        <li><strong>동기화된 일정</strong>: 연결 코드 기준으로 보관되며, 앱에서 연결을 해제하거나 삭제를 요청하면 삭제됩니다.</li>
+        <li><strong>오류 로그</strong>: 안정성 분석 후 90일 이내 삭제합니다.</li>
+        <li><strong>대기자 이메일</strong>: 알림 발송 목적 달성 후 또는 삭제 요청 시 즉시 삭제합니다.</li>
+        <li><strong>기기 데이터</strong>: 앱 삭제 시 함께 삭제됩니다.</li>
     </ul>
 
-    <h2>4. 제3자 제공</h2>
-    <p>수집된 정보는 아래 서비스에 AI 처리 목적으로만 전송됩니다:</p>
+    <h2>4. 제3자 서비스 (처리 위탁)</h2>
+    <p>전송된 텍스트는 아래 서비스에서 처리됩니다. 각 서비스의 개인정보처리방침이 함께 적용됩니다. 앱은 필요할 때 아래 AI 서비스 중 하나를 순서대로 사용합니다(서비스 장애 시 다음 서비스로 전환).</p>
     <ul>
-        <li>OpenAI (일정 생성, TTS)</li>
-        <li>Google (이미지 검색, YouTube 검색)</li>
+        <li><strong>AI 일정 생성·수정</strong>: Google(Gemini), Upstage(Solar), Groq, OpenRouter, Cerebras</li>
+        <li><strong>AI 대화("메이트")</strong>: Anthropic(Claude) 및 위 AI 서비스</li>
+        <li><strong>음성 안내(TTS)</strong>: 기기 내장 음성 합성(기본) 또는 Microsoft Edge TTS</li>
+        <li><strong>영상·이미지 검색</strong>: Google(YouTube, 이미지 검색)</li>
+        <li><strong>날씨</strong>: wttr.in (도시명만 전송)</li>
+        <li><strong>서버 호스팅</strong>: Render (앱 서버)</li>
     </ul>
+    <p>앱은 광고를 게재하지 않으며, 광고·마케팅 목적으로 정보를 제3자에게 판매·제공하지 않습니다.</p>
 
     <h2>5. 이용자의 권리</h2>
     <ul>
         <li>앱을 삭제하면 기기에 저장된 모든 데이터가 삭제됩니다.</li>
-        <li>서버에는 개인 식별 정보가 저장되지 않으므로 별도의 삭제 요청이 필요하지 않습니다.</li>
-        <li>추가 문의 사항은 아래 연락처로 문의해 주세요.</li>
+        <li>일정 동기화를 사용한 경우, 아래 연락처로 연결 코드를 알려 주시면 서버의 일정 데이터를 삭제합니다.</li>
+        <li>대기자 이메일은 아래 연락처로 삭제를 요청할 수 있습니다.</li>
+        <li>완료 사진 기능은 보호자 화면(내 정보)에서 언제든 끌 수 있으며, 저장된 사진은 앱 삭제 시 함께 삭제됩니다.</li>
     </ul>
 
     <h2>6. 앱 권한</h2>
     <ul>
-        <li><strong>인터넷</strong>: AI 일정 생성 및 검색 기능에 필요합니다.</li>
+        <li><strong>인터넷</strong>: AI 일정 생성, 대화, 음성 안내, 검색</li>
+        <li><strong>알림</strong>: 활동 시작 시각 알림</li>
+        <li><strong>진동</strong>: 활동 전환 시 촉각 알림</li>
+        <li><strong>카메라(기기 카메라 앱 호출)</strong>: 완료 사진 기능을 켠 경우에만 기기의 카메라 앱을 열어 사진 1장을 받습니다. 앱이 카메라 권한을 직접 요구하지 않으며, 사진은 기기에만 저장됩니다.</li>
+        <li><strong>전화·문자 앱 열기</strong>: 도움 화면에서 저장된 긴급 연락처로 전화·문자 앱을 열어 줍니다. 통화·문자 내용에는 접근하지 않습니다.</li>
     </ul>
 
-    <h2>7. 방침 변경</h2>
-    <p>본 방침이 변경되는 경우 앱 업데이트를 통해 안내합니다.</p>
+    <h2>7. 아동·발달장애인 이용자 보호</h2>
+    <p>앱은 계정 생성이나 로그인을 요구하지 않으며, 광고와 인앱 결제가 없습니다. 당사자 화면에는 삭제·결제 등 되돌리기 어려운 동작을 두지 않고, 보호자 화면에서만 설정을 변경할 수 있습니다.</p>
+
+    <h2>8. 방침 변경</h2>
+    <p>본 방침이 변경되는 경우 이 페이지와 앱 업데이트 안내를 통해 알립니다.</p>
 
     <div class="contact">
         <h2 style="margin-top: 0;">문의처</h2>
         <p>
-            연세대학교 사회복지대학원 HEART Lab<br>
-            이메일: heartlab@yonsei.ac.kr
+            개발자: 안준영<br>
+            이메일: wnsdud2689@gmail.com<br>
+            <span class="date">※ 하루메이트는 서울시자원봉사센터 청년기획봉사단 '온쿡'에서 시작해, 연세대학교 사회복지대학원 연구팀 의뢰 프로토타입을 거쳐 독립 개발된 앱입니다. 위 기관은 앱 운영·데이터 처리 주체가 아닙니다.</span>
         </p>
     </div>
 </body>
