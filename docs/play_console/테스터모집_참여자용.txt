@@ -1,0 +1,13 @@
+[하루메이트 앱 테스트 참여 안내]
+
+안드로이드 폰에서 아래 순서대로 해주세요.
+
+① 링크 열고 "테스터 되기" 누르기
+https://play.google.com/apps/testing/com.harumate.care
+
+② Play 스토어에서 설치
+https://play.google.com/store/apps/details?id=com.harumate.care
+
+③ 2주 동안 지우지 말고, "테스트 나가기" 누르지 말고, 2~3일에 한 번 앱 열어주세요.
+
+불편한 점 있으면 한 줄만 보내주세요. 감사합니다!
