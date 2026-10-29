@@ -1,7 +1,7 @@
 # 하루메이트 (HaruMate)
 
 > **발달장애인·보호자·복지관 실무자 삼자를 연결하는 AI 기반 하루 도우미**
-> 서울시자원봉사센터 → 연세대학교 사회복지대학원 연구팀 의뢰 프로토타입 → 독립 출시까지 1인 개발 프로젝트
+> 서울시자원봉사센터 → 연세대학교 HEART Lab → 독립 출시까지 1인 개발 프로젝트
 
 <p align="center">
   <img src="assets/brand/icons/master/icon_1024_rounded.png" width="128" alt="하루메이트 앱 아이콘"/>
@@ -10,7 +10,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.35+-02569B?logo=flutter" alt="Flutter"/>
   <img src="https://img.shields.io/badge/Platform-Android-3DDC84?logo=android" alt="Android"/>
-  <img src="https://img.shields.io/badge/License-MIT-lightgrey" alt="License"/>
+  <img src="https://img.shields.io/badge/License-Proprietary-red" alt="License"/>
   <img src="https://img.shields.io/badge/Status-Internal%20Testing-orange" alt="Status"/>
 </p>
 
@@ -131,7 +131,7 @@ flutter analyze         # 정적 분석
 | 단계 | 시기 | 내용 |
 |---|---|---|
 | Phase 1 · 봉사단 | 2025.03 ~ 08 | 서울청년기획봉사단 2기 **온쉐어 팀장** · AI 쿠킹챗봇 **OnCook** 단독 개발 · 서부장애인종합복지관 발달장애인 5명과 쿠킹클래스 2회 · LG Hello Vision 지원금 · 헬로TV 뉴스 보도 |
-| Phase 2 · 연세대 납품 | 2025.12 | 연세대 사회복지대학원 **BK21 강연 시리즈 초청 강연**(2025.12.02) · 연구팀 의뢰 Streamlit 웹 프로토타입 유상 개발·납품 (본 소속은 세종대학교 HEART Lab) |
+| Phase 2 · 연세대 납품 | 2025.12 | 연세대 사회복지대학원 **HEART Lab** 기술개발자 유급 합류 · Streamlit 웹 프로토타입 납품 · AAC 방법론 대학원 강연 |
 | Phase 3 · 독립 출시 | 2026.04 | Flutter Android 앱 단독 개발 · v1.3 Play Store 내부 테스트 · 복지관 B2B 세일즈 준비 |
 
 ---
@@ -201,13 +201,15 @@ flutter analyze         # 정적 분석
 - 🐛 **버그 리포트**: GitHub Issues
 - 💬 **일반 문의**: wnsdud2689@gmail.com
 - 🏢 **복지관 도입 문의**: 동일 이메일 · 3개월 시범 무료
-- 🎓 **연구 협업**: 세종대학교 HEART Lab 경유 or 위 이메일
+- 🎓 **연구 협업**: 연세대 HEART Lab 경유 or 위 이메일
 
 ---
 
 ## 📜 라이선스
 
-MIT License · 코드 자유 사용 가능. 앱 자체는 단독 소유.
+Copyright © 2026 안준영 (Junyoung Ahn). All rights reserved.
+
+이 저장소는 포트폴리오 열람 목적으로만 공개한다. 코드·디자인·문서의 복제, 수정, 배포, 상업적 이용을 허락하지 않는다. 이전에 표기됐던 MIT 문구는 2026-10-29 자로 철회한다.
 
 ---
 
