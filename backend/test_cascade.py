@@ -39,15 +39,15 @@ class FakeClient:
 
 
 def gemini_ok(text):
-    return FakeResp(200, {"candidates": [{"content": {"parts": [{"text": text}]}}]})
+    return FakeResp(200, {"candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": text}]}}]})
 
 
 def openai_ok(text):
-    return FakeResp(200, {"choices": [{"message": {"content": text}}]})
+    return FakeResp(200, {"choices": [{"finish_reason": "stop", "message": {"content": text}}]})
 
 
 def run(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 @pytest.fixture
@@ -88,7 +88,8 @@ def test_gemini_first_success(keys, fake, monkeypatch):
     out = run(main.llm_generate("sys", "user", json_schema={}))
     assert json.loads(out) == {"schedule": []}
     assert len(client.calls) == 1 and "generativelanguage" in client.calls[0]
-    assert "gemini-2.5-flash" in client.calls[0]  # 2.0-flash 하드코딩 제거 확인
+    assert f"/models/{main.GEMINI_MODEL}:" in client.calls[0]  # ENV/기본값 모델 사용 확인
+    assert "gemini-2.0-flash" not in client.calls[0]  # 2.0-flash 하드코딩 제거 확인
 
 
 def test_fallback_gemini_500_to_cerebras_with_markdown(keys, fake, monkeypatch):

@@ -1,0 +1,140 @@
+[2026-10-29 결정 변경] 아래 '별도 서비스/별도 URL' 방침을 대체한다.
+새 서비스 hibuddy-api-v16 을 만들지 않고 기존 hibuudy.onrender.com 서비스를 유료(0.5c-512mb)+디스크 /var/data 1GB 로 바꿔 새 백엔드를 덮어쓴다.
+이유: Play 콘솔 확인 결과 구앱 1.3.3 설치 기기 3대뿐이고 전부 1.6.0 으로 교체 예정. URL 을 유지해 앱 기본값을 그대로 쓴다.
+영향: 그 3대는 덮어쓰기 배포 순간 AI 기능이 끊긴다(공유 Bearer 우회 없음). 롤백은 Deploys → 이전 배포 Rollback.
+절차: Hibuudy-backend-deploy/README_RENDER.md. 아래 본문의 '구앱 유지' 관련 문장은 이 블록이 우선한다.
+
+하이버디 1.6 서버 배포 준비 — 내부 전용
+작성: 2026-10-14
+
+배포 대상
+기존 https://hibuudy.onrender.com 은 기존 Play 앱용으로 유지한다.
+최신 서버는 별도 서비스와 별도 URL로 배포한다. 새 앱의 API_BASE_URL에
+실제로 검증한 새 URL을 빌드 시 지정한다. 이 문서와 소스는 공개하지 않는다.
+
+호환성
+기존 공유 Bearer는 최신 서버의 기기 인증을 통과하지 못한다.
+구형 개인 context, user_id 조회, 구형 일정 저장 요청도 최신 계약과 다르다.
+기존 인증 우회를 되살리거나 구형 요청을 무조건 신뢰하는 호환 코드를 넣지 않는다.
+구앱을 같은 URL에서 신서버로 강제 전환하는 배포를 하지 않는다.
+
+소스를 공개하지 않는 경로
+1. 사용자에게 대상이 확인된 비공개 Git 저장소에 backend 실행 파일만 준비하고,
+   Render가 해당 비공개 저장소만 읽을 수 있도록 연결한다.
+2. 또는 비공개 컨테이너 레지스트리의 이미지를 Render가 읽도록 연결한다.
+현재 공개 GitHub에 새 코어를 push하지 않는다. 전체 저장소, 연구 데이터,
+앱/워치 소스와 체크포인트는 backend 배포에 필요하지 않다.
+실제 저장소 생성/업로드, 유료 서비스 생성과 배포는 아직 실행하지 않았다.
+
+컨테이너와 저장소
+backend 디렉터리가 Docker 빌드 컨텍스트이다. 실행 코드는 main.py,
+contracts.py, device_store.py, response_evaluator.py, routers/, schemas/,
+services/와 requirements.txt/Dockerfile이다. .dockerignore로 환경파일,
+DB, TTS 캐시, 테스트와 로컬 시험 서버를 제외한다.
+render.yaml은 별도 이름 hibuddy-api-v16, 자동 배포 off, /health 점검을 사용한다.
+SQLite 기기 인증/연결/승인 안내는 /var/data/devices.db에 저장한다.
+HIBUDDY_DATA_DIR=/var/data, HIBUDDY_REQUIRE_PERSISTENT_STORAGE=true,
+ENVIRONMENT=production, HIBUDDY_LOCAL_DRAFT=false, USE_V3_ORCHESTRATOR=false,
+HIBUDDY_PHYSIO_EXTERNAL_ENABLED=false를 사용한다.
+/var/data에 실제 영속 디스크를 연결해야 한다. 경로 환경변수만 설정해도
+health는 configured_directory를 반환하므로 그 값은 영속성 보증이 아니다.
+Render의 영속 디스크는 유료 컴퓨트에서 지원한다. 기존 free 서비스 설정을
+그대로 복사하면 재시작/재배포 때 기기 인증과 연결이 없어질 수 있다.
+SQLite와 디스크를 쓰는 이 구성은 우선 단일 인스턴스로 검증한다.
+실제 디스크 연결, 재시작/재배포 후 보존, 백업/복구는 호스팅에서 확인해야 한다.
+
+비밀값과 모델 설정
+API 키/관리자 토큰은 호스팅의 secret 환경변수로만 주입한다.
+APP_AUTH_TOKEN은 관리자 API용이며 앱에 넣지 않는다.
+일반 AI의 LLM_CASCADE와 공급자 모델/키는 실제 계정으로 확인한 것만 설정한다.
+UPSTAGE_MODEL 기본값/배포 예시는 solar-pro4이다. 기존 solar-pro3는 공식 문서상
+2026-10-30 KST 종료 예정이므로 11월 시험에서 사용하지 않는다.
+/health의 llm_providers는 키 존재 여부이며 모델 호출 성공을 증명하지 않는다.
+새 server의 일반 대화도 합성 문장으로 실제 공급자 응답을 별도로 검증한다.
+생체 외부 전송은 일반 AI 검증과 별도이며 기본 OFF를 유지한다.
+
+앱에서 확인할 최소 호환 응답
+GET /health
+  status: ok
+  api_contract: hibuddy-device-v1
+  plan_schema_version: 1
+  auth: device
+  capabilities.device_enrollment / pairing / approved_plan_sync: true
+내부 스키마 노출을 줄이기 위해 /openapi.json, /docs, /redoc은 비활성화한다.
+
+새 환경의 수용 확인 순서
+1. 위 health 계약과 local_draft=false 확인.
+2. 합성 담당자/당사자 등록, 승인 안내 게시, 일회용 코드 수락과 동일 판 수신.
+3. 다른 기기의 접근 거부, 연결 해제 후 새 조회 거부, 폐기한 토큰 거부.
+4. 같은 디스크로 재시작/재배포한 뒤 기존 기기 토큰과 안내 보존 확인.
+5. 합성 질문의 실제 AI 응답, 실패/동의 철회 처리, 실제 폰의 TTS 출력 확인.
+6. 기존 Play 앱이 기존 URL에서 계속 동작하는지 확인.
+7. 실제 새 URL로 서명한 앱의 설치/업데이트와 두 실기기 연결을 확인.
+이전 에뮬레이터 성공이나 pytest 통과만으로 이 순서를 완료 처리하지 않는다.
+
+20명 시험 운영
+인증된 요청은 DB에서 검증한 기기 ID로 제한한다. 같은 IP의 다른 기기는
+각자 연결 코드 발급/수락 각5회/분, 일정 생성/수정 각10회/분, 대화20회/분,
+일정 조회30회/분의 한도를 쓴다. 임의 Bearer나 전달한 device ID를 키로 쓰지 않는다.
+등록은 IP당10회/분을 유지한다. 20대 동시 등록 중10대의 429 응답을 확인했고,
+61초 후 해당10대만 재시도해 모두 등록되었다. 온보딩 준비 시간을 나눈다.
+기본 메모리 limiter는 단일 프로세스용이다. 다중 worker/인스턴스 운영은
+공유 limiter 저장소와 프록시 IP 신뢰 설정을 별도 검증하기 전 확대하지 않는다.
+실제 배포의 공용 Wi-Fi, 공급자 쿼터, 20명 실사용 부하 검증은 아직 수행하지 않았다.
+새 버전 URL/앱 빌드/테스트 트랙을 한 묶음으로 기록한다.
+
+검증과 도구 범위
+python -B smoke_contract.py 는 임시 DB와 자기 소유의 loopback 프로세스만 만든다.
+등록/게시/연결/재수신/권한/불변 판/중복 재시도/프로세스 재시작 보존/폐기를 확인한다.
+원격 URL을 받지 않으며 실제 모델 호출, 기존 서버나 기존 DB 변경을 하지 않는다.
+요약 JSON에는 토큰을 출력하지 않고 종료 시 임시 저장소를 정리한다.
+2026-10-14 새 Python3.12 환경에서 기존 backend pytest 178개 통과.
+계약 식별 응답과 공개 스키마 비활성화 이후에도 178개 통과(24.56초).
+smoke_contract.py의 5개 점검 묶음 통과: 계약/인증, 게시/연결/동일 안내 수신/권한,
+불변 판/중복 재시도, 새 OS 프로세스의 인증/연결/안내 보존, 연결/기기 폐기.
+로컬 시험은 임시 DB, 합성 기기와 모의 공급자를 사용한다.
+실제 운영 배포, 컨테이너 빌드, 실물 폰/워치, 유료 호출은 그 시험과 구분한다.
+이번 환경은 GitHub CLI 로그인은 있으나 Render/Docker CLI와 Render API 자격은
+확인되지 않았다. 이것만으로 새 비공개 저장소 연결이나 배포 권한을 확정하지 않는다.
+
+2026-10-14 추가 검증
+인증 기기별 limiter 적용 후 pytest182개 통과(19.85초). 같은 IP의20기기에서
+합성 provider 대화40회/일정조회40회, 같은 기기21번째 대화/31번째 조회429,
+임의 Bearer/X-Device-ID/X-Forwarded-For로 등록 한도 분리 불가, 폐기 토큰401을 확인했다.
+인증 dependency가 SlowAPI key 함수보다 먼저 실행되는지도 실제 요청으로 확인했다.
+solar-pro4 기본값 반영 후 전체182개 재통과(17.66초).
+python -B smoke_cohort.py --output <로컬 JSON> 은 별도 keyless loopback 서버와
+임시 DB에서20대(담당자10/당사자10)를 실제 HTTP 등록/게시/연결하고, 같은 IP에서
+동시40회 조회해 정확한 승인본 수신을 확인한다. 이번 실행에서10쌍 게시/연결263ms,
+40조회96ms였으나 PC 한 대의 합성 시험 시간이며 실사용 성능 수치가 아니다.
+시험 기기20대는 폐기하고 자기 소유 서버/임시 DB를 정리했다. 외부 모델 호출0회.
+
+실제 모델 로컬 review 서버
+http://127.0.0.1:8016 의 main:app은 별도 Temp 데이터 디렉터리를 사용한다.
+원본 backend/.env를 읽되 HIBUDDY_LOCAL_DRAFT=false, 생체 외부OFF로 실행했다.
+원래 설정(cerebras 단독)에서 대화3회/일정1회는 모두503이었고, 서버 로그의
+실제 upstream 응답은402였다. 해당 계정의 결제/잔액 내역은 조회하지 않았다.
+이후 이 로컬 프로세스에서만 LLM_CASCADE=upstage,cerebras,
+UPSTAGE_MODEL=solar-pro4를 지정해 대화2회200(778ms/668ms),
+일정1회200(4124ms, 옷 입기/책상 정리/쉬기3활동)을 확인했다.
+두 번째 실행의 fallback 경고는 없었다. 응답 자체는 provider/model 식별 필드를
+포함하지 않으므로 설정/분기와 로그 근거를 함께 기록했다.
+합성 자격2개는 시험 후 폐기했다. 새 앱은 자체 기기 등록으로 연결한다.
+이 결과는 텍스트 API 성공이며 폰 TTS/마이크/실기기 시연 또는 운영 배포 성공이 아니다.
+출력 초안은 사람이 검토/승인해야 한다. 짧은 한국어 응답의 품질을 전면 보증하지 않는다.
+원본 .env, 기존 운영 서버, 원격 저장소/배포는 변경하지 않았다.
+자세한 입력/응답/상태와20대 결과는 내부 전용
+docs/implementation/evidence/2026-10-14_backend_review.json 에 저장한다.
+로컬 프로세스/PID/로그는 Temp/hibuddy-meeting-20261014/backend-live-review/process.json,
+중지 도구는 같은 Temp 루트의 stop-review-backend.ps1에 둔다.
+
+공식 참고
+https://render.com/docs/git-provider
+https://render.com/docs/deploying-an-image
+https://render.com/docs/disks
+https://render.com/docs/blueprint-spec
+https://console.upstage.ai/docs/capabilities/generate/reasoning
+https://console.upstage.ai/api/chat
+https://support.cerebras.net/articles/5041581099-cerebras-self-serve-paygo-faq
+https://slowapi.readthedocs.io/en/latest/
+https://fastapi.tiangolo.com/tutorial/dependencies/

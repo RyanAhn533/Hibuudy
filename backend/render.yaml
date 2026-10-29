@@ -1,11 +1,42 @@
 services:
   - type: web
+    # 2026-10-29 decision: overwrite the EXISTING service (hibuudy.onrender.com) instead of
+    # creating a new one. A Blueprint applies to an existing service only when `name` matches
+    # that service's name exactly; otherwise it creates a second service. The existing name is
+    # NOT verified: JY must read it in the Render Dashboard and edit this value if it differs.
+    # Value below is restored from origin/main:backend/render.yaml.
     name: hibuddy-api
     runtime: docker
-    plan: free
+    # Lowest paid plan ID (disks need paid compute): 0.5 CPU / 512 MB, $7/month per
+    # render.com/pricing 2026-10-29. docs/blueprint-spec plan list has 0.5c-512mb, not "starter".
+    plan: 0.5c-512mb
+    autoDeployTrigger: 'off'
+    healthCheckPath: /health
+    disk:
+      name: hibuddy-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
+      - key: HIBUDDY_DATA_DIR
+        value: /var/data
+      - key: HIBUDDY_REQUIRE_PERSISTENT_STORAGE
+        value: 'true'
+      - key: ENVIRONMENT
+        value: production
+      - key: HIBUDDY_LOCAL_DRAFT
+        value: 'false'
+      - key: USE_V3_ORCHESTRATOR
+        value: 'false'
+      - key: HIBUDDY_PHYSIO_EXTERNAL_ENABLED
+        value: 'false'
+      - key: UPSTAGE_API_KEY
+        sync: false
+      - key: UPSTAGE_MODEL
+        value: solar-pro4
       - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
       - key: GOOGLE_API_KEY
         sync: false
       - key: GOOGLE_CSE_ID
